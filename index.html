@@ -749,7 +749,7 @@ async function providerChat(o){const p=o.provider;if(!p)throw new Error('No AI p
    if(data==='[DONE]'){if(!got)throw new Error('The model returned an empty response. Check the model name and token limit.');return;}
    let j;try{j=JSON.parse(data)}catch(_){continue}if(j.error)throw new Error('Provider error: '+String(j.error.message||JSON.stringify(j.error)).slice(0,300));
    const d=(j.choices&&j.choices[0]&&j.choices[0].delta)||{};const r=d.reasoning_content||d.reasoning||'';const c=d.content||'';
-   if(r&&o.onReasoning)o.onReasoning(r);if(c&&o.onDelta)o.onDelta(c);}}
+   if(r&&o.onReasoning)o.onReasoning(r);if(c){got=true;if(o.onDelta)o.onDelta(c);}}
  return '';}
 async function fetchModels(p){const h={};if(p.apiKey)h.Authorization='Bearer '+p.apiKey;
  const res=await fetch(modelsUrl(p.baseUrl),{headers:h});if(!res.ok)throw new Error(describeHttp(res.status,''));
@@ -1968,7 +1968,7 @@ async function startBuild(){const p=S.project;if(!p)return;if(S._building){toast
   const msg=(e.name==='AbortError'?'Build server request timed out.':String(e.message||e))+(e.raw?'\n'+String(e.raw).slice(0,4000):'');
   if(!S._lastBuild||S._lastBuild.state!=='failed')S._lastBuild={b,logs:S._logShown||'',jobId,state:'failed',error:msg};
   clientLine('Error: '+msg,'err');p.builds.unshift({at:Date.now(),ok:false,msg:msg.split('\n')[0]});btSet('failed',jobId);
- }finally{persistProject(p);}}
+ }finally{S._building=false;persistProject(p);}}
 function extractBuildErrors(log){log=String(log||'');const L=log.split('\n');const pat=/FAILURE: Build failed|What went wrong|Execution failed for task|(^|\s)e: |\berror:|Unresolved reference|Cannot find symbol|Compilation (error|failed)|resource linking failed|AAPT|Manifest merger failed|Duplicate class|Could not (resolve|find|get)|GradleException|Task :\S+ FAILED|BUILD FAILED|##\[error\]|Exception in thread|exit code [1-9]/i;const hit=[];L.forEach((l,i)=>{if(pat.test(l))hit.push(i)});const rg=[];hit.forEach(i=>{const a=Math.max(0,i-3),z=Math.min(L.length-1,i+8);if(rg.length&&a<=rg[rg.length-1][1]+1)rg[rg.length-1][1]=Math.max(rg[rg.length-1][1],z);else rg.push([a,z])});const blocks=rg.map(([a,z])=>L.slice(a,z+1).join('\n')).slice(0,8);const m1=log.match(/Execution failed for task '([^']+)'/)||log.match(/Task (:\S+) FAILED/),loc=[];for(const m of log.matchAll(/([\w\-.\/\\:]+\.(?:kt|java|xml|gradle|kts)):(\d+)/g)){const f=m[1].replace(/^file:\/\//,'');if(loc.length<5&&!loc.some(x=>x.file===f))loc.push({file:f,line:+m[2]})}const ec=log.match(/Process completed with exit code (\d+)/);return{blocks,hits:hit.length,failedTask:m1?m1[1]:'',locations:loc,exitCode:ec?ec[1]:'',first:hit.length?L[hit[0]].trim():''};}
 function classify(L){const ex=extractBuildErrors(L.logs);const real=ex.hits>0&&/FAILURE: Build failed|Execution failed|(^|\s)e: |\berror:|Unresolved|Cannot find symbol|Could not (resolve|find)|AAPT|Manifest merger|Duplicate class|GradleException|Compilation/i.test(L.logs);return{kind:real?'project':'infrastructure',ex};}
 function errSummary(t){t=String(t||'');return t.length>300000?t.slice(0,30000)+'\n...[truncated for prompt transport]...\n'+t.slice(-270000):t;}
