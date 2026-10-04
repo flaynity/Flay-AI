@@ -750,7 +750,11 @@ async function providerChat(o){const p=o.provider;if(!p)throw new Error('No AI p
    let j;try{j=JSON.parse(data)}catch(_){continue}if(j.error)throw new Error('Provider error: '+String(j.error.message||JSON.stringify(j.error)).slice(0,300));
    const d=(j.choices&&j.choices[0]&&j.choices[0].delta)||{};const r=d.reasoning_content||d.reasoning||'';const c=d.content||'';
    if(r&&o.onReasoning)o.onReasoning(r);if(c){got=true;if(o.onDelta)o.onDelta(c);}}
- return '';}
+  }
+ }
+ if(!got)throw new Error('The model returned an empty response. Check the model name and token limit.');
+ return '';
+}
 async function fetchModels(p){const h={};if(p.apiKey)h.Authorization='Bearer '+p.apiKey;
  const res=await fetch(modelsUrl(p.baseUrl),{headers:h});if(!res.ok)throw new Error(describeHttp(res.status,''));
  const j=await res.json();return((j.data||j.models||[]).map(m=>m.id||m.name).filter(Boolean));}
@@ -1885,6 +1889,8 @@ document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;
  if(drawer.classList.contains('open')){closeDrawer();return;}
  const cur=$('.screen.active');if(cur&&cur.id!=='screen-chat')goBack();});
 
+window.addEventListener('error',e=>{const m=String(e.message||'JavaScript error');console.error('[Flay AI]',e.error||e);if(typeof toast==='function'&&m)toast('App error: '+m.slice(0,220),'err');});
+window.addEventListener('unhandledrejection',e=>{const m=String(e.reason?.message||e.reason||'Unhandled promise error');console.error('[Flay AI]',e.reason);if(typeof toast==='function'&&m)toast('App error: '+m.slice(0,220),'err');});
 (async function boot(){loadSettings();applyTheme();
  try{const[chats,projects]=await Promise.all([DB.all('chats'),DB.all('projects')]);
   S.chats=chats.sort((a,b)=>b.updatedAt-a.updatedAt);S.projects=projects;}catch(e){/* storage unavailable: app still runs in-memory */}
