@@ -2057,7 +2057,7 @@ async function genOne(am,it,before,refs){
    u+='\nCURRENT CONTENT OF '+it.path+':\n'+before+'\n'+refs+'\n';
    u+='Return the smallest possible change. Output ONLY either: (A) one or more exact SEARCH/REPLACE edit blocks, or (B) the complete updated file content. Do not explain. Do not use markdown fences. If no change is needed, return the current file content exactly.\n';
    u+='Edit block format:\n<<<<<<< SEARCH\n(exact existing lines)\n=======\n(replacement lines)\n>>>>>>> REPLACE\n';
-   if(attempt>1)u+='\nRETRY: Return the actual updated file content or a valid matching edit block. Do not return prose.';
+   if(attempt>1)u+='\nRETRY: The previous result made NO CHANGE. You must now apply the requested modification. Return a real changed file or a matching SEARCH/REPLACE block. Do not return the unchanged file.';
   }else{
    u+=refs+'\nOutput ONLY the complete content of the new file. No code fences, no explanation.';
    if(attempt>1)u+='\nRETRY: Return the complete file content only.';
@@ -2067,10 +2067,10 @@ async function genOne(am,it,before,refs){
    last=buf.trim();
    if(it.action==='modify'){
     const blocks=/(?:<<<<<<< SEARCH)[\\s\\S]*?(?:=======[\\s\\S]*?)>>>>>>> REPLACE/.test(last);
-    if(blocks){applyEdits(before,last);return last;}
+    if(blocks){const applied=applyEdits(before,last);if(applied===before)throw new Error('The generated edit made no change to the current file.');return last;}
     const candidate=cleanGenerated(it.path,last).trim();
     if(candidate){
-     if(candidate===before.trim())return '<<<<<<< SEARCH\n'+before+'\n=======\n'+before+'\n>>>>>>> REPLACE';
+     if(candidate===before.trim())throw new Error('The generated file is unchanged. The requested modification must make a real change.');
      return '<<<<<<< SEARCH\n'+before+'\n=======\n'+candidate+'\n>>>>>>> REPLACE';
     }
     throw new Error('The model returned empty file content.');
@@ -2099,7 +2099,7 @@ async function genOne(am,it,before,refs){
     const out=await genOne(am,it,before,refs);
     after=it.action==='create'?cleanGenerated(it.path,out):applyEdits(before,out);
     if(it.action==='create'&&!after.trim())throw new Error('The model returned an empty file.');}
-   it.status='validating';refreshQueue(am);if(it.action!=='delete'){const ve=validateCode(it.path,after);if(ve)throw new Error('Validation failed - '+ve+' The file was not saved.');if(it.action==='modify'&&after===before)throw new Error('The edit produced no change to the file, so nothing was saved.');}it.status='saving';refreshQueue(am);
+   it.status='validating';refreshQueue(am);if(it.action!=='delete'){const ve=validateCode(it.path,after);if(ve)throw new Error('Validation failed - '+ve+' The file was not saved.');if(it.action==='modify'&&after===before)throw new Error('The generated edit made no change. Retry the requested modification.');}it.status='saving';refreshQueue(am);
    if(it.action==='delete')delete p.files[it.path];else p.files[it.path]={content:after};
    const kind=it.action==='delete'?'delete':existed?'modify':'create',a=after.split('\n'),b=before.split('\n');
    am.ops.results=am.ops.results.filter(r=>r.path!==it.path);am.ops.results.push({path:it.path,action:kind,ok:true});
