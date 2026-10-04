@@ -2046,31 +2046,41 @@ const AG_CHAT_SYS="You are Flay AI, a friendly conversational coding assistant w
 async function agentChat(am,p,text,atts,hist){let ctx='ACTIVE PROJECT: '+p.name+'\nFILES IN THE CODE TAB (paths only):\n'+Object.keys(p.files).sort().slice(0,300).join('\n');atts.forEach(a=>{if(typeof a.content==='string')ctx+='\n\n### ATTACHED FILE '+(a.path||a.name)+'\n'+a.content.slice(0,20000)});await providerChat({provider:activeProvider(),messages:[{role:'system',content:AG_CHAT_SYS},...hist,{role:'user',content:(text||'Hello')+'\n\n[Project context]\n'+ctx}],signal:S.agentAbort.signal,onDelta:d=>{am.content+=d;updateLive(am,'#agentMsgs');},onReasoning:think(am)});}
 async function genOne(am,it,before,refs){
  let last='';
- for(let attempt=1;attempt<=3;attempt++){
+ for(let attempt=1;attempt<=2;attempt++){
   let buf='';
   let u='TASK:\n'+am.task+'\n\nPLAN: '+(am.plan||'')+'\nFILE: '+it.path+' ('+it.action+') - '+(it.reason||'')+'\n';
   if(am.errText)u+='\nBUILD ERROR:\n'+errSummary(am.errText)+'\n';
+  const p=activeProvider();
+  if(!p)throw new Error('No AI provider is configured.');
   if(it.action==='modify'){
    u+='\nCURRENT CONTENT OF '+it.path+':\n'+before+'\n'+refs+'\n';
-   u+='Output ONLY valid edit blocks, nothing else. You MUST return at least one edit block. Exact format:\n<<<<<<< SEARCH\n(exact existing lines copied from the current file)\n=======\n(replacement lines)\n>>>>>>> REPLACE\n';
-   u+='The SEARCH text must exist exactly in the current file and each block must make a real requested change. Never return a summary, explanation, code fence, full-file replacement, or JSON.';
-   if(attempt>1)u+='\n\nRETRY '+attempt+': The previous response contained no usable edit block or did not match the current file. Re-read the current file above and return a valid matching edit block now. Do not give prose.';
+   u+='Return the smallest possible change. Output ONLY either: (A) one or more exact SEARCH/REPLACE edit blocks, or (B) the complete updated file content. Do not explain. Do not use markdown fences. If no change is needed, return the current file content exactly.\n';
+   u+='Edit block format:\n<<<<<<< SEARCH\n(exact existing lines)\n=======\n(replacement lines)\n>>>>>>> REPLACE\n';
+   if(attempt>1)u+='\nRETRY: Return the actual updated file content or a valid matching edit block. Do not return prose.';
   }else{
    u+=refs+'\nOutput ONLY the complete content of the new file. No code fences, no explanation.';
-   if(attempt>1)u+='\n\nRETRY '+attempt+': The previous response was empty or invalid. Return the complete file content only.';
+   if(attempt>1)u+='\nRETRY: Return the complete file content only.';
   }
   try{
-   await providerChat({provider:activeProvider(),messages:[{role:'system',content:AG_SYS},{role:'user',content:u}],signal:S.agentAbort.signal,onDelta:d=>{buf+=d;},onReasoning:think(am)});
-   last=buf;
+   await providerChat({provider:{...p,supportsReasoning:false},messages:[{role:'system',content:AG_SYS},{role:'user',content:u}],signal:S.agentAbort.signal,maxTokens:Math.min(4096,Math.max(768,Math.ceil((before.length+u.length)/3))),onDelta:d=>{buf+=d;}});
+   last=buf.trim();
    if(it.action==='modify'){
-    if(!/<<<<<<< SEARCH[\\s\\S]*?=======[\\s\\S]*?>>>>>>> REPLACE/.test(buf))throw new Error('The model returned no usable edit blocks.');
-    applyEdits(before,buf);
-   }else if(!unfence(buf).trim())throw new Error('The model returned an empty file.');
-   return buf;
+    const blocks=/(?:<<<<<<< SEARCH)[\\s\\S]*?(?:=======[\\s\\S]*?)>>>>>>> REPLACE/.test(last);
+    if(blocks){applyEdits(before,last);return last;}
+    const candidate=unfence(last).trim();
+    if(candidate){
+     if(candidate===before.trim())return '<<<<<<< SEARCH\n'+before+'\n=======\n'+before+'\n>>>>>>> REPLACE';
+     return '<<<<<<< SEARCH\n'+before+'\n=======\n'+candidate+'\n>>>>>>> REPLACE';
+    }
+    throw new Error('The model returned empty file content.');
+   }
+   const candidate=unfence(last);
+   if(candidate.trim())return candidate;
+   throw new Error('The model returned an empty file.');
   }catch(e){
    if(e.name==='AbortError')throw e;
    last=String(e.message||e);
-   if(attempt===3)throw new Error('File generation failed after 3 attempts: '+last);
+   if(attempt===2)throw new Error('File generation failed: '+last);
   }
  }
  throw new Error('File generation failed: '+last);
