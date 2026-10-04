@@ -2029,7 +2029,8 @@ function filesInText(p,text,errOnly){let t=String(text||'');
   ids.forEach(id=>{const h=ks.find(x=>x.split('/').pop().replace(/\.\w+$/,'')===id);if(h&&!out.includes(h))out.push(h);});
   if(!out.length)for(const id of ids){const h=Object.entries(p.files).find(([x,f])=>!f.binary&&new RegExp('\\b(class|object|interface)\\s+'+id+'\\b').test(f.content||''));if(h){out.push(h[0]);break;}}}
  return out.slice(0,3);}
-const unfence=s=>String(s).replace(/^\s*\x60\x60\x60[\w+-]*\r?\n/,'').replace(/\r?\n\x60\x60\x60\s*$/,'');
+const unfence=s=>String(s).replace(/^\\uFEFF/,'').replace(/^\\s*\\x60\\x60\\x60[\\w+-]*\\r?\\n/,'').replace(/\\r?\\n\\x60\\x60\\x60\\s*$/,'').trim();
+function cleanGenerated(path,s){let v=unfence(s);const ext=(path.split('.').pop()||'').toLowerCase();if((ext==='xml'||ext==='svg')&&v&&!v.startsWith('<')){const i=v.indexOf('<');if(i>0)v=v.slice(i);}return v;}
 function applyEdits(src,out){const re=/<<<<<<< SEARCH\r?\n([\s\S]*?)\r?\n?=======\r?\n([\s\S]*?)\r?\n?>>>>>>> REPLACE/g;let m,n=0,res=src;
  while((m=re.exec(out))){const s=m[1],i=res.indexOf(s);if(!s||i<0)throw new Error('Edit block did not match the current file. Retry re-reads the file and regenerates.');if(res.indexOf(s,i+1)>=0)throw new Error('Edit block matched more than once.');res=res.slice(0,i)+m[2]+res.slice(i+s.length);n++;}
  if(!n)throw new Error('The model returned no edit blocks.');return res;}
@@ -2067,14 +2068,14 @@ async function genOne(am,it,before,refs){
    if(it.action==='modify'){
     const blocks=/(?:<<<<<<< SEARCH)[\\s\\S]*?(?:=======[\\s\\S]*?)>>>>>>> REPLACE/.test(last);
     if(blocks){applyEdits(before,last);return last;}
-    const candidate=unfence(last).trim();
+    const candidate=cleanGenerated(it.path,last).trim();
     if(candidate){
      if(candidate===before.trim())return '<<<<<<< SEARCH\n'+before+'\n=======\n'+before+'\n>>>>>>> REPLACE';
      return '<<<<<<< SEARCH\n'+before+'\n=======\n'+candidate+'\n>>>>>>> REPLACE';
     }
     throw new Error('The model returned empty file content.');
    }
-   const candidate=unfence(last);
+   const candidate=cleanGenerated(it.path,last);
    if(candidate.trim())return candidate;
    throw new Error('The model returned an empty file.');
   }catch(e){
@@ -2096,7 +2097,7 @@ async function genOne(am,it,before,refs){
     if(existed)agAct(am,'Read '+it.path,'file');
     it.status='generating';refreshQueue(am);
     const out=await genOne(am,it,before,refs);
-    after=it.action==='create'?unfence(out):applyEdits(before,out);
+    after=it.action==='create'?cleanGenerated(it.path,out):applyEdits(before,out);
     if(it.action==='create'&&!after.trim())throw new Error('The model returned an empty file.');}
    it.status='validating';refreshQueue(am);if(it.action!=='delete'){const ve=validateCode(it.path,after);if(ve)throw new Error('Validation failed - '+ve+' The file was not saved.');if(it.action==='modify'&&after===before)throw new Error('The edit produced no change to the file, so nothing was saved.');}it.status='saving';refreshQueue(am);
    if(it.action==='delete')delete p.files[it.path];else p.files[it.path]={content:after};
