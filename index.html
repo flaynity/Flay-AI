@@ -1863,8 +1863,8 @@ function renderBuildPane(){const p=S.project;if(!p)return;
  
  $('#bjBuildBtn').disabled = false;
  
- $('#bjApkDl').classList.toggle('hidden',!S._apkUrl);
- if(S._apkUrl){$('#bjApkDl').onclick=()=>downloadApkFromLink(S._apkUrl,p.name.replace(/\s+/g,'-')+'-debug.apk');}
+ $('#bjApkDl').classList.toggle('hidden',!(S._apkUrl&&S._apkFor===p.id));
+ if(S._apkUrl&&S._apkFor===p.id){$('#bjApkDl').onclick=()=>downloadApkFromLink(S._apkUrl,p.name.replace(/\s+/g,'-')+'-debug.apk');}
  
  $('#bjHistory').innerHTML=(p.builds&&p.builds.length)?p.builds.slice(0,20).map(b=>`
   <div class="premium-history-item">
@@ -1932,7 +1932,7 @@ function syncLog(text){const h=$('#btLog');text=String(text||'');const prev=S._l
 function btSet(state,jobId,label){$('#btDot').className='bt-dot '+(state==='running'?'run':state==='success'?'ok':state==='failed'?'fail':'');
  $('#btStatus').textContent=label||(state==='running'?'Build running...':state==='success'?'Build completed successfully.':state==='failed'?'Build failed.':'Preparing...');
  $('#btFix').classList.toggle('hidden',state!=='failed');if(jobId)$('#btJob').textContent='Job ID: '+jobId;}
-async function startBuild(){const p=S.project;if(!p)return;
+async function startBuild(){const p=S.project;if(!p)return;if(S._building){toast('A build is already running.','warn');return;}S._building=true;
  S._lastBuild=null;S._buildJobId='';S._logShown='';S._apkUrl='';termScrollLock=true;
  infoEl().classList.add('hidden');$('#btLog').innerHTML='';$('#btOpenActions').classList.add('hidden');$('#btJob').textContent='Packaging project...';btSet('running','','Packaging...');
  clientLine('$ package project '+p.name,'cmd');let jobId='',b={run:{},jobs:[]};
@@ -1946,10 +1946,10 @@ async function startBuild(){const p=S.project;if(!p)return;
   if(!j||!j.ok||!j.jobId)throw new Error('Invalid build response: '+raw.slice(0,300));
   jobId=String(j.jobId);S._buildJobId=jobId;const statusUrl=String(j.statusUrl||BASE+'/build/status/'+encodeURIComponent(jobId));
   clientLine('Build job created: '+jobId,'ok');btSet('running',jobId,'Waiting for GitHub Actions...');
-  const t0=Date.now();
+  const t0=Date.now();let pollFail=0;
   while(Date.now()-t0<30*60*1000){
    await sleep(2500);
-   const sr=await fetch(statusUrl,{headers:{Accept:'application/json'},signal:withTimeout(30000)});const sraw=await sr.text();let s=null;try{s=JSON.parse(sraw)}catch(_){}
+   let sr;try{sr=await fetch(statusUrl,{headers:{Accept:'application/json'},signal:withTimeout(30000)});}catch(pe){if(++pollFail>6)throw pe;clientLine('Status check failed ('+(pe.message||'network')+'), retrying...','dim');continue;}pollFail=0;const sraw=await sr.text();let s=null;try{s=JSON.parse(sraw)}catch(_){}
    if(!sr.ok){const e=new Error(describeHttp(sr.status,sraw));e.raw=sraw;throw e;}
    if(!s||!s.status)throw new Error('Invalid status response: '+sraw.slice(0,300));
    b=normBuild(s);renderInfo(b);
@@ -1960,7 +1960,7 @@ async function startBuild(){const p=S.project;if(!p)return;
    S._lastBuild={b,logs,jobId,state,error:s.error?String(s.error):''};
    const url=s.htmlUrl||b.run.url;if(url){$('#btOpenActions').classList.remove('hidden');$('#btOpenActions').onclick=()=>window.open(url,'_blank','noopener');}
    btSet(state,jobId,state==='running'?'Status: '+s.status+(b.run.status?' · run '+b.run.status:''):'');
-   if(state==='success'){S._apkUrl=String(s.apkUrl||BASE+'/build/download/'+encodeURIComponent(jobId));p.builds.unshift({at:Date.now(),ok:true,msg:'APK build succeeded (job '+jobId+(b.run.number?', run #'+b.run.number:'')+').'});return;}
+   if(state==='success'){S._apkUrl=String(s.apkUrl||BASE+'/build/download/'+encodeURIComponent(jobId));S._apkFor=p.id;p.builds.unshift({at:Date.now(),ok:true,msg:'APK build succeeded (job '+jobId+(b.run.number?', run #'+b.run.number:'')+').'});return;}
    if(state==='failed'){p.builds.unshift({at:Date.now(),ok:false,msg:(S._lastBuild.error||'GitHub Actions build failed')+' (job '+jobId+')'});return;}
   }
   throw new Error('Timed out waiting for the build server.');
@@ -2002,6 +2002,8 @@ function swap(m,sel,html,before){const mel=$('#agentMsgs [data-mid="'+m.id+'"]')
 const refreshQueue=m=>swap(m,'.card.queue',queueCard(m),'.ai-st,.msg-body');
 function agAct(m,label,ic,st){m.activity.push({icon:ic,label,status:st||'done'});swap(m,'.card.act',activityCard(m));}
 const think=(am)=>r=>{if(!am.thinkT0)am.thinkT0=Date.now();am.reasoning=(am.reasoning||'')+r;updateLive(am,'#agentMsgs');};
+const AG_CHAT_SYS="You are Flay AI, a friendly conversational coding assistant working inside the active project. Answer the latest user message directly and naturally, in the language the user wrote it in. For questions, greetings, identity or capability questions, do not edit files. Never mention internal planning or tools.";
+async function agentChat(am,p,text,atts,hist){let ctx='ACTIVE PROJECT: '+p.name+'\nFILES IN THE CODE TAB (paths only):\n'+Object.keys(p.files).sort().slice(0,300).join('\n');atts.forEach(a=>{if(typeof a.content==='string')ctx+='\n\n### ATTACHED FILE '+(a.path||a.name)+'\n'+a.content.slice(0,20000)});await providerChat({provider:activeProvider(),messages:[{role:'system',content:AG_CHAT_SYS},...hist,{role:'user',content:(text||'Hello')+'\n\n[Project context]\n'+ctx}],signal:S.agentAbort.signal,onDelta:d=>{am.content+=d;updateLive(am,'#agentMsgs');},onReasoning:think(am)});}
 async function genOne(am,it,before,refs){let buf='';
  let u='TASK:\n'+am.task+'\n\nPLAN: '+(am.plan||'')+'\nFILE: '+it.path+' ('+it.action+') - '+(it.reason||'')+'\n';
  if(am.errText)u+='\nBUILD ERROR:\n'+errSummary(am.errText)+'\n';
