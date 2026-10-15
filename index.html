@@ -2252,8 +2252,12 @@ document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;
 #screen-project #pjTabs{outline:none!important}
 /* Keep every project tab's page content below the floating tab box */
 /* Let page content extend behind the floating tab capsule */
+/* Start each tab's page content immediately below the floating tabs */
 #screen-project>.pane.on{padding-top:0!important;box-sizing:border-box!important}
-#screen-project>.pane.on>.scrollpane:first-child{margin-top:0!important}
+#screen-project #pjBuild>.scrollpane,
+#screen-project #pjAgent>.scrollpane{padding-top:76px!important;box-sizing:border-box!important}
+#screen-project #pjCode>.toolbar{margin-top:76px!important}
+#screen-project #pjCode>.scrollpane{padding-top:76px!important;box-sizing:border-box!important}
 #screen-project #pjTabs{top:calc(env(safe-area-inset-top) + 2px)!important}
 
 #screen-project #pjTabs button{flex:1!important;min-width:0!important;background:transparent!important;border:0!important;border-radius:9999px!important;box-shadow:none!important;color:var(--text2)!important}
