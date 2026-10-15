@@ -368,6 +368,9 @@ input,textarea,select{font:inherit;color:inherit}
 /* Unified premium back button design across all pages, matching App Information */
 .topbar>.ibtn[data-back],#screen-pform .topbar>.ibtn{width:46px;height:46px;border:1.5px solid transparent;border-radius:16px;background:linear-gradient(var(--pc, #0E0E12),var(--pc, #0E0E12)) padding-box,linear-gradient(135deg,#FF1B7A,#3B82F6) border-box;box-shadow:0 0 18px rgba(255,27,122,.25)}
 [data-theme=light] .topbar>.ibtn[data-back],[data-theme=light] #screen-pform .topbar>.ibtn{background:linear-gradient(#FFFFFF,#FFFFFF) padding-box,linear-gradient(135deg,#FF1B7A,#3B82F6) border-box}
+/* Final override: every page back button must exactly match App Information's premium button */
+section.screen .topbar>button.ibtn[data-back]{width:46px!important;height:46px!important;border:1.5px solid transparent!important;border-radius:16px!important;background:linear-gradient(var(--pc, #07080F),var(--pc, #07080F)) padding-box,linear-gradient(135deg,#FF1B7A,#3B82F6) border-box!important;box-shadow:0 0 18px rgba(255,27,122,.25)!important}
+[data-theme=light] section.screen .topbar>button.ibtn[data-back]{background:linear-gradient(#FFFFFF,#FFFFFF) padding-box,linear-gradient(135deg,#FF1B7A,#3B82F6) border-box!important}
 </style>
 </head>
 <body>
