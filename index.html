@@ -371,6 +371,9 @@ input,textarea,select{font:inherit;color:inherit}
 /* Final override: every page back button must exactly match App Information's premium button */
 section.screen .topbar>button.ibtn[data-back]{width:46px!important;height:46px!important;border:1.5px solid transparent!important;border-radius:16px!important;background:linear-gradient(var(--pc, #07080F),var(--pc, #07080F)) padding-box,linear-gradient(135deg,#FF1B7A,#3B82F6) border-box!important;box-shadow:0 0 18px rgba(255,27,122,.25)!important}
 [data-theme=light] section.screen .topbar>button.ibtn[data-back]{background:linear-gradient(#FFFFFF,#FFFFFF) padding-box,linear-gradient(135deg,#FF1B7A,#3B82F6) border-box!important}
+/* Build Project workspace: hide close button and project name in top bar */
+#screen-project #pjClose,#screen-project #pjTitle{display:none!important}
+
 /* Upload Project icon: gradient border and pink glow */
 #screen-projects #btnPrZip{width:46px;height:46px;border:1.5px solid transparent!important;border-radius:16px!important;background:linear-gradient(var(--pc, #07080F),var(--pc, #07080F)) padding-box,linear-gradient(135deg,#FF1B7A,#3B82F6) border-box!important;box-shadow:0 0 18px rgba(255,27,122,.25)!important;transition:box-shadow .18s ease,transform .18s ease}
 #screen-projects #btnPrZip:active{box-shadow:0 0 23px rgba(255,27,122,.34)!important;transform:scale(.97)}
