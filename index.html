@@ -2237,9 +2237,11 @@ document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;
 :root:not([data-theme=light]) #shFile>.ic{background:linear-gradient(135deg,#3B5BFF,#6D3BFF)}
 :root:not([data-theme=light]) #shPlugins>.ic{background:linear-gradient(135deg,#3DDC5A,#16A34A)}
 /* Code / Agent / Build tabs: floating at screen top with transparent container */
-#screen-project #pjTabs{position:fixed!important;top:calc(env(safe-area-inset-top) + 8px)!important;left:14px!important;right:14px!important;z-index:60!important;margin:0!important;padding:0!important;gap:6px!important;background:transparent!important;border:0!important;border-radius:0!important;box-shadow:none!important}
-#screen-project #pjTabs button{background:transparent!important;border:0!important;box-shadow:none!important}
-#screen-project #pjTabs button.on{background:linear-gradient(90deg,#FF2A6D,#B01CB0)!important;color:#fff!important;box-shadow:0 4px 16px rgba(255,27,122,.38)!important}
+/* Code / Agent / Build: one shared floating segmented control */
+#screen-project #pjTabs{position:fixed!important;top:calc(env(safe-area-inset-top) + 10px)!important;left:14px!important;right:14px!important;z-index:60!important;display:flex!important;gap:5px!important;margin:0!important;padding:5px!important;border:1px solid rgba(255,255,255,.12)!important;border-radius:9999px!important;background:rgba(14,14,19,.94)!important;box-shadow:0 8px 24px rgba(0,0,0,.22)!important;backdrop-filter:blur(14px)!important}
+#screen-project #pjTabs button{flex:1!important;min-width:0!important;background:transparent!important;border:0!important;border-radius:9999px!important;box-shadow:none!important;color:var(--text2)!important}
+#screen-project #pjTabs button.on{background:linear-gradient(90deg,#FF2A6D,#B01CB0)!important;color:#fff!important;box-shadow:0 4px 16px rgba(255,27,122,.35)!important}
+[data-theme=light] #screen-project #pjTabs{background:rgba(255,255,255,.94)!important;border-color:rgba(0,0,0,.1)!important;box-shadow:0 8px 24px rgba(0,0,0,.12)!important}
 
 :root:not([data-theme=light]) .tabs{margin:12px 15px 18px;padding:7px;background:#0E0E13;border:1px solid rgba(255,255,255,.1)}
 :root:not([data-theme=light]) .tabs button{padding:12px;font-size:15px;color:#9AA0B8}
