@@ -2239,7 +2239,9 @@ document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;
 /* Code / Agent / Build tabs: floating at screen top with transparent container */
 /* Code / Agent / Build: one shared floating segmented control */
 /* Remove the hidden project header's full-width divider so only the floating capsule remains */
-#screen-project>.topbar{display:none!important;border:0!important;box-shadow:none!important}
+#screen-project>.topbar{display:none!important;border:0!important;box-shadow:none!important;background:transparent!important;outline:0!important}
+#screen-project #pjTabs::before,#screen-project #pjTabs::after{content:none!important;display:none!important}
+#screen-project #pjTabs{outline:0!important;border-top-color:transparent!important;border-bottom-color:transparent!important}
 /* Translucent floating Code / Agent / Build capsule */
 #screen-project #pjTabs{position:fixed!important;top:calc(env(safe-area-inset-top) + 10px)!important;left:14px!important;right:14px!important;z-index:100!important;display:flex!important;gap:5px!important;margin:0!important;padding:5px!important;border:1px solid rgba(255,255,255,.12)!important;border-radius:9999px!important;background:rgba(14,14,19,.20)!important;box-shadow:0 5px 18px rgba(0,0,0,.10)!important;backdrop-filter:blur(5px)!important;-webkit-backdrop-filter:blur(5px)!important}
 /* Keep every project tab's page content below the floating tab box */
