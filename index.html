@@ -2236,6 +2236,11 @@ document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;
 :root:not([data-theme=light]) #shPhoto>.ic{background:linear-gradient(135deg,#00C9A7,#0891B2)}
 :root:not([data-theme=light]) #shFile>.ic{background:linear-gradient(135deg,#3B5BFF,#6D3BFF)}
 :root:not([data-theme=light]) #shPlugins>.ic{background:linear-gradient(135deg,#3DDC5A,#16A34A)}
+/* Code / Agent / Build tabs: floating at screen top with transparent container */
+#screen-project #pjTabs{position:fixed!important;top:calc(env(safe-area-inset-top) + 8px)!important;left:14px!important;right:14px!important;z-index:60!important;margin:0!important;padding:0!important;gap:6px!important;background:transparent!important;border:0!important;border-radius:0!important;box-shadow:none!important}
+#screen-project #pjTabs button{background:transparent!important;border:0!important;box-shadow:none!important}
+#screen-project #pjTabs button.on{background:linear-gradient(90deg,#FF2A6D,#B01CB0)!important;color:#fff!important;box-shadow:0 4px 16px rgba(255,27,122,.38)!important}
+
 :root:not([data-theme=light]) .tabs{margin:12px 15px 18px;padding:7px;background:#0E0E13;border:1px solid rgba(255,255,255,.1)}
 :root:not([data-theme=light]) .tabs button{padding:12px;font-size:15px;color:#9AA0B8}
 :root:not([data-theme=light]) .tabs button.on{background:linear-gradient(90deg,#FF2A6D,#B01CB0);color:#fff;box-shadow:0 6px 22px rgba(255,27,122,.45)}
