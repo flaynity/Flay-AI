@@ -485,18 +485,7 @@ input,textarea,select{font:inherit;color:inherit}
       <span class="dr-arrow"><svg class="ic sm"><use href="#i-chev-r"/></svg></span>
     </button>
   </nav>
-  <div class="dr-foot">
-    <button id="themeBtn" class="dr-theme-card">
-      <div class="th-left">
-        <span class="th-ico" id="themeIco"><svg class="ic sm"><use href="#i-sun"/></svg></span>
-        <div class="th-text">
-          <b id="themeLbl">Light theme</b>
-          <span>Flay AI · local workspace · the project is the source of truth</span>
-        </div>
-      </div>
-      <span class="th-toggle active"><span class="th-knob"></span></span>
-    </button>
-  </div>
+  <div class="dr-foot"></div>
 </aside>
 
 <!-- HISTORY -->
@@ -830,22 +819,16 @@ const DB=(()=>{let dbp;
  async function tx(store,mode,fn){const db=await open();return new Promise((res,rej)=>{const t=db.transaction(store,mode);const r=fn(t.objectStore(store));t.oncomplete=()=>res(r&&r.result);t.onerror=()=>rej(t.error);});}
  return{put:(s,v)=>tx(s,'readwrite',o=>o.put(v)),del:(s,id)=>tx(s,'readwrite',o=>o.delete(id)),all:s=>tx(s,'readonly',o=>o.getAll()),get:(s,id)=>tx(s,'readonly',o=>o.get(id))};})();
 /* ---------- global state ---------- */
-const S={theme:'dark',settings:{providers:[],selectedProviderId:null,reasoning:'balanced'},
+const S={settings:{providers:[],selectedProviderId:null,reasoning:'balanced'},
  chats:[],chat:null,projects:[],project:null,navStack:[],
  streaming:false,abort:null,agentStreaming:false,agentAbort:null,
  pendingAttachments:[],agentAttachments:[],webAccess:false,selection:null,expanded:new Set(),techSel:null,appDraft:null,sheetTarget:'chat',pinned:true,zipMode:'new'};
 const activeProvider=()=>S.settings.providers.find(p=>p.id===S.settings.selectedProviderId)||S.settings.providers[0]||null;
-function saveSettings(){try{localStorage.setItem('flay.settings.v1',JSON.stringify({providers:S.settings.providers,selectedProviderId:S.settings.selectedProviderId,reasoning:S.settings.reasoning,theme:S.theme,lastChatId:S.chat?S.chat.id:null}));}catch(e){}}
+function saveSettings(){try{localStorage.setItem('flay.settings.v1',JSON.stringify({providers:S.settings.providers,selectedProviderId:S.settings.selectedProviderId,reasoning:S.settings.reasoning,lastChatId:S.chat?S.chat.id:null}));}catch(e){}}
 function loadSettings(){try{const s=JSON.parse(localStorage.getItem('flay.settings.v1')||'{}');
  if(s.providers)S.settings.providers=s.providers;
- if(s.selectedProviderId)S.settings.selectedProviderId=s.selectedProviderId;if(s.reasoning)S.settings.reasoning=s.reasoning;if(s.theme)S.theme=s.theme;}catch(e){}}
-function applyTheme(){
- document.documentElement.setAttribute('data-theme',S.theme);
- const isDark=S.theme==='dark';
- $('#themeIco').innerHTML=`<use href="#i-${isDark?'sun':'moon'}"/>`;
- $('#themeLbl').textContent=isDark?'Light theme':'Dark theme';
- const tg=$('.th-toggle');if(tg)tg.classList.toggle('active',isDark);
-}
+ if(s.selectedProviderId)S.settings.selectedProviderId=s.selectedProviderId;if(s.reasoning)S.settings.reasoning=s.reasoning;}catch(e){}}
+function applyTheme(){document.documentElement.setAttribute('data-theme','dark');}
 const persistChat=()=>S.chat&&DB.put('chats',S.chat);
 const persistProject=(p=S.project)=>p&&DB.put('projects',p);
 /* ---------- markdown ---------- */
@@ -1102,7 +1085,7 @@ const drawer=$('#drawer'),scrim=$('#scrim');
 function openDrawer(){drawer.classList.add('open');scrim.classList.remove('hidden');}
 function closeDrawer(){drawer.classList.remove('open');scrim.classList.add('hidden');}
 $('#btnMenu').onclick=openDrawer;scrim.onclick=closeDrawer;
-$('#themeBtn').onclick=()=>{S.theme=S.theme==='dark'?'light':'dark';applyTheme();saveSettings();};
+
 $$('#drawer nav button').forEach(b=>b.onclick=()=>{const n=b.dataset.nav;closeDrawer();
  if(n==='history'){renderHistory();openScreen('screen-history');}
  else if(n==='projects'){renderProjects();openScreen('screen-projects');}
