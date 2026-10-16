@@ -543,7 +543,7 @@ section.screen .topbar>button.ibtn[data-back]{width:46px!important;height:46px!i
 <!-- PROVIDERS -->
 <section class="screen" id="screen-providers">
   <header class="topbar">
-    <button class="ibtn" data-back><svg class="ic"><use href="#i-back"/></svg></button>
+    <button class="ibtn" data-menu aria-label="Menu"><svg class="ic"><use href="#i-menu"/></svg></button>
     <div class="tb-title">Set Up AI</div>
     <button class="ibtn" id="btnPvAdd" aria-label="Add provider"><svg class="ic"><use href="#i-plus"/></svg></button>
   </header>
@@ -590,7 +590,7 @@ section.screen .topbar>button.ibtn[data-back]{width:46px!important;height:46px!i
 <!-- PROJECTS -->
 <section class="screen" id="screen-projects">
   <header class="topbar">
-    <button class="ibtn" data-back><svg class="ic"><use href="#i-back"/></svg></button>
+    <button class="ibtn" data-menu aria-label="Menu"><svg class="ic"><use href="#i-menu"/></svg></button>
     <div class="tb-title">Project Information</div>
     <button class="ibtn" id="btnPrZip" aria-label="Import ZIP project"><svg class="ic"><use href="#i-upload"/></svg></button>
   </header>
@@ -603,7 +603,7 @@ section.screen .topbar>button.ibtn[data-back]{width:46px!important;height:46px!i
 <!-- TECH SELECT (Screenshot 1) -->
 <section class="screen" id="screen-tech">
   <header class="topbar">
-    <button class="ibtn" data-back><svg class="ic"><use href="#i-back"/></svg></button>
+    <button class="ibtn" data-menu aria-label="Menu"><svg class="ic"><use href="#i-menu"/></svg></button>
     <div class="tb-title">Build Android App</div>
   </header>
   <div class="scrollpane" style="display:flex"><div class="techwrap" style="flex:1">
@@ -1120,7 +1120,8 @@ function openScreen(id,opts={}){const cur=$('.screen.active');
  $$('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');closeDrawer();}
 function goBack(){const id=S.navStack.pop()||'screen-chat';$$('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');
  if(id==='screen-project'&&S.project)renderPjAll();}
-$$('[data-back]').forEach(b=>b.onclick=goBack);
+$('[data-back]').forEach(b=>b.onclick=goBack);
+  $('[data-menu]').forEach(b=>b.onclick=openDrawer);
 
 /* drawer */
 const drawer=$('#drawer'),scrim=$('#scrim');
