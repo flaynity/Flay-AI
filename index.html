@@ -2440,3 +2440,11 @@ $('#agentMsgs').addEventListener('click',e=>{const r=e.target.closest('[data-ret
 
 </body>
 </html>
+
+
+/* Agent composer floats at the top beneath the Code / Agent / Build capsule */
+#screen-project #pjAgent{position:relative!important;min-height:0!important}
+#screen-project #pjAgent>.composer{position:absolute!important;top:60px!important;left:14px!important;right:14px!important;bottom:auto!important;z-index:30!important;flex:none!important;padding:0!important;margin:0!important;background:transparent!important;box-sizing:border-box!important}
+#screen-project #pjAgent>.composer .cbox2{width:100%!important;max-width:820px!important;box-sizing:border-box!important;margin:0 auto!important;border:0!important;outline:0!important;border-radius:28px!important;background:rgba(14,14,19,.78)!important;background-image:none!important;box-shadow:none!important;backdrop-filter:blur(16px)!important;-webkit-backdrop-filter:blur(16px)!important}
+#screen-project #pjAgent>.composer .cbox2:focus-within{border:0!important;outline:0!important;box-shadow:none!important}
+#screen-project #pjAgent>.scrollpane{padding-top:150px!important;padding-bottom:24px!important;box-sizing:border-box!important}
