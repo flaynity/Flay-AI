@@ -407,6 +407,9 @@ section.screen .topbar>button.ibtn[data-back]{width:46px!important;height:46px!i
 .rs-handle{width:38px;height:4px;border-radius:99px;background:#555;margin:0 auto 18px}
 .rs-title{font-size:18px;font-weight:650;letter-spacing:-.02em;margin:0 0 5px}
 .rs-subtitle{font-size:13px;color:#aaa;margin:0 0 22px}
+.rs-model-row{display:flex;align-items:center;gap:10px;padding:12px 13px;margin:0 0 17px;border-radius:15px;background:#303030;border:1px solid rgba(255,255,255,.045)}
+.rs-model-row .rs-model-name{flex:1;min-width:0;font-size:13px;color:#bdbdbd}
+.rs-model-row button{display:flex;align-items:center;gap:7px;padding:8px 10px;border-radius:11px;background:#414141;font-size:12px;font-weight:650;color:#fff}
 .rs-track-wrap{padding:8px 2px 0}
 #reasonRange{display:block;width:100%;height:38px;margin:0;appearance:none;-webkit-appearance:none;background:transparent;touch-action:pan-y;outline:none}
 #reasonRange::-webkit-slider-runnable-track{height:8px;border-radius:999px;background:linear-gradient(90deg,#329cff 0%,#329cff var(--effort-progress,50%),#414141 var(--effort-progress,50%),#414141 100%)}
@@ -504,7 +507,7 @@ section.screen .topbar>button.ibtn[data-back]{width:46px!important;height:46px!i
         <span class="c-sep"></span>
         <div class="cgrow"></div>
         <button class="mchip" id="chipReason" aria-label="Reasoning effort"><svg class="ic"><use href="#i-brain"/></svg></button>
-        <button class="mchip" id="chipModel"><svg class="ic"><use href="#i-chip"/></svg><span>Model</span></button>
+        <button class="mchip" id="chipModel"><svg class="ic"><use href="#i-chip"/></svg><span>Select model</span></button>
         <button class="cbtn send" id="btnSend" aria-label="Send"><svg class="ic"><use href="#i-send"/></svg></button>
       </div>
     </div>
@@ -1384,7 +1387,7 @@ function openModelModal(){
   const inp=modalRoot.querySelector(`[data-mmanual="${p.id}"]`);const v=(inp.value||'').trim();
   if(!v){toast('Enter a model id.','warn');return;}
   S.settings.selectedProviderId=p.id;p.model=v;saveSettings();closeModal();updateChips();renderChat();toast('Model: '+p.name+' / '+v,'ok');});}
-$('#chipModel').onclick=openModelModal;$('#chipModel2').onclick=openModelModal;
+$('#chipModel').onclick=openReasonModal;$('#chipModel2').onclick=openReasonModal;
 function openReasonModal(){
  const choices=[{label:'Off',value:'off'},{label:'Low',value:'fast'},{label:'Medium',value:'balanced'},{label:'High',value:'deep'},{label:'Max',value:'max'}];
  const existing=document.getElementById('reasonSheetBackdrop');if(existing)existing.remove();
@@ -1406,7 +1409,7 @@ function openReasonModal(){
  const paint=()=>{const n=Number(range.value);backdrop.style.setProperty('--effort-progress',(n/4*100)+'%');range.style.setProperty('--effort-progress',(n/4*100)+'%');value.textContent=choices[n].label;};
  const apply=()=>{S.settings.reasoning=choices[Number(range.value)].value;saveSettings();};
  range.addEventListener('input',()=>{paint();apply();});
- const close=()=>{backdrop.classList.remove('open');setTimeout(()=>backdrop.remove(),180);};
+ const close=()=>{backdrop.classList.remove('open');setTimeout(()=>backdrop.remove(),180);};\n backdrop.querySelector('#rsSelectModel').onclick=()=>{close();setTimeout(openModelModal,190);};
  backdrop.addEventListener('click',e=>{if(e.target===backdrop)close();});
  backdrop.querySelector('#rsDone').onclick=()=>{apply();close();};
  backdrop.querySelector('#rsReset').onclick=()=>{range.value='2';paint();apply();};
