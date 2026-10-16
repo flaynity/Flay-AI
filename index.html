@@ -1347,7 +1347,7 @@ function openModelModal(anchor){
   const r=a.getBoundingClientRect(),gap=8,pad=12;
   const maxH=Math.max(180,r.top-gap-pad);
   const popupWidth=Math.max(120,Math.min(window.innerWidth-40,240));
-  const popupHeight=Math.max(150,Math.min(190,maxH));
+  const popupHeight=120;
   const centerX=Math.max(popupWidth/2+8,Math.min(window.innerWidth-popupWidth/2-8,r.left+r.width/2));
   sheet.style.left=centerX+'px';
   sheet.style.bottom=(window.innerHeight-r.top+gap)+'px';
@@ -1378,7 +1378,7 @@ function openModelModal(anchor){
  track.addEventListener('keydown',e=>{if(!reasonOn())return;let i=cur;
   if(e.key==='ArrowRight'||e.key==='ArrowUp')i++;else if(e.key==='ArrowLeft'||e.key==='ArrowDown')i--;else if(e.key==='Home')i=0;else if(e.key==='End')i=4;else return;
   e.preventDefault();commit(i);setP(cur/4);saveSettings();});
- function toggleList(v){const o=typeof v==='boolean'?v:!sheet.classList.contains('open');sheet.classList.toggle('open',o);$('#msPill').setAttribute('aria-expanded',o);}
+ function toggleList(v){const o=typeof v==='boolean'?v:!sheet.classList.contains('open');sheet.classList.toggle('open',o);$('#msPill').setAttribute('aria-expanded',o);const cap=parseFloat(sheet.style.maxHeight)||240;sheet.style.height=Math.min(o?240:120,cap)+'px';}
  $('#msPill').onclick=()=>toggleList();
  function renderList(){
   const ap=activeProvider();
