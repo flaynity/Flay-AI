@@ -2513,7 +2513,7 @@ section.screen .topbar>button.ibtn[data-menu]:active{
 #screen-chat .ai-agents-icon svg{display:block!important;width:27px!important;height:27px!important}
 #screen-chat .msg.ai .ai-bubble{gap:10px!important}
 /* Keep the AI Thinking card at its original inset while replies align left */
-#screen-chat .msg.ai > .card.think{margin-left:16px!important;margin-right:16px!important}
+#screen-chat .msg.ai > .card.think{display:block!important;width:calc(100% - 32px)!important;max-width:none!important;box-sizing:border-box!important;margin-left:auto!important;margin-right:auto!important}
 </style>
 <style id="flay-agents-remove-statusbar-shadow">
 /* Remove the dark fade/shadow beneath the Android status bar on Agents page */
