@@ -1378,7 +1378,7 @@ function openModelModal(anchor){
  track.addEventListener('keydown',e=>{if(!reasonOn())return;let i=cur;
   if(e.key==='ArrowRight'||e.key==='ArrowUp')i++;else if(e.key==='ArrowLeft'||e.key==='ArrowDown')i--;else if(e.key==='Home')i=0;else if(e.key==='End')i=4;else return;
   e.preventDefault();commit(i);setP(cur/4);saveSettings();});
- function toggleList(v){const o=typeof v==='boolean'?v:!sheet.classList.contains('open');sheet.classList.toggle('open',o);$('#msPill').setAttribute('aria-expanded',o);const cap=parseFloat(sheet.style.maxHeight)||240;sheet.style.height=Math.min(o?240:120,cap)+'px';}
+ function toggleList(v){const o=typeof v==='boolean'?v:!sheet.classList.contains('open');sheet.classList.toggle('open',o);$('#msPill').setAttribute('aria-expanded',o);const cap=parseFloat(sheet.style.maxHeight)||340;sheet.style.height=Math.min(o?340:120,cap)+'px';}
  $('#msPill').onclick=()=>toggleList();
  function renderList(){
   const ap=activeProvider();
@@ -2630,7 +2630,7 @@ section.screen .topbar>button.ibtn[data-menu]:active{
 .ms-sheet.open .ms-list{grid-template-rows:1fr;visibility:visible;transition:grid-template-rows .32s cubic-bezier(.3,.9,.3,1),visibility 0s}
 .ms-list-in{min-height:0;overflow:hidden;opacity:0;transition:opacity .2s}
 .ms-sheet.open .ms-list-in{opacity:1;transition:opacity .28s .06s}
-.ms-scroll{max-height:min(18vh,100px);overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:12px;padding:2px 0}
+.ms-scroll{max-height:min(32vh,220px);overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:12px;padding:2px 0}
 .ms-gh{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:2px 10px 6px;font-size:12.5px;font-weight:600;color:#8A8C96}
 .ms-gh span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ms-opt{display:flex;align-items:center;justify-content:space-between;gap:6px;width:100%;min-height:30px;margin-bottom:3px;padding:0 9px;border-radius:9999px;background:#0C0C0F;border:1px solid rgba(255,255,255,.05);color:#E8E9EE;font-size:13px;font-weight:500;text-align:left;transition:background .15s,border-color .15s}
