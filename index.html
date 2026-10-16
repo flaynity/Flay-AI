@@ -1397,7 +1397,8 @@ function openReasonModal(){
  backdrop.innerHTML=`<section id="reasonSheet" role="dialog" aria-modal="true" aria-label="Reasoning effort">
   <div class="rs-handle"></div>
   <h3 class="rs-title">Reasoning effort</h3>
-  <p class="rs-subtitle">Adjust how much reasoning the model uses</p>
+  <p class="rs-subtitle">Choose a model and adjust its reasoning effort</p>
+  <div class="rs-model-row"><span class="rs-model-name">Model</span><button id="rsSelectModel" type="button">Select model <span aria-hidden="true">›</span></button></div>
   <div class="rs-track-wrap"><input id="reasonRange" type="range" min="0" max="4" step="1" value="${idx}" aria-label="Reasoning effort">
    <div class="rs-ticks"><span>Off</span><span>Low</span><span>Medium</span><span>High</span><span>Max</span></div>
   </div>
