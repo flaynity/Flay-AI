@@ -2500,3 +2500,29 @@ section.screen .topbar>button.ibtn[data-menu]:active{
              linear-gradient(135deg,#FF1B7A 0%,#FF4FA3 42%,#8B5CF6 72%,#3B82F6 100%) border-box!important;
 }
 </style>
+
+
+<style id="flay-chat-header-gradient-buttons">
+/* Agents/chat page: premium Menu and New Chat buttons */
+#screen-chat .ftop>#btnMenu,
+#screen-chat .ftop>#btnNewChat{
+  border:1.5px solid transparent!important;
+  border-radius:16px!important;
+  background:linear-gradient(#0B0C12,#0B0C12) padding-box,
+             linear-gradient(135deg,#FF1B7A 0%,#FF4FA3 40%,#9B4DFF 72%,#3B82F6 100%) border-box!important;
+  box-shadow:0 0 10px rgba(255,27,122,.22),0 0 22px rgba(255,27,122,.18)!important;
+  transition:box-shadow .18s ease,transform .12s ease!important;
+}
+#screen-chat .ftop>#btnMenu:active,
+#screen-chat .ftop>#btnNewChat:active{
+  transform:scale(.94)!important;
+  box-shadow:0 0 14px rgba(255,27,122,.36),0 0 26px rgba(255,27,122,.24)!important;
+}
+#screen-chat .ftop>#btnMenu .ic,
+#screen-chat .ftop>#btnNewChat .ic{color:#FF4F9A!important}
+[data-theme=light] #screen-chat .ftop>#btnMenu,
+[data-theme=light] #screen-chat .ftop>#btnNewChat{
+  background:linear-gradient(#FFFFFF,#FFFFFF) padding-box,
+             linear-gradient(135deg,#FF1B7A 0%,#FF4FA3 40%,#9B4DFF 72%,#3B82F6 100%) border-box!important;
+}
+</style>
