@@ -1073,7 +1073,7 @@ function msgHtml(m){
   ${thinkCard(m)}
   ${genCard(m)}
   <div class="ai-bubble">
-    <div class="ai-avatar-badge">${icon('spark','sm fill')}</div>
+    <span class="ai-agents-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="url(#fdGrad)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4.2v2.2"/><circle cx="12" cy="3" r="1" fill="url(#fdGrad)" stroke="none"/><rect x="4.6" y="6.8" width="14.8" height="12.6" rx="4.6"/><rect x="1.5" y="11.4" width="1.9" height="4.2" rx=".95" fill="url(#fdGrad)" stroke="none"/><rect x="20.6" y="11.4" width="1.9" height="4.2" rx=".95" fill="url(#fdGrad)" stroke="none"/><circle cx="9.2" cy="13.1" r="1.4" fill="url(#fdGrad)" stroke="none"/><circle cx="14.8" cy="13.1" r="1.4" fill="url(#fdGrad)" stroke="none"/></svg></span>
     <div class="msg-body">${m.content?md(m.content):''}${m.status==='streaming'?'<span class="caret"></span>':''}</div>
   </div>
   ${m.activity&&m.activity.length?activityCard(m):''}
@@ -2504,6 +2504,14 @@ section.screen .topbar>button.ibtn[data-menu]:active{
 <style id="flay-ai-message-card-removal">
 /* Remove the surrounding card box from AI chat responses only */
 #screen-chat .msg.ai .ai-bubble{background:transparent!important;background-image:none!important;border:0!important;border-radius:0!important;box-shadow:none!important;padding:0!important}
+</style>
+<style id="flay-ai-left-edge-agents-icon">
+/* Start AI replies at the screen's left edge and reuse the Menu > Agents icon */
+#screen-chat .msgs{max-width:none!important;width:100%!important;margin-left:0!important;margin-right:0!important;padding-left:0!important}
+#screen-chat .ai-avatar-badge{display:none!important}
+#screen-chat .ai-agents-icon{display:inline-flex!important;align-items:center!important;justify-content:center!important;flex:none!important;width:27px!important;height:27px!important;margin:0 0 0 0!important}
+#screen-chat .ai-agents-icon svg{display:block!important;width:27px!important;height:27px!important}
+#screen-chat .msg.ai .ai-bubble{gap:10px!important}
 </style>
 <style id="flay-agents-remove-statusbar-shadow">
 /* Remove the dark fade/shadow beneath the Android status bar on Agents page */
