@@ -2507,13 +2507,13 @@ section.screen .topbar>button.ibtn[data-menu]:active{
 </style>
 <style id="flay-ai-left-edge-agents-icon">
 /* Start AI replies at the screen's left edge and reuse the Menu > Agents icon */
-#screen-chat .msgs{max-width:none!important;width:100%!important;margin-left:0!important;margin-right:0!important;padding-left:0!important}
+#screen-chat .msgs{max-width:820px!important;width:100%!important;margin-left:auto!important;margin-right:auto!important;padding:14px 16px 30px!important;box-sizing:border-box!important}
 #screen-chat .ai-avatar-badge{display:none!important}
 #screen-chat .ai-agents-icon{display:inline-flex!important;align-items:center!important;justify-content:center!important;flex:none!important;width:27px!important;height:27px!important;margin:0 0 0 0!important}
 #screen-chat .ai-agents-icon svg{display:block!important;width:27px!important;height:27px!important}
-#screen-chat .msg.ai .ai-bubble{gap:10px!important}
-/* Keep the AI Thinking card at its original inset while replies align left */
-#screen-chat .msg.ai > .card.think{display:block!important;width:calc(100% - 32px)!important;max-width:none!important;box-sizing:border-box!important;margin-left:auto!important;margin-right:auto!important}
+#screen-chat .msg.ai .ai-bubble{gap:10px!important;margin-left:-16px!important}
+/* Keep Thinking / AI Processing / Deep Thinking cards inside the normal, equally padded message column */
+#screen-chat .msg.ai > .card.think{display:block!important;width:100%!important;max-width:100%!important;box-sizing:border-box!important;margin-left:0!important;margin-right:0!important}
 </style>
 <style id="flay-agents-remove-statusbar-shadow">
 /* Remove the dark fade/shadow beneath the Android status bar on Agents page */
