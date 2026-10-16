@@ -396,38 +396,6 @@ section.screen .topbar>button.ibtn[data-back]{width:46px!important;height:46px!i
 #screen-projects #prList .list-item{border:1.5px solid transparent!important;border-radius:18px!important;background:linear-gradient(var(--surface, #0C0D15),var(--surface, #0C0D15)) padding-box,linear-gradient(135deg,#FF1B7A,#3B82F6) border-box!important;box-shadow:0 0 18px rgba(255,27,122,.22)!important;overflow:hidden;transition:box-shadow .18s ease,transform .18s ease}
 #screen-projects #prList .list-item:active{box-shadow:0 0 22px rgba(255,27,122,.3)!important}
 [data-theme=light] #screen-projects #prList .list-item{background:linear-gradient(#FFFFFF,#FFFFFF) padding-box,linear-gradient(135deg,#FF1B7A,#3B82F6) border-box!important}
-
-/* Agents composer model + reasoning bottom sheet */
-#chipModel{min-width:112px;justify-content:center;gap:7px;border-radius:16px;padding:0 12px;height:38px;background:#292929;border:1px solid rgba(255,255,255,.07);color:#f2f2f2}
-#chipModel span{max-width:125px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;font-weight:600}
-#reasonSheetBackdrop{position:fixed;inset:0;z-index:120;background:rgba(0,0,0,.58);display:flex;align-items:flex-end;justify-content:center;opacity:0;transition:opacity .18s}
-#reasonSheetBackdrop.open{opacity:1}
-#reasonSheet{width:100%;max-width:560px;background:#242424;color:#f5f5f5;border:1px solid rgba(255,255,255,.08);border-bottom:0;border-radius:24px 24px 0 0;padding:12px 18px calc(22px + env(safe-area-inset-bottom));box-shadow:none;transform:translateY(24px);transition:transform .2s ease}
-#reasonSheetBackdrop.open #reasonSheet{transform:translateY(0)}
-.rs-handle{width:38px;height:4px;border-radius:99px;background:#555;margin:0 auto 18px}
-.rs-title{font-size:18px;font-weight:650;letter-spacing:-.02em;margin:0 0 5px}
-.rs-subtitle{font-size:13px;color:#aaa;margin:0 0 22px}
-.rs-model-row{display:flex;align-items:center;gap:10px;padding:12px 13px;margin:0 0 17px;border-radius:15px;background:#303030;border:1px solid rgba(255,255,255,.045)}
-.rs-model-row .rs-model-name{flex:1;min-width:0;font-size:13px;color:#bdbdbd}
-.rs-model-row button{display:flex;align-items:center;gap:7px;padding:8px 10px;border-radius:11px;background:#414141;font-size:12px;font-weight:650;color:#fff}
-.rs-track-wrap{padding:8px 2px 0}
-#reasonRange{display:block;width:100%;height:38px;margin:0;appearance:none;-webkit-appearance:none;background:transparent;touch-action:pan-y;outline:none}
-#reasonRange::-webkit-slider-runnable-track{height:8px;border-radius:999px;background:linear-gradient(90deg,#329cff 0%,#329cff var(--effort-progress,50%),#414141 var(--effort-progress,50%),#414141 100%)}
-#reasonRange::-moz-range-track{height:8px;border-radius:999px;background:#414141}
-#reasonRange::-moz-range-progress{height:8px;border-radius:999px;background:#329cff}
-#reasonRange::-webkit-slider-thumb{appearance:none;-webkit-appearance:none;width:28px;height:28px;margin-top:-10px;border-radius:50%;background:#fff;border:0;box-shadow:0 1px 3px rgba(0,0,0,.2)}
-#reasonRange::-moz-range-thumb{width:28px;height:28px;border:0;border-radius:50%;background:#fff}
-.rs-ticks{display:flex;justify-content:space-between;padding:8px 5px 0;color:#929292;font-size:11px}
-.rs-current{display:flex;align-items:center;justify-content:space-between;margin-top:22px;padding:13px 14px;border-radius:16px;background:#303030;border:1px solid rgba(255,255,255,.035)}
-.rs-current-label{font-size:13px;color:#b9b9b9}
-.rs-current-value{font-size:15px;font-weight:650;display:flex;align-items:center;gap:9px}
-.rs-current-value svg{width:18px;height:18px;stroke:#bdbdbd;fill:none;stroke-width:2}
-.rs-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:16px}
-.rs-actions button{padding:10px 17px;border-radius:13px;font-size:14px;font-weight:600}
-#rsDone{background:#f1f1f1;color:#171717}
-#rsReset{background:#353535;color:#ddd}
-@media(min-width:560px){#reasonSheet{margin-bottom:10px;border-bottom:1px solid rgba(255,255,255,.08);border-radius:24px}}
-
 </style>
 </head>
 <body>
@@ -507,7 +475,7 @@ section.screen .topbar>button.ibtn[data-back]{width:46px!important;height:46px!i
         <span class="c-sep"></span>
         <div class="cgrow"></div>
         <button class="mchip" id="chipReason" aria-label="Reasoning effort"><svg class="ic"><use href="#i-brain"/></svg></button>
-        <button class="mchip" id="chipModel"><svg class="ic"><use href="#i-chip"/></svg><span>Select model</span></button>
+        <button class="mchip" id="chipModel"><svg class="ic"><use href="#i-chip"/></svg><span>Model</span></button>
         <button class="cbtn send" id="btnSend" aria-label="Send"><svg class="ic"><use href="#i-send"/></svg></button>
       </div>
     </div>
@@ -1387,35 +1355,13 @@ function openModelModal(){
   const inp=modalRoot.querySelector(`[data-mmanual="${p.id}"]`);const v=(inp.value||'').trim();
   if(!v){toast('Enter a model id.','warn');return;}
   S.settings.selectedProviderId=p.id;p.model=v;saveSettings();closeModal();updateChips();renderChat();toast('Model: '+p.name+' / '+v,'ok');});}
-$('#chipModel').onclick=openReasonModal;$('#chipModel2').onclick=openReasonModal;
-function openReasonModal(){
- const choices=[{label:'Off',value:'off'},{label:'Low',value:'fast'},{label:'Medium',value:'balanced'},{label:'High',value:'deep'},{label:'Max',value:'max'}];
- const existing=document.getElementById('reasonSheetBackdrop');if(existing)existing.remove();
- const current=S.settings.reasoning||'balanced';
- let idx=Math.max(0,choices.findIndex(x=>x.value===current));
- const backdrop=document.createElement('div');backdrop.id='reasonSheetBackdrop';
- backdrop.innerHTML=`<section id="reasonSheet" role="dialog" aria-modal="true" aria-label="Reasoning effort">
-  <div class="rs-handle"></div>
-  <h3 class="rs-title">Reasoning effort</h3>
-  <p class="rs-subtitle">Choose a model and adjust its reasoning effort</p>
-  <div class="rs-model-row"><span class="rs-model-name">Model</span><button id="rsSelectModel" type="button">Select model <span aria-hidden="true">›</span></button></div>
-  <div class="rs-track-wrap"><input id="reasonRange" type="range" min="0" max="4" step="1" value="${idx}" aria-label="Reasoning effort">
-   <div class="rs-ticks"><span>Off</span><span>Low</span><span>Medium</span><span>High</span><span>Max</span></div>
-  </div>
-  <div class="rs-current"><span class="rs-current-label">Selected effort</span><span class="rs-current-value"><span id="rsValue">${choices[idx].label}</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span></div>
-  <div class="rs-actions"><button id="rsReset" type="button">Reset</button><button id="rsDone" type="button">Done</button></div>
- </section>`;
- document.body.appendChild(backdrop);
- const range=backdrop.querySelector('#reasonRange'),value=backdrop.querySelector('#rsValue');
- const paint=()=>{const n=Number(range.value);backdrop.style.setProperty('--effort-progress',(n/4*100)+'%');range.style.setProperty('--effort-progress',(n/4*100)+'%');value.textContent=choices[n].label;};
- const apply=()=>{S.settings.reasoning=choices[Number(range.value)].value;saveSettings();};
- range.addEventListener('input',()=>{paint();apply();});
- const close=()=>{backdrop.classList.remove('open');setTimeout(()=>backdrop.remove(),180);};\n backdrop.querySelector('#rsSelectModel').onclick=()=>{close();setTimeout(openModelModal,190);};
- backdrop.addEventListener('click',e=>{if(e.target===backdrop)close();});
- backdrop.querySelector('#rsDone').onclick=()=>{apply();close();};
- backdrop.querySelector('#rsReset').onclick=()=>{range.value='2';paint();apply();};
- paint();requestAnimationFrame(()=>backdrop.classList.add('open'));
-}
+$('#chipModel').onclick=openModelModal;$('#chipModel2').onclick=openModelModal;
+function openReasonModal(){const p=activeProvider();
+ modal(`<h3>Reasoning effort</h3>${p&&p.supportsReasoning?'':'<p class="muted small" style="margin:4px 0 10px">Reasoning controls unavailable for this model/provider. Enable "Model supports reasoning effort" in the provider settings. Thinking appears only when the provider actually streams reasoning tokens — nothing is simulated.</p>'}
+ <div style="display:flex;flex-direction:column;gap:8px">${['off','fast','balanced','deep','max'].map(r=>`<label class="perm ${S.settings.reasoning===r?'on':''}" style="${p&&p.supportsReasoning?'':'opacity:.45;pointer-events:none'}"><input type="radio" name="rr" value="${r}" ${S.settings.reasoning===r?'checked':''}> ${r[0].toUpperCase()+r.slice(1)}</label>`).join('')}</div>
+ <div class="mrow"><button class="btn" id="rC">Cancel</button><button class="btn primary" id="rO">Apply</button></div>`);
+ $('#rC').onclick=closeModal;
+ $('#rO').onclick=()=>{const v=modalRoot.querySelector('input[name=rr]:checked');if(v)S.settings.reasoning=v.value;saveSettings();closeModal();};}
 $('#chipReason').onclick=openReasonModal;$('#chipReason2').onclick=openReasonModal;
 
 /* ---------- history ---------- */
