@@ -474,7 +474,6 @@ section.screen .topbar>button.ibtn[data-back]{width:46px!important;height:46px!i
         <button class="cbtn" id="chipWeb" aria-label="Web"><svg class="ic sm"><use href="#i-globe"/></svg></button>
         <span class="c-sep"></span>
         <div class="cgrow"></div>
-        <button class="mchip" id="chipReason" aria-label="Reasoning effort"><svg class="ic"><use href="#i-brain"/></svg></button>
         <button class="mchip" id="chipModel"><svg class="ic"><use href="#i-chip"/></svg><span>Model</span></button>
         <button class="cbtn send" id="btnSend" aria-label="Send"><svg class="ic"><use href="#i-send"/></svg></button>
       </div>
@@ -684,7 +683,6 @@ section.screen .topbar>button.ibtn[data-back]{width:46px!important;height:46px!i
           <button class="cbtn" id="chipWeb2" aria-label="Web"><svg class="ic sm"><use href="#i-globe"/></svg></button>
           <span class="c-sep"></span>
           <div class="cgrow"></div>
-          <button class="mchip" id="chipReason2" aria-label="Reasoning effort"><svg class="ic"><use href="#i-brain"/></svg></button>
           <button class="mchip" id="chipModel2"><svg class="ic"><use href="#i-chip"/></svg><span>Model</span></button>
           <button class="cbtn send" id="agentSend" aria-label="Send"><svg class="ic"><use href="#i-send"/></svg></button>
         </div>
@@ -924,7 +922,7 @@ function describeHttp(st,t){const b=(t||'').replace(/\s+/g,' ').trim();const sho
 async function providerChat(o){const p=o.provider;if(!p)throw new Error('No AI provider is configured. Open Menu > Set Up AI.');
  const headers={'Content-Type':'application/json'};if(p.apiKey)headers.Authorization='Bearer '+p.apiKey;
  const body={model:o.model||p.model,messages:o.messages,temperature:o.temperature??p.temperature??0.7,max_tokens:o.maxTokens??p.maxTokens??4096,stream:!!(o.stream??p.stream)};
- if(p.supportsReasoning&&S.settings.reasoning&&S.settings.reasoning!=='off'){body.reasoning_effort={fast:'low',balanced:'medium',deep:'high',max:'high'}[S.settings.reasoning]||'medium';}
+ if(p.supportsReasoning&&S.settings.reasoning&&S.settings.reasoning!=='off'){body.reasoning_effort={fast:'low',balanced:'medium',deep:'high',extra:'high',max:'high'}[S.settings.reasoning]||'medium';}
  let res;try{res=await fetch(chatUrl(p.baseUrl),{method:'POST',headers,body:JSON.stringify(body),signal:o.signal});}
  catch(e){if(e.name==='AbortError')throw e;throw new Error('Network error: '+(e.message||'request failed')+' (CORS, offline, or wrong URL)');}
  if(!res.ok){let t='';try{t=await res.text()}catch(_){}throw new Error(describeHttp(res.status,t));}
@@ -1195,8 +1193,7 @@ function shortModel(m){m=m||'';return m.length>16?m.slice(0,15)+'…':m;}
 function updateChips(){const p=activeProvider();
  const ml=(p&&p.model)?shortModel(p.model):'Model';
  ['#chipModel','#chipModel2'].forEach(s=>{const el=$(s);if(el)el.querySelector('span').textContent=ml;});
- const on=!!(p&&p.supportsReasoning);
- ['#chipReason','#chipReason2'].forEach(s=>{const el=$(s);if(el)el.classList.toggle('dis',!on);});}
+}
 function renderAtts(){const host=$('#chatAtts');
  if(!S.pendingAttachments.length){host.classList.add('hidden');host.innerHTML='';return;}
  host.classList.remove('hidden');
@@ -1327,42 +1324,66 @@ async function readIn(files,target){for(const f of files){
  if(target==='chat')renderAtts();else renderAgentAtts();}
 
 /* ---------- model selector ---------- */
+const RLV=[{k:'fast',l:'Low'},{k:'balanced',l:'Medium'},{k:'deep',l:'High'},{k:'extra',l:'Extra'},{k:'max',l:'Max'}];
+const rlIdx=()=>{const i=RLV.findIndex(x=>x.k===S.settings.reasoning);return i<0?0:i;};
 function openModelModal(){
  const provs=S.settings.providers;
  if(!provs.length){toast('Add a provider first (Menu > Set Up AI).','warn');renderProviders();openScreen('screen-providers');return;}
- modal(`<h3>Select model</h3><div>${provs.map(p=>`
-  <div class="pcard ${p.id===S.settings.selectedProviderId?'active':''}">
-   <div class="ph">${icon('sliders','sm')}<b>${esc(p.name)}</b>${p.id===S.settings.selectedProviderId?'<span class="pbadge" style="border-color:var(--accent);color:var(--accent)">Active</span>':''}</div>
-   <div class="mgrid">
-    ${p.model?`<button class="mopt ${p.id===S.settings.selectedProviderId?'on':''}" data-mp="${p.id}" data-m="${esc(p.model)}">${icon('chip','xs')}${esc(p.model)}</button>`:''}
-    ${(p.models||[]).filter(m=>m!==p.model).map(m=>`<button class="mopt" data-mp="${p.id}" data-m="${esc(m)}">${icon('chip','xs')}${esc(m)}</button>`).join('')}
-    ${(!p.model&&!(p.models||[]).length)?'<span class="muted small">No models yet — fetch or add manually.</span>':''}
-   </div>
-   <div class="pacts"><button class="btn sm" data-mfetch="${p.id}">Fetch models</button></div>
-   <div class="keybox"><input class="inp" placeholder="Add model manually (id)" data-mmanual="${p.id}" autocapitalize="off"><button class="btn sm" data-madd="${p.id}">Add</button></div>
-  </div>`).join('')}</div>
- <div class="mrow"><button class="btn" id="mmClose">Close</button></div>`);
- $('#mmClose').onclick=closeModal;
- modalRoot.querySelectorAll('[data-mp]').forEach(b=>b.onclick=()=>{
-  const p=S.settings.providers.find(x=>x.id===b.dataset.mp);if(!p)return;
-  S.settings.selectedProviderId=p.id;p.model=b.dataset.m;saveSettings();closeModal();updateChips();renderChat();toast('Model: '+p.name+' / '+p.model,'ok');});
- modalRoot.querySelectorAll('[data-mfetch]').forEach(b=>b.onclick=async()=>{
-  const p=S.settings.providers.find(x=>x.id===b.dataset.mfetch);b.textContent='Fetching…';
-  try{p.models=await fetchModels(p);saveSettings();toast(p.models.length+' models discovered for '+p.name+'.','ok');openModelModal();}
-  catch(e){b.textContent='Fetch models';toast('Model discovery failed: '+e.message,'err');}});
- modalRoot.querySelectorAll('[data-madd]').forEach(b=>b.onclick=()=>{
-  const p=S.settings.providers.find(x=>x.id===b.dataset.madd);
-  const inp=modalRoot.querySelector(`[data-mmanual="${p.id}"]`);const v=(inp.value||'').trim();
-  if(!v){toast('Enter a model id.','warn');return;}
-  S.settings.selectedProviderId=p.id;p.model=v;saveSettings();closeModal();updateChips();renderChat();toast('Model: '+p.name+' / '+v,'ok');});}
+ modalRoot.innerHTML=`<div class="scrim2"></div><div class="ms-sheet" role="dialog" aria-label="Select model">
+  <div class="ms-grip"></div>
+  <div class="ms-eff" id="msEff"><div class="ms-track" id="msTrack" role="slider" tabindex="0" aria-label="Reasoning effort" aria-valuemin="0" aria-valuemax="4">
+   <div class="ms-fill"></div>${[0,1,2,3,4].map(i=>`<i class="ms-dot" data-f="${i/4}" style="--f:${i/4}"></i>`).join('')}<div class="ms-knob"></div></div></div>
+  <p class="ms-note hidden" id="msNote">Reasoning effort is unavailable for this provider. Turn on "Model supports reasoning effort" in its settings.</p>
+  <button class="ms-pill" id="msPill" aria-expanded="false" aria-haspopup="listbox"><span class="ms-m" id="msM"></span><span class="ms-e" id="msE"></span>${icon('chev-d')}</button>
+  <div class="ms-list"><div class="ms-list-in"><div class="ms-scroll" id="msScroll" role="listbox"></div></div></div>
+ </div>`;
+ modalRoot.classList.add('show');
+ _modalCancel=closeModal;
+ modalRoot.querySelector('.scrim2').onclick=closeModal;
+ const sheet=modalRoot.querySelector('.ms-sheet'),track=$('#msTrack'),dots=[...track.querySelectorAll('.ms-dot')],scroll=$('#msScroll');
+ const reasonOn=()=>{const p=activeProvider();return !!(p&&p.supportsReasoning);};
+ let cur=rlIdx(),drag=false;
+ function setP(f){track.style.setProperty('--p',f);dots.forEach(d=>d.classList.toggle('on',+d.dataset.f<=f+1e-6));}
+ function paintLabel(){
+  const p=activeProvider(),on=reasonOn();
+  $('#msM').textContent=(p&&p.model)?p.model:'Select model';
+  $('#msE').textContent=(p&&p.model&&on)?RLV[cur].l:'';
+  track.setAttribute('aria-valuenow',cur);track.setAttribute('aria-valuetext',RLV[cur].l);
+  $('#msEff').classList.toggle('off',!on);track.setAttribute('aria-disabled',on?'false':'true');
+  $('#msNote').classList.toggle('hidden',on);}
+ function commit(i){i=Math.max(0,Math.min(4,i));if(i!==cur){cur=i;S.settings.reasoning=RLV[i].k;if(navigator.vibrate)try{navigator.vibrate(6);}catch(_){}}paintLabel();}
+ const R=()=>track.querySelector('.ms-knob').offsetWidth/2;
+ function fracOf(e){const r=track.getBoundingClientRect(),k=R();return Math.min(1,Math.max(0,(e.clientX-r.left-k)/Math.max(1,r.width-2*k)));}
+ function move(e){const f=fracOf(e);setP(f);commit(Math.round(f*4));}
+ function endDrag(){if(!drag)return;drag=false;track.classList.remove('drag');setP(cur/4);saveSettings();}
+ track.addEventListener('pointerdown',e=>{if(!reasonOn())return;drag=true;track.classList.add('drag');try{track.setPointerCapture(e.pointerId);}catch(_){}move(e);});
+ track.addEventListener('pointermove',e=>{if(drag)move(e);});
+ track.addEventListener('pointerup',endDrag);track.addEventListener('pointercancel',endDrag);
+ track.addEventListener('keydown',e=>{if(!reasonOn())return;let i=cur;
+  if(e.key==='ArrowRight'||e.key==='ArrowUp')i++;else if(e.key==='ArrowLeft'||e.key==='ArrowDown')i--;else if(e.key==='Home')i=0;else if(e.key==='End')i=4;else return;
+  e.preventDefault();commit(i);setP(cur/4);saveSettings();});
+ function toggleList(v){const o=typeof v==='boolean'?v:!sheet.classList.contains('open');sheet.classList.toggle('open',o);$('#msPill').setAttribute('aria-expanded',o);}
+ $('#msPill').onclick=()=>toggleList();
+ function renderList(){
+  const ap=activeProvider();
+  scroll.innerHTML=provs.map(p=>{const ms=[...(p.model?[p.model]:[]),...(p.models||[]).filter(m=>m!==p.model)];
+   return `<div class="ms-grp"><div class="ms-gh"><span>${esc(p.name)}</span><button class="ms-chipbtn" data-mfetch="${p.id}">Fetch models</button></div>
+   ${ms.length?ms.map(m=>{const on=!!(ap&&p.id===ap.id&&m===p.model);return `<button class="ms-opt ${on?'on':''}" role="option" aria-selected="${on}" data-mp="${p.id}" data-m="${esc(m)}"><span>${esc(m)}</span>${on?icon('check','sm'):''}</button>`;}).join(''):'<div class="ms-empty">No models yet — fetch or add manually.</div>'}
+   <div class="ms-add"><input class="ms-inp" placeholder="Add model manually (id)" data-mmanual="${p.id}" autocapitalize="off" autocomplete="off" spellcheck="false"><button class="ms-chipbtn pri" data-madd="${p.id}">Add</button></div></div>`;}).join('');}
+ function pick(p,m){S.settings.selectedProviderId=p.id;p.model=m;saveSettings();updateChips();renderChat();toast('Model: '+p.name+' / '+m,'ok');renderList();paintLabel();toggleList(false);}
+ scroll.addEventListener('click',async e=>{
+  const o=e.target.closest('[data-mp]');
+  if(o){const p=S.settings.providers.find(x=>x.id===o.dataset.mp);if(p)pick(p,o.dataset.m);return;}
+  const f=e.target.closest('[data-mfetch]');
+  if(f){const p=S.settings.providers.find(x=>x.id===f.dataset.mfetch);f.textContent='Fetching…';
+   try{p.models=await fetchModels(p);saveSettings();toast(p.models.length+' models discovered for '+p.name+'.','ok');renderList();}
+   catch(err){f.textContent='Fetch models';toast('Model discovery failed: '+err.message,'err');}return;}
+  const a=e.target.closest('[data-madd]');
+  if(a){const p=S.settings.providers.find(x=>x.id===a.dataset.madd);const inp=scroll.querySelector(`[data-mmanual="${p.id}"]`);const v=(inp.value||'').trim();
+   if(!v){toast('Enter a model id.','warn');return;}pick(p,v);}});
+ scroll.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.matches('[data-mmanual]')){const b=scroll.querySelector(`[data-madd="${e.target.dataset.mmanual}"]`);if(b)b.click();}});
+ setP(cur/4);paintLabel();renderList();}
 $('#chipModel').onclick=openModelModal;$('#chipModel2').onclick=openModelModal;
-function openReasonModal(){const p=activeProvider();
- modal(`<h3>Reasoning effort</h3>${p&&p.supportsReasoning?'':'<p class="muted small" style="margin:4px 0 10px">Reasoning controls unavailable for this model/provider. Enable "Model supports reasoning effort" in the provider settings. Thinking appears only when the provider actually streams reasoning tokens — nothing is simulated.</p>'}
- <div style="display:flex;flex-direction:column;gap:8px">${['off','fast','balanced','deep','max'].map(r=>`<label class="perm ${S.settings.reasoning===r?'on':''}" style="${p&&p.supportsReasoning?'':'opacity:.45;pointer-events:none'}"><input type="radio" name="rr" value="${r}" ${S.settings.reasoning===r?'checked':''}> ${r[0].toUpperCase()+r.slice(1)}</label>`).join('')}</div>
- <div class="mrow"><button class="btn" id="rC">Cancel</button><button class="btn primary" id="rO">Apply</button></div>`);
- $('#rC').onclick=closeModal;
- $('#rO').onclick=()=>{const v=modalRoot.querySelector('input[name=rr]:checked');if(v)S.settings.reasoning=v.value;saveSettings();closeModal();};}
-$('#chipReason').onclick=openReasonModal;$('#chipReason2').onclick=openReasonModal;
 
 /* ---------- history ---------- */
 function renderHistory(){const list=$('#hsList');const items=[...S.chats].sort((a,b)=>b.updatedAt-a.updatedAt);
@@ -2567,4 +2588,45 @@ section.screen .topbar>button.ibtn[data-menu]:active{
   background:linear-gradient(#FFFFFF,#FFFFFF) padding-box,
              linear-gradient(135deg,#FF1B7A 0%,#FF4FA3 40%,#9B4DFF 72%,#3B82F6 100%) border-box!important;
 }
+
+/* ---------- Select model bottom sheet ---------- */
+.ms-sheet{position:absolute;left:50%;bottom:0;width:min(100%,560px);transform:translateX(-50%);max-height:90vh;display:flex;flex-direction:column;gap:10px;padding:10px 14px calc(16px + env(safe-area-inset-bottom));background:linear-gradient(180deg,#101116 0%,#08080B 100%);border:1px solid rgba(255,255,255,.07);border-bottom:0;border-radius:30px 30px 0 0;box-shadow:0 -26px 70px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.05);animation:msUp .34s cubic-bezier(.2,.9,.25,1)}
+@keyframes msUp{from{transform:translate(-50%,40px);opacity:0}}
+.ms-grip{width:40px;height:4px;border-radius:2px;background:rgba(255,255,255,.18);margin:4px auto 6px;flex:none}
+.ms-eff{flex:none;padding:17px 18px;border-radius:9999px;background:#0C0C0F;border:1px solid rgba(255,255,255,.05);box-shadow:inset 0 1px 0 rgba(255,255,255,.03)}
+.ms-track{--k:44px;--r:22px;--p:.5;position:relative;height:34px;border-radius:9999px;background:#26272D;touch-action:none;cursor:pointer;outline:none;user-select:none;-webkit-user-select:none}
+.ms-fill{position:absolute;left:0;top:0;bottom:0;width:calc(var(--r) + (100% - 2*var(--r))*var(--p));border-radius:9999px;background:linear-gradient(90deg,#0888FF 0%,#1F9DFF 100%);box-shadow:0 0 18px rgba(8,136,255,.28);transition:width .24s cubic-bezier(.3,.9,.3,1)}
+.ms-dot{position:absolute;top:50%;left:calc(var(--r) + (100% - 2*var(--r))*var(--f));width:8px;height:8px;margin:-4px 0 0 -4px;border-radius:50%;background:#6E6F77;transition:background .2s}
+.ms-dot.on{background:#8CCBFF}
+.ms-knob{position:absolute;top:50%;left:calc(var(--r) + (100% - 2*var(--r))*var(--p));width:var(--k);height:var(--k);margin:calc(var(--k)/-2) 0 0 calc(var(--k)/-2);border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff 0%,#F4F6FA 100%);box-shadow:0 3px 12px rgba(0,0,0,.55),0 0 22px rgba(8,136,255,.3);transition:left .24s cubic-bezier(.3,1.25,.4,1),transform .16s}
+.ms-track.drag .ms-fill{transition:none}
+.ms-track.drag .ms-knob{transition:transform .16s;transform:scale(1.07)}
+.ms-track:focus-visible .ms-knob{box-shadow:0 3px 12px rgba(0,0,0,.55),0 0 0 3px rgba(8,136,255,.6)}
+.ms-eff.off .ms-track{opacity:.38;filter:grayscale(.7);pointer-events:none}
+.ms-note{margin:-2px 10px 0;font-size:12px;line-height:1.5;color:#8A8C96}
+.ms-pill{position:relative;flex:none;display:flex;align-items:center;justify-content:center;gap:8px;width:100%;height:56px;padding:0 52px;border-radius:9999px;background:#0C0C0F;border:1px solid rgba(255,255,255,.05);color:#F4F4F7;font-size:18px;font-weight:500;letter-spacing:.1px;transition:background .15s,transform .12s}
+.ms-pill:hover{background:#121317}.ms-pill:active{transform:scale(.985)}
+.ms-pill .ms-m{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ms-pill .ms-e{flex:none}
+.ms-pill .ic{position:absolute;right:20px;top:50%;width:18px;height:18px;margin-top:-9px;color:#C9CAD1;transition:transform .3s cubic-bezier(.3,.9,.3,1)}
+.ms-sheet.open .ms-pill .ic{transform:rotate(180deg)}
+.ms-list{display:grid;grid-template-rows:0fr;visibility:hidden;min-height:0;transition:grid-template-rows .32s cubic-bezier(.3,.9,.3,1),visibility 0s .32s}
+.ms-sheet.open .ms-list{grid-template-rows:1fr;visibility:visible;transition:grid-template-rows .32s cubic-bezier(.3,.9,.3,1),visibility 0s}
+.ms-list-in{min-height:0;overflow:hidden;opacity:0;transition:opacity .2s}
+.ms-sheet.open .ms-list-in{opacity:1;transition:opacity .28s .06s}
+.ms-scroll{max-height:min(44vh,360px);overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:12px;padding:2px 0}
+.ms-gh{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:2px 10px 6px;font-size:12.5px;font-weight:600;color:#8A8C96}
+.ms-gh span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ms-opt{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;min-height:48px;margin-bottom:6px;padding:0 18px;border-radius:9999px;background:#0C0C0F;border:1px solid rgba(255,255,255,.05);color:#E8E9EE;font-size:15px;font-weight:500;text-align:left;transition:background .15s,border-color .15s}
+.ms-opt span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ms-opt:hover{background:#131419}
+.ms-opt.on{background:rgba(8,136,255,.14);border-color:rgba(8,136,255,.5);color:#fff}
+.ms-opt .ic{flex:none;color:#2BA3FF}
+.ms-empty{padding:4px 12px 10px;font-size:13px;color:#8A8C96}
+.ms-add{display:flex;gap:8px;padding:0 2px}
+.ms-inp{flex:1;min-width:0;height:44px;padding:0 16px;border-radius:9999px;background:#0C0C0F;border:1px solid rgba(255,255,255,.07);color:#fff;font-size:14px;outline:none;transition:border-color .15s,box-shadow .15s}
+.ms-inp:focus{border-color:#0888FF;box-shadow:0 0 0 3px rgba(8,136,255,.2)}
+.ms-chipbtn{flex:none;height:30px;padding:0 13px;border-radius:9999px;background:rgba(255,255,255,.07);color:#C9CAD1;font-size:12px;font-weight:600}
+.ms-chipbtn.pri{height:44px;padding:0 20px;background:linear-gradient(180deg,#1F9DFF,#0888FF);color:#fff;font-size:14px}
+@media (prefers-reduced-motion:reduce){.ms-sheet{animation:none}.ms-fill,.ms-knob,.ms-list,.ms-list-in,.ms-pill .ic{transition:none!important}}
 </style>
