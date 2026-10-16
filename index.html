@@ -1180,9 +1180,7 @@ function renderChat(){updateChips();renderAtts();
   <span class="eic">${icon('spark','lg fill')}</span>
   <h1>Build something remarkable.</h1>
   <p>Uploaded code becomes the source of truth for project modifications. Connect an AI provider in Set Up AI, attach your code, and start.</p>
-  <div class="qa-grid">
-   ${[['tools','Build a website','Build a website: '],['wrench','Fix my code','Fix an issue in my code: '],['zip','Analyze a ZIP','Analyze the ZIP project I attached and explain its structure: '],['android','Create a mobile UI','Create a mobile UI: '],['doc','Explain my code','Explain what this code does: ']].map(q=>`<button class="qa" data-qa="${esc(q[2])}">${icon(q[0],'sm')}<span>${q[1]}</span></button>`).join('')}
-  </div></div>`;}
+</div>`;}
  else renderThread('#msgs',S.chat.messages);
  updateSendBtn();restoreDraft();}
 const draftKey=()=>S.chat?'flay.draft.'+S.chat.id:null;
