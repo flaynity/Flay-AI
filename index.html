@@ -77,50 +77,42 @@ input,textarea,select{font:inherit;color:inherit}
 .fbtn:nth-child(2){border-color:rgba(255,27,122,0.35);box-shadow:0 4px 18px rgba(255,27,122,0.12)}
 .fbtn:active{transform:scale(.92)}
 
-/* Premium navigation drawer — scoped only to Menu Page */
-#drawer{position:fixed;top:0;bottom:0;left:0;width:min(360px,92vw);background:#0B0D13;color:#F4F4FA;z-index:60;transform:translateX(-102%);transition:transform .26s cubic-bezier(.2,.8,.2,1);display:flex;flex-direction:column;border-right:1px solid rgba(255,255,255,.08);padding-top:env(safe-area-inset-top);overflow:hidden}
-#drawer.open{transform:none;box-shadow:0 18px 60px rgba(0,0,0,.42)}
-#drawer .dr-scroll{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding-bottom:10px}
-.dr-banner{margin:20px 18px 26px;border:0;border-radius:0;background:transparent;position:relative;padding:4px 0;box-shadow:none}
-.dr-banner::after{display:none}
-.dr-spark-corner{display:none}
-.dr-head{display:flex;gap:15px;align-items:center}
-.dr-logo{width:58px;height:58px;border-radius:23px;background:linear-gradient(140deg,#B9A5FF 0%,#9AAEFF 48%,#76E8E0 100%);color:#10121B;display:flex;align-items:center;justify-content:center;box-shadow:none}
-.dr-logo .ic{width:30px;height:30px}
-.dr-title{font-size:25px;font-weight:850;letter-spacing:-.045em;color:#F7F5FF}
-.dr-title span{color:#B7A3FF}
-.dr-sub{display:none}
-#drawer .dr-newchat{margin:0 18px 30px;width:calc(100% - 36px);min-height:76px;display:flex;align-items:center;gap:18px;padding:0 22px;border:1px solid #4B456A;border-radius:25px;background:linear-gradient(110deg,#211E32 0%,#172027 100%);color:#F6F4FF;font-size:20px;font-weight:750;letter-spacing:-.02em;text-align:left}
-#drawer .dr-newchat:active{transform:scale(.985)}
-#drawer .dr-newchat .dr-hotkey{margin-left:auto;font-size:13px;font-weight:800;color:#B9A4FF;white-space:nowrap}
-.dr-section-title{display:flex;align-items:center;justify-content:space-between;margin:0 20px 12px;color:#858BA1;font-size:12px;font-weight:850;letter-spacing:.2em;text-transform:uppercase}
-#drawer nav{padding:0 18px 20px;display:flex;flex-direction:column;gap:4px}
-.dr-nav-item{display:flex;align-items:center;gap:16px;width:100%;min-height:64px;padding:12px 16px;border-radius:20px;background:transparent;border:1px solid transparent;color:#AEB2C2;transition:background .18s ease,border-color .18s ease}
-.dr-nav-item:active{transform:scale(.99)}
-.dr-nav-item .dr-ico{width:22px;height:22px;display:flex;align-items:center;justify-content:center;color:#A6AABC;flex:none;background:transparent!important;box-shadow:none!important}
-.dr-nav-item .dr-ico .ic{width:20px;height:20px}
-.dr-nav-item .dr-label{flex:1;font-weight:500;font-size:17px;text-align:left}
-.dr-nav-item .dr-arrow{display:none}
-.dr-nav-item.nav-history{background:#191B23;border-color:#292B35;color:#F2F1F8}
-.dr-nav-item.nav-history .dr-ico{color:#B9A5FF}
-.dr-nav-item.nav-projects,.dr-nav-item.nav-providers,.dr-nav-item.nav-build{border-color:transparent}
-#drawer .dr-chats{padding:4px 18px 22px}
-#drawer .dr-chat-link{display:flex;align-items:center;gap:14px;width:100%;min-height:58px;padding:10px 18px;background:transparent;border:0;border-radius:14px;color:#A8ADBE;text-align:left;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#drawer .dr-chat-link .ic{width:18px;height:18px;flex:none;color:#9298AB}
-#drawer .dr-chat-link span{overflow:hidden;text-overflow:ellipsis}
-.dr-foot{padding:12px 18px calc(16px + env(safe-area-inset-bottom));border-top:1px solid rgba(255,255,255,.09);flex:none}
-.dr-upgrade{padding:20px 18px 18px;border:1px solid #2D2C3C;border-radius:27px;background:linear-gradient(140deg,#1B1928,#11131B);margin-bottom:18px}
-.dr-upgrade-head{display:flex;align-items:center;gap:8px;justify-content:space-between;font-size:16px;font-weight:800;color:#F3F1FB}
-.dr-plus{padding:5px 12px;border-radius:999px;border:1px solid #554477;background:#302642;color:#D8CBFF;font-size:12px;font-weight:800}
-.dr-upgrade p{margin:15px 0 18px;color:#999FB2;font-size:14px;line-height:1.6}
-#drawer .dr-plans{width:100%;height:52px;border:0;border-radius:17px;background:#E9E1FF;color:#171321;font-size:15px;font-weight:800}
-.dr-profile{display:flex;align-items:center;gap:12px;padding:14px 8px 0}
-.dr-avatar{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#C8B6FF,#7BE3DD);color:#151522;font-size:18px;font-weight:800;flex:none}
-.dr-profile-copy{min-width:0;flex:1}
-.dr-profile-copy b{display:block;color:#ECECF5;font-size:15px;font-weight:600}
-.dr-profile-copy span{display:block;color:#858BA1;font-size:13px;margin-top:3px}
-.dr-profile-menu{color:#858BA1;background:transparent;border:0;padding:8px}
-#scrim{position:fixed;inset:0;background:rgba(0,0,0,.62);backdrop-filter:blur(4px);z-index:55}
+/* drawer (Navigation Menu) */
+#drawer{position:fixed;top:0;bottom:0;left:0;width:min(340px,86vw);background:#000000;z-index:60;transform:translateX(-102%);transition:transform .26s cubic-bezier(.2,.8,.2,1);display:flex;flex-direction:column;border-right:1px solid rgba(255,255,255,0.08);padding-top:env(safe-area-inset-top)}
+#drawer.open{transform:none;box-shadow:var(--shadow)}
+.dr-banner{margin:16px 14px 10px;border-radius:20px;background:#0C0D16;border:1px solid rgba(255,27,122,0.3);position:relative;overflow:hidden;padding:18px 16px;box-shadow:0 8px 24px rgba(255,27,122,0.15)}
+.dr-banner::after{content:"";position:absolute;bottom:-20px;right:-20px;width:140px;height:140px;background:radial-gradient(circle, rgba(255,27,122,0.45) 0%, transparent 70%);border-radius:50%;pointer-events:none}
+.dr-spark-corner{position:absolute;top:14px;right:16px;color:#FF1B7A;opacity:.8}
+.dr-head{display:flex;gap:14px;align-items:center;position:relative;z-index:2}
+.dr-logo{width:46px;height:46px;border-radius:14px;background:var(--accent-gradient);color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(255,27,122,0.45)}
+.dr-title{font-size:18px;font-weight:800;letter-spacing:-.02em}
+.dr-title span{color:var(--accent)}
+.dr-sub{display:block;font-size:11.5px;color:var(--text2);margin-top:2px}
+#drawer nav{padding:8px 14px;flex:1;display:flex;flex-direction:column;gap:10px}
+.dr-nav-item{display:flex;align-items:center;gap:14px;width:100%;padding:13px 14px;border-radius:16px;background:#08090E;border:1px solid var(--border);transition:all .18s ease}
+.dr-nav-item:active{transform:scale(.98)}
+.dr-nav-item .dr-ico{width:38px;height:38px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#fff;flex:none}
+.dr-nav-item .dr-ico.history{background:linear-gradient(135deg, #FF1B7A, #BE123C);box-shadow:0 3px 12px rgba(255,27,122,0.35)}
+.dr-nav-item .dr-ico.projects{background:linear-gradient(135deg, #3B82F6, #1D4ED8);box-shadow:0 3px 12px rgba(59,130,246,0.35)}
+.dr-nav-item .dr-ico.providers{background:linear-gradient(135deg, #06B6D4, #0891B2);box-shadow:0 3px 12px rgba(6,182,212,0.35)}
+.dr-nav-item .dr-ico.build{background:linear-gradient(135deg, #22C55E, #16A34A);box-shadow:0 3px 12px rgba(34,197,94,0.35)}
+.dr-nav-item.nav-history{border-color:rgba(255,27,122,0.32)}
+.dr-nav-item.nav-projects{border-color:rgba(59,130,246,0.32)}
+.dr-nav-item.nav-providers{border-color:rgba(6,182,212,0.32)}
+.dr-nav-item.nav-build{border-color:rgba(34,197,94,0.32)}
+.dr-nav-item .dr-label{flex:1;font-weight:700;font-size:14.5px;text-align:left}
+.dr-nav-item .dr-arrow{color:var(--text-muted)}
+.dr-foot{padding:10px 14px calc(14px + env(safe-area-inset-bottom))}
+.dr-theme-card{width:100%;background:#08090E;border:1px solid var(--border);border-radius:18px;padding:14px;display:flex;align-items:center;justify-content:space-between;text-align:left}
+.th-left{display:flex;gap:12px;align-items:center;min-width:0}
+.th-ico{width:36px;height:36px;border-radius:12px;background:var(--surface2);display:flex;align-items:center;justify-content:center;color:var(--accent);flex:none}
+.th-text b{display:block;font-size:14px;font-weight:700}
+.th-text span{display:block;font-size:11px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px;margin-top:2px}
+.th-toggle{width:46px;height:26px;border-radius:9999px;background:var(--surface2);border:1px solid var(--border);position:relative;flex:none;transition:all .2s ease}
+.th-toggle .th-knob{position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform .2s cubic-bezier(.2,.8,.2,1);box-shadow:0 2px 6px rgba(0,0,0,0.3)}
+.th-toggle.active{background:var(--accent);border-color:var(--accent)}
+.th-toggle.active .th-knob{transform:translateX(20px)}
+#scrim{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);z-index:55}
 
 /* chat messages & thinking cards */
 #chatScroll{flex:1;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding-top:76px}
@@ -479,51 +471,40 @@ section.screen .topbar>button.ibtn[data-back]{width:46px!important;height:46px!i
 
 <!-- DRAWER -->
 <div id="scrim" class="hidden"></div>
-<aside id="drawer" aria-label="Main menu">
-  <div class="dr-scroll">
-    <div class="dr-banner">
-      <div class="dr-head">
-        <span class="dr-logo"><svg class="ic fill"><use href="#i-spark"/></svg></span>
-        <div><b class="dr-title">Flay<span>AI</span></b></div>
+<aside id="drawer">
+  <div class="dr-banner">
+    <span class="dr-spark-corner"><svg class="ic xs fill"><use href="#i-spark"/></svg></span>
+    <div class="dr-head">
+      <span class="dr-logo"><svg class="ic fill"><use href="#i-spark"/></svg></span>
+      <div>
+        <b class="dr-title">Flay <span>AI</span></b>
+        <span class="dr-sub">AI Chat &amp; Coding Agent</span>
       </div>
     </div>
-    <button class="dr-newchat" id="drawerNewChat" type="button">
-      <svg class="ic"><use href="#i-plus"/></svg><span>New conversation</span><span class="dr-hotkey">⌘ K</span>
+  </div>
+  <nav>
+    <button data-nav="history" class="dr-nav-item nav-history">
+      <span class="dr-ico history"><svg class="ic sm"><use href="#i-history"/></svg></span>
+      <span class="dr-label">Chat History</span>
+      <span class="dr-arrow"><svg class="ic sm"><use href="#i-chev-r"/></svg></span>
     </button>
-    <div class="dr-section-title">Workspace</div>
-    <nav>
-      <button data-nav="providers" class="dr-nav-item nav-history">
-        <span class="dr-ico"><svg class="ic"><use href="#i-spark"/></svg></span><span class="dr-label">AI Assistant</span>
-      </button>
-      <button data-nav="build" class="dr-nav-item nav-build">
-        <span class="dr-ico"><svg class="ic"><use href="#i-sliders"/></svg></span><span class="dr-label">Explore tools</span>
-      </button>
-      <button data-nav="projects" class="dr-nav-item nav-projects">
-        <span class="dr-ico"><svg class="ic"><use href="#i-folder"/></svg></span><span class="dr-label">Library</span>
-      </button>
-      <button data-nav="history" class="dr-nav-item nav-providers">
-        <span class="dr-ico"><svg class="ic"><use href="#i-history"/></svg></span><span class="dr-label">Recent activity</span>
-      </button>
-    </nav>
-    <div class="dr-section-title"><span>Your chats</span><span style="letter-spacing:.12em">•••</span></div>
-    <div class="dr-chats" id="drawerChats">
-      <button class="dr-chat-link" type="button" data-nav="history"><svg class="ic"><use href="#i-spark"/></svg><span>Chat History</span></button>
-      <button class="dr-chat-link" type="button" data-nav="projects"><svg class="ic"><use href="#i-spark"/></svg><span>Build a project</span></button>
-      <button class="dr-chat-link" type="button" data-nav="providers"><svg class="ic"><use href="#i-spark"/></svg><span>Set up your AI</span></button>
-    </div>
-  </div>
-  <div class="dr-foot">
-    <div class="dr-upgrade">
-      <div class="dr-upgrade-head"><span>Make more with Flay AI</span><span class="dr-plus">PLUS</span></div>
-      <p>Unlock advanced models, longer conversations and creative tools.</p>
-      <button class="dr-plans" id="drawerPlans" type="button">Explore plans ↗</button>
-    </div>
-    <div class="dr-profile">
-      <span class="dr-avatar">F</span>
-      <div class="dr-profile-copy"><b>Flay AI User</b><span>Free workspace</span></div>
-      <button class="dr-profile-menu" id="drawerProfileMenu" type="button" aria-label="Account options">•••</button>
-    </div>
-  </div>
+    <button data-nav="projects" class="dr-nav-item nav-projects">
+      <span class="dr-ico projects"><svg class="ic sm"><use href="#i-folder"/></svg></span>
+      <span class="dr-label">Project Information</span>
+      <span class="dr-arrow"><svg class="ic sm"><use href="#i-chev-r"/></svg></span>
+    </button>
+    <button data-nav="providers" class="dr-nav-item nav-providers">
+      <span class="dr-ico providers"><svg class="ic sm"><use href="#i-sliders"/></svg></span>
+      <span class="dr-label">Set Up AI</span>
+      <span class="dr-arrow"><svg class="ic sm"><use href="#i-chev-r"/></svg></span>
+    </button>
+    <button data-nav="build" class="dr-nav-item nav-build">
+      <span class="dr-ico build"><svg class="ic sm"><use href="#i-android"/></svg></span>
+      <span class="dr-label">Build Android App</span>
+      <span class="dr-arrow"><svg class="ic sm"><use href="#i-chev-r"/></svg></span>
+    </button>
+  </nav>
+  <div class="dr-foot"></div>
 </aside>
 
 <!-- HISTORY -->
@@ -1123,9 +1104,6 @@ const drawer=$('#drawer'),scrim=$('#scrim');
 function openDrawer(){drawer.classList.add('open');scrim.classList.remove('hidden');}
 function closeDrawer(){drawer.classList.remove('open');scrim.classList.add('hidden');}
 $('#btnMenu').onclick=openDrawer;scrim.onclick=closeDrawer;
-$('#drawerNewChat').onclick=()=>{closeDrawer();$('#btnNewChat').click();};
-$('#drawerPlans').onclick=()=>{closeDrawer();renderProviders();openScreen('screen-providers');};
-$('#drawerProfileMenu').onclick=()=>{closeDrawer();renderProviders();openScreen('screen-providers');};
 
 $$('#drawer nav button').forEach(b=>b.onclick=()=>{const n=b.dataset.nav;closeDrawer();
  if(n==='history'){renderHistory();openScreen('screen-history');}
@@ -2306,57 +2284,6 @@ document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;
 :root:not([data-theme=light]) .build-primary-btn.primary{background:linear-gradient(90deg,#FF2A6D,#D4145A 50%,#A21CAF);box-shadow:0 8px 26px rgba(255,27,122,.4)}
 :root:not([data-theme=light]) .pcard-actions{flex-direction:column;gap:14px}
 :root:not([data-theme=light]) .build-primary-btn{flex:none;width:100%}
-
-/* Final reference-match pass: menu controls only */
-#drawer{width:min(520px,100vw)!important;background:#0B0E14!important;color:#F2F1FA!important;border-right:1px solid rgba(255,255,255,.07)!important}
-#drawer .dr-scroll{padding-top:0!important}
-#drawer .dr-banner{margin:24px 27px 56px!important;padding:0!important}
-#drawer .dr-logo{width:74px!important;height:74px!important;min-width:74px!important;border-radius:27px!important;background:linear-gradient(140deg,#BCA6FF 0%,#9ABEFF 50%,#77E4DD 100%)!important;color:#0B0E14!important}
-#drawer .dr-logo .ic{width:34px!important;height:34px!important}
-#drawer .dr-title{font-size:31px!important;letter-spacing:-1.3px!important;font-weight:850!important}
-#drawer .dr-title span{color:#B7A4FF!important}
-#drawer .dr-newchat{box-sizing:border-box!important;margin:0 27px 54px!important;width:calc(100% - 54px)!important;min-height:96px!important;padding:0 38px!important;gap:24px!important;border:2px solid #44415F!important;border-radius:29px!important;background:linear-gradient(115deg,#211E32 0%,#172027 100%)!important;color:#F3F1FB!important;font-size:25px!important;font-weight:750!important;box-shadow:none!important}
-#drawer .dr-newchat>svg{width:25px!important;height:25px!important;flex:none!important;stroke-width:2.8!important}
-#drawer .dr-newchat .dr-hotkey{font-size:17px!important;color:#B8A2FF!important;font-weight:800!important}
-#drawer .dr-section-title{margin:0 49px 15px!important;font-size:16px!important;letter-spacing:3px!important;color:#7F879D!important;font-weight:850!important}
-#drawer nav{padding:0 27px 36px!important;gap:10px!important}
-#drawer .dr-nav-item{box-sizing:border-box!important;width:100%!important;min-height:76px!important;height:76px!important;padding:0 32px!important;gap:30px!important;border:1px solid transparent!important;border-radius:24px!important;background:transparent!important;color:#AEB3C4!important;box-shadow:none!important}
-#drawer .dr-nav-item.nav-history{min-height:94px!important;height:94px!important;border:2px solid #292C36!important;border-radius:25px!important;background:#191B23!important;color:#F4F2FA!important}
-#drawer .dr-nav-item .dr-ico{width:24px!important;height:24px!important;min-width:24px!important;background:transparent!important;color:#A9AFC2!important;box-shadow:none!important}
-#drawer .dr-nav-item.nav-history .dr-ico{color:#BDAAFF!important}
-#drawer .dr-nav-item .dr-ico .ic{width:23px!important;height:23px!important}
-#drawer .dr-nav-item .dr-label{font-size:25px!important;font-weight:500!important;letter-spacing:-.4px!important;color:inherit!important}
-#drawer .dr-chats{padding:0 27px 20px!important}
-#drawer .dr-chat-link{min-height:80px!important;height:80px!important;padding:0 24px!important;gap:20px!important;border:0!important;background:transparent!important;border-radius:12px!important;color:#A6ABBD!important;font-size:22px!important;font-weight:400!important}
-#drawer .dr-chat-link .ic{width:22px!important;height:22px!important;color:#969CAF!important}
-#drawer .dr-foot{padding:20px 27px calc(18px + env(safe-area-inset-bottom))!important;background:#0B0E14!important;border-top:1px solid rgba(255,255,255,.10)!important}
-#drawer .dr-upgrade{margin:0 0 26px!important;padding:30px 30px 28px!important;border:2px solid #292A39!important;border-radius:31px!important;background:linear-gradient(135deg,#1B1928 0%,#11131B 100%)!important;box-shadow:none!important}
-#drawer .dr-upgrade-head{font-size:23px!important;letter-spacing:-.5px!important}
-#drawer .dr-plus{padding:8px 16px!important;font-size:16px!important;border-radius:999px!important}
-#drawer .dr-upgrade p{margin:22px 0 27px!important;font-size:20px!important;line-height:1.65!important;color:#9CA2B5!important}
-#drawer .dr-plans{height:68px!important;border-radius:21px!important;background:#E9E1FF!important;color:#171321!important;font-size:21px!important;font-weight:800!important;box-shadow:none!important}
-#drawer .dr-profile{gap:16px!important;padding:22px 20px 0!important}
-#drawer .dr-avatar{width:64px!important;height:64px!important;font-size:25px!important}
-#drawer .dr-profile-copy b{font-size:22px!important;color:#ECECF5!important}
-#drawer .dr-profile-copy span{font-size:17px!important;color:#858BA1!important}
-#drawer .dr-profile-menu{font-size:20px!important;color:#858BA1!important}
-@media(max-height:760px){
- #drawer .dr-banner{margin-bottom:24px!important}
- #drawer .dr-newchat{margin-bottom:30px!important;min-height:72px!important}
- #drawer .dr-section-title{margin-bottom:8px!important}
- #drawer nav{gap:2px!important;padding-bottom:18px!important}
- #drawer .dr-nav-item{min-height:57px!important;height:57px!important}
- #drawer .dr-nav-item.nav-history{min-height:68px!important;height:68px!important}
- #drawer .dr-nav-item .dr-label{font-size:18px!important}
- #drawer .dr-chat-link{min-height:50px!important;height:50px!important;font-size:16px!important}
- #drawer .dr-upgrade{padding:16px!important;margin-bottom:12px!important}
- #drawer .dr-upgrade p{font-size:14px!important;margin:10px 0 14px!important}
- #drawer .dr-upgrade-head{font-size:16px!important}
- #drawer .dr-plans{height:48px!important;font-size:15px!important}
- #drawer .dr-avatar{width:44px!important;height:44px!important}
- #drawer .dr-profile-copy b{font-size:15px!important}
- #drawer .dr-profile-copy span{font-size:13px!important}
-}
 </style>
 
 
