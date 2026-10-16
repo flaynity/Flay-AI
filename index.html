@@ -1326,7 +1326,7 @@ async function readIn(files,target){for(const f of files){
 /* ---------- model selector ---------- */
 const RLV=[{k:'fast',l:'Low'},{k:'balanced',l:'Medium'},{k:'deep',l:'High'},{k:'extra',l:'Extra'},{k:'max',l:'Max'}];
 const rlIdx=()=>{const i=RLV.findIndex(x=>x.k===S.settings.reasoning);return i<0?0:i;};
-function openModelModal(){
+function openModelModal(anchor){
  const provs=S.settings.providers;
  if(!provs.length){toast('Add a provider first (Menu > Set Up AI).','warn');renderProviders();openScreen('screen-providers');return;}
  modalRoot.innerHTML=`<div class="scrim2"></div><div class="ms-sheet" role="dialog" aria-label="Select model">
@@ -1340,7 +1340,19 @@ function openModelModal(){
  modalRoot.classList.add('show');
  _modalCancel=closeModal;
  modalRoot.querySelector('.scrim2').onclick=closeModal;
- const sheet=modalRoot.querySelector('.ms-sheet'),track=$('#msTrack'),dots=[...track.querySelectorAll('.ms-dot')],scroll=$('#msScroll');
+ const sheet=modalRoot.querySelector('.ms-sheet');
+ const placeAboveAnchor=()=>{
+  const a=anchor||$('#chipModel')||$('#chipModel2');
+  if(!a)return;
+  const r=a.getBoundingClientRect(),gap=8,pad=12;
+  const maxH=Math.max(180,r.top-gap-pad);
+  sheet.style.left=Math.max(14,Math.min(window.innerWidth-14, r.left+r.width/2))+'px';
+  sheet.style.bottom=(window.innerHeight-r.top+gap)+'px';
+  sheet.style.maxHeight=maxH+'px';
+  sheet.style.width='min(calc(100% - 28px),560px)';
+ };
+ placeAboveAnchor();
+ const track=$('#msTrack'),dots=[...track.querySelectorAll('.ms-dot')],scroll=$('#msScroll');
  const reasonOn=()=>{const p=activeProvider();return !!(p&&p.supportsReasoning);};
  let cur=rlIdx(),drag=false;
  function setP(f){track.style.setProperty('--p',f);dots.forEach(d=>d.classList.toggle('on',+d.dataset.f<=f+1e-6));}
@@ -1383,7 +1395,7 @@ function openModelModal(){
    if(!v){toast('Enter a model id.','warn');return;}pick(p,v);}});
  scroll.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.matches('[data-mmanual]')){const b=scroll.querySelector(`[data-madd="${e.target.dataset.mmanual}"]`);if(b)b.click();}});
  setP(cur/4);paintLabel();renderList();}
-$('#chipModel').onclick=openModelModal;$('#chipModel2').onclick=openModelModal;
+$('#chipModel').onclick=()=>openModelModal($('#chipModel'));$('#chipModel2').onclick=()=>openModelModal($('#chipModel2'));
 
 /* ---------- history ---------- */
 function renderHistory(){const list=$('#hsList');const items=[...S.chats].sort((a,b)=>b.updatedAt-a.updatedAt);
@@ -2590,8 +2602,8 @@ section.screen .topbar>button.ibtn[data-menu]:active{
 }
 
 /* ---------- Select model bottom sheet ---------- */
-.ms-sheet{position:fixed;left:50%;top:50%;bottom:auto;width:min(calc(100% - 28px),560px);transform:translate(-50%,-50%);max-height:calc(100dvh - 40px - env(safe-area-inset-top) - env(safe-area-inset-bottom));overflow:hidden;display:flex;flex-direction:column;gap:10px;padding:14px;background:linear-gradient(180deg,#101116 0%,#08080B 100%);border:1px solid rgba(255,255,255,.09);border-radius:24px;box-shadow:0 24px 80px rgba(0,0,0,.72),inset 0 1px 0 rgba(255,255,255,.05);animation:msFloatIn .24s cubic-bezier(.2,.9,.25,1)}
-@keyframes msFloatIn{from{transform:translate(-50%,-47%);opacity:0}to{transform:translate(-50%,-50%);opacity:1}}
+.ms-sheet{position:fixed;left:50%;top:auto;bottom:calc(100vh - 50%);width:min(calc(100% - 28px),560px);transform:translate(-50%,0);max-height:calc(100dvh - 40px - env(safe-area-inset-top) - env(safe-area-inset-bottom));overflow:hidden;display:flex;flex-direction:column;gap:10px;padding:14px;background:linear-gradient(180deg,#101116 0%,#08080B 100%);border:1px solid rgba(255,255,255,.09);border-radius:24px;box-shadow:0 24px 80px rgba(0,0,0,.72),inset 0 1px 0 rgba(255,255,255,.05);animation:msFloatIn .22s cubic-bezier(.2,.9,.25,1)}
+@keyframes msFloatIn{from{transform:translate(-50%,8px);opacity:0}to{transform:translate(-50%,0);opacity:1}}
 .ms-grip{width:40px;height:4px;border-radius:2px;background:rgba(255,255,255,.18);margin:4px auto 6px;flex:none}
 .ms-eff{flex:none;padding:17px 18px;border-radius:9999px;background:#0C0C0F;border:1px solid rgba(255,255,255,.05);box-shadow:inset 0 1px 0 rgba(255,255,255,.03)}
 .ms-track{--k:44px;--r:22px;--p:.5;position:relative;height:34px;border-radius:9999px;background:#26272D;touch-action:none;cursor:pointer;outline:none;user-select:none;-webkit-user-select:none}
