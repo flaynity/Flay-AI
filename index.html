@@ -2476,3 +2476,27 @@ $('#agentMsgs').addEventListener('click',e=>{const r=e.target.closest('[data-ret
 
 </body>
 </html>
+
+
+<style id="flay-menu-gradient-border">
+/* Premium gradient border and pink glow for page-header Menu buttons */
+section.screen .topbar>button.ibtn[data-menu]{
+  width:46px!important;
+  height:46px!important;
+  min-width:46px!important;
+  border:1.5px solid transparent!important;
+  border-radius:16px!important;
+  background:linear-gradient(var(--pc, #07080F),var(--pc, #07080F)) padding-box,
+             linear-gradient(135deg,#FF1B7A 0%,#FF4FA3 42%,#8B5CF6 72%,#3B82F6 100%) border-box!important;
+  box-shadow:0 0 10px rgba(255,27,122,.22),0 0 22px rgba(255,27,122,.18)!important;
+  transition:box-shadow .18s ease,transform .12s ease!important;
+}
+section.screen .topbar>button.ibtn[data-menu]:active{
+  transform:scale(.95)!important;
+  box-shadow:0 0 13px rgba(255,27,122,.34),0 0 26px rgba(255,27,122,.22)!important;
+}
+[data-theme=light] section.screen .topbar>button.ibtn[data-menu]{
+  background:linear-gradient(#FFFFFF,#FFFFFF) padding-box,
+             linear-gradient(135deg,#FF1B7A 0%,#FF4FA3 42%,#8B5CF6 72%,#3B82F6 100%) border-box!important;
+}
+</style>
