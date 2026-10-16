@@ -1204,7 +1204,7 @@ function renderAtts(){const host=$('#chatAtts');
 $('#chatAtts').addEventListener('click',e=>{const b=e.target.closest('[data-rmatt]');if(b){S.pendingAttachments.splice(+b.dataset.rmatt,1);renderAtts();}});
 
 /* ---------- system prompts ---------- */
-const SYS_CHAT=`You are Flay AI, a precise senior AI coding assistant for Android (Kotlin/Java), web and general programming. Be concise and correct. Base answers on attached file contents when provided.
+const SYS_CHAT=`You are Synora AI, a precise senior AI coding assistant for Android (Kotlin/Java), web and general programming. Be concise and correct. Base answers on attached file contents when provided.
 
 Code delivery rules:
 - Very short snippets (roughly under 25 lines) may be shown inline in a normal code block.
@@ -1721,7 +1721,7 @@ $('#agentInput').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&
 $('#agentSend').onclick=()=>{if(S.agentStreaming){S.agentAbort&&S.agentAbort.abort();}else sendAgent();};
 
 function agentSystem(p){
- return 'You are Flay AI, the coding agent for the project "'+p.name+'" ('+(TECHS[p.tech]?TECHS[p.tech].title:'imported project')+', package '+(p.package||'n/a')+').\n'+
+ return 'You are Synora AI, the coding agent for the project "'+p.name+'" ('+(TECHS[p.tech]?TECHS[p.tech].title:'imported project')+', package '+(p.package||'n/a')+').\n'+
 'The current project file tree and the contents of relevant files are provided in the user message. The project is the source of truth.\n\n'+
 'CRITICAL RULES FOR CODE UPDATES:\n'+
 '- When asked to update, fix, modify, design, or change code, YOU MUST MODIFY THE ACTUAL PROJECT FILES using the flayfiles block.\n'+
@@ -2392,7 +2392,7 @@ function buildReport(L,ex,prior){const r=L.b.run,v=x=>x===undefined||x===null||x
 function buildFix(){const p=S.project,L=S._lastBuild;if(!p||!L||L.state!=='failed'){toast('No failed build is available to fix.','warn');return;}if(!L.logs){toast('Failure log unavailable.','err');return;}const c=classify(L),ex=c.ex,r=L.b.run;if(c.kind==='infrastructure'){const bid=$('.screen.active')?.id;goBack();if(bid!=='screen-project')return;setTab('agent');p.agent.push({id:uid(),role:'assistant',content:'No project-code error was found. The failure appears to be infrastructure/build-service related.\nNo project files were changed.',createdAt:Date.now(),status:'done'});persistProject(p);renderThread('#agentMsgs',p.agent);pinScroll(true);return;}const sig=ex.failedTask+'|'+ex.first.replace(/\d+/g,'#');const prior=p.lastFix&&p.lastFix.sig===sig?'PREVIOUS ATTEMPT DID NOT RESOLVE THE ROOT CAUSE: the same failure occurred again. Re-analyze and do not repeat the previous change blindly.':'';p.lastFix={sig,runId:r.id||'',files:[]};const rep=buildReport(L,ex,prior),ctx=JSON.stringify({run:r,jobs:L.b.jobs.map(j=>({...j,logs:undefined})),failedTask:ex.failedTask,errorLocations:ex.locations,exitCode:ex.exitCode,firstError:ex.first,previousAttemptFailed:!!prior},null,1);S.agentAttachments=[{kind:'doc',path:'build-failed.log',name:'build-failed.log',size:rep.length,content:rep},{kind:'doc',path:'build-context.json',name:'build-context.json',size:ctx.length,content:ctx}];S._fixPending=true;const backId=$('.screen.active')?.id;goBack();if(backId!=='screen-project')return;setTab('agent');renderAgentAtts();const inp=$('#agentInput');inp.value=(prior?prior+' ':'')+'Fix the real Android build failure in build-failed.log and build-context.json. First determine root cause, failed task/step, error file and line. Make the smallest safe change, validate it, save it.';autoGrow(inp);setTimeout(()=>sendAgent(),120);}
 window.startBuildTerminal=startBuild;$('#btFix').onclick=buildFix;
 
-const AG_SYS='You are Flay AI, a precise Android/web coding agent. Make the smallest safe change. Never print project source code in prose.';
+const AG_SYS='You are Synora AI, a precise Android/web coding agent. Make the smallest safe change. Never print project source code in prose.';
 function resolvePath(p,tok){const t=normPath(tok),ps=Object.keys(p.files);
  const ex=ps.filter(x=>t===x||t.endsWith('/'+x));if(ex.length)return[ex.sort((a,b)=>b.length-a.length)[0]];
  const sf=ps.filter(x=>x.endsWith('/'+t));if(sf.length)return sf.slice(0,2);
