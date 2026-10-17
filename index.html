@@ -167,34 +167,42 @@ input,textarea,select{font:inherit;color:inherit}
 .att-chip em{font-style:normal;color:var(--text2)}
 
 /* AI thinking row + bottom "Steps" sheet */
-.tk{display:flex;gap:14px;align-items:stretch;margin:2px 0 14px;padding:2px 0;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+.tk{display:flex;gap:14px;align-items:stretch;margin:2px 0 14px;padding:2px 0;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none;transition:opacity .3s ease,transform .3s ease}
+.tk.enter{animation:tkin .55s cubic-bezier(.2,.8,.2,1)}
+@keyframes tkin{from{opacity:0;transform:translateY(10px)}}
+.tk.out{opacity:0;transform:translateY(-6px)}
 .tk.can{cursor:pointer}
 .tk.can:active .tk-t{color:var(--text)}
 .tk-rail{display:flex;flex-direction:column;align-items:center;gap:6px;width:28px;flex:none}
-.tk-orb{width:28px;height:28px;flex:none;opacity:.85}
-.tk.live .tk-orb{opacity:1;animation:tkspin 2.6s linear infinite}
+.tk-orb{width:28px;height:28px;flex:none;opacity:.8;animation:tkspin 2.8s linear infinite;animation-play-state:paused;transition:opacity .5s ease}
+.tk.live .tk-orb{opacity:1;animation-play-state:running}
 @keyframes tkspin{to{transform:rotate(360deg)}}
 .tk-line{flex:1;width:2px;min-height:12px;border-radius:2px;background:rgba(148,163,184,.22);position:relative;overflow:hidden}
-.tk.live .tk-line::after{content:"";position:absolute;left:0;right:0;bottom:0;height:38%;background:linear-gradient(180deg,rgba(124,92,255,0),#7C5CFF);animation:tkpulse 1.6s ease-in-out infinite}
+.tk-line::after{content:"";position:absolute;left:0;right:0;bottom:0;height:38%;background:linear-gradient(180deg,rgba(124,92,255,0),#7C5CFF);opacity:0;transition:opacity .5s ease}
+.tk.live .tk-line::after{opacity:1;animation:tkpulse 1.6s ease-in-out infinite}
 @keyframes tkpulse{50%{opacity:.35}}
 .tk-txt{flex:1;min-width:0}
-.tk-t{font-size:15.5px;font-weight:700;line-height:1.35;color:var(--text2);word-break:break-word}
-.tk-d{margin-top:4px;font-size:14.5px;line-height:1.5;color:var(--text-muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word}
-.tk-d[hidden]{display:none}
+.tk-t{font-size:15.5px;font-weight:700;line-height:1.35;color:var(--text2);word-break:break-word;transition:color .2s ease}
+.tk-dw{display:grid;grid-template-rows:0fr;opacity:0;transition:grid-template-rows .4s cubic-bezier(.2,.8,.2,1),opacity .35s ease}
+.tk-dw.on{grid-template-rows:1fr;opacity:1}
+.tk-d{min-height:0;overflow:hidden;padding-top:4px;font-size:14.5px;line-height:1.5;color:var(--text-muted);word-break:break-word}
+.tk-txt.swap .tk-t,.tk-txt.swap .tk-d{animation:tkswap .5s cubic-bezier(.2,.8,.2,1)}
+@keyframes tkswap{from{opacity:0;transform:translateY(8px)}}
 .tk-sheet{position:fixed;inset:0;z-index:90;display:none}
 .tk-sheet.show{display:block}
-.tk-scrim{position:absolute;inset:0;background:rgba(0,0,0,.55);animation:tkfade .2s ease}
+.tk-scrim{position:absolute;inset:0;background:rgba(0,0,0,.55);animation:tkfade .25s ease}
 @keyframes tkfade{from{opacity:0}}
-.tk-panel{position:absolute;left:0;right:0;bottom:0;max-height:82vh;display:flex;flex-direction:column;background:#171717;border-radius:30px 30px 0 0;box-shadow:0 -10px 40px rgba(0,0,0,.5);padding-bottom:env(safe-area-inset-bottom);animation:tkup .28s cubic-bezier(.2,.8,.2,1)}
+.tk-panel{position:absolute;left:0;right:0;bottom:0;max-height:82vh;display:flex;flex-direction:column;background:#171717;border-radius:30px 30px 0 0;box-shadow:0 -10px 40px rgba(0,0,0,.5);padding-bottom:env(safe-area-inset-bottom);animation:tkup .34s cubic-bezier(.2,.8,.2,1)}
 @keyframes tkup{from{transform:translateY(100%)}}
 .tk-panel.drag{animation:none;transition:none}
 .tk-grip-wrap{padding:14px 0 4px;flex:none;touch-action:none}
 .tk-grip{width:56px;height:6px;border-radius:3px;background:#3A3A3D;margin:0 auto}
 .tk-h{text-align:center;font-size:18px;font-weight:700;color:#fff;padding:16px 20px 14px;flex:none;touch-action:none}
 .tk-list{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:6px 24px 28px}
-.tk-it{display:flex;gap:16px}
+.tk-it{display:flex;gap:16px;animation:tkitem .4s cubic-bezier(.2,.8,.2,1) backwards}
+@keyframes tkitem{from{opacity:0;transform:translateY(12px)}}
 .tk-bar{display:flex;flex-direction:column;align-items:center;width:12px;flex:none;padding-top:7px}
-.tk-dot{width:9px;height:9px;border-radius:50%;background:#8A8A8E;flex:none}
+.tk-dot{width:9px;height:9px;border-radius:50%;background:#8A8A8E;flex:none;transition:background .3s ease,box-shadow .3s ease}
 .tk-dot.live{background:#7C5CFF;box-shadow:0 0 0 4px rgba(124,92,255,.22);animation:tkpulse 1.4s ease-in-out infinite}
 .tk-vl{flex:1;width:2px;margin-top:6px;border-radius:2px;background:#333337}
 .tk-it:last-child .tk-vl{background:transparent}
@@ -202,12 +210,16 @@ input,textarea,select{font:inherit;color:inherit}
 .tk-it:last-child .tk-body{padding-bottom:4px}
 .tk-st{font-size:16px;font-weight:700;line-height:1.4;color:#C4C7C5;word-break:break-word}
 .tk-sd{margin-top:4px;font-size:15px;line-height:1.55;color:#9AA0A6;white-space:pre-wrap;word-break:break-word}
+.tk-sd[hidden]{display:none}
 [data-theme=light] .tk-panel{background:#FFFFFF;box-shadow:0 -10px 40px rgba(15,23,42,.18)}
 [data-theme=light] .tk-grip{background:#CBD5E1}
 [data-theme=light] .tk-h{color:#0F172A}
 [data-theme=light] .tk-st{color:#334155}
 [data-theme=light] .tk-sd{color:#64748B}
 [data-theme=light] .tk-vl{background:#E2E8F0}
+/* user message slides in; AI reply fills the page like ChatGPT */
+.msg.user.msg-in>.bubble{animation:msgin .4s cubic-bezier(.2,.8,.2,1)}
+@keyframes msgin{from{opacity:0;transform:translateY(14px)}}
 
 .card{border-radius:18px;margin:0 0 12px;background:#090A10;overflow:hidden;border:1px solid transparent}
 .card-head{display:flex;align-items:center;gap:12px;padding:12px 14px;font-size:13px;cursor:pointer;user-select:none}
@@ -1001,82 +1013,130 @@ function statusIcon(st){if(st==='done')return icon('check','sm st-done');if(st==
 /* ---------- AI thinking: compact row + bottom "Steps" sheet (real model reasoning only) ---------- */
 const _tkCache=new WeakMap();
 const _tk={mid:null};
+const TK_DWELL=1200;
 const TK_ORB=(()=>{const cols=['#D45BFF','#C455FF','#A860FF','#8C62FF','#7360FF','#6A5CFF','#8F5BF2','#BC52F7'];let o='<svg class="tk-orb" viewBox="0 0 32 32" aria-hidden="true">';for(let i=0;i<8;i++)o+='<ellipse cx="16" cy="6" rx="2.3" ry="3.6" fill="'+cols[i]+'" transform="rotate('+(i*45)+' 16 16)"/>';return o+'</svg>';})();
 
 /* Split the model's real reasoning text into steps. Nothing is invented. */
 function thinkSteps(m){
- const r=String(m.reasoning||'').replace(/\r/g,'');
- const c=_tkCache.get(m);if(c&&c.n===r.length)return c.s;
+ let r=String(m.reasoning||'').replace(/\r/g,'');
+ const streaming=m.status==='streaming';
+ /* a half-written heading line is ignored until it is complete, so titles never flicker */
+ if(streaming&&r&&!/\n$/.test(r)){const i=r.lastIndexOf('\n'),tail=r.slice(i+1).trim();if(/^(\*\*|#)/.test(tail))r=r.slice(0,i+1);}
+ const key=r.length+(streaming?'s':'d');
+ const c=_tkCache.get(m);if(c&&c.k===key)return c.s;
  const steps=[];let cur=null,gap=false;
  r.split('\n').forEach(line=>{
   const t=line.trim();
   if(!t){gap=true;return;}
   const h=t.match(/^\*\*(.{2,140}?)\*\*[:\uFF1A]?$/)||t.match(/^#{1,4}\s+(.{2,140})$/);
-  if(h){cur={title:h[1].replace(/\*\*/g,'').trim(),text:''};steps.push(cur);gap=false;return;}
-  if(cur&&cur.title){cur.text+=(cur.text?(gap?'\n\n':'\n'):'')+t;}
+  if(h){cur={title:h[1].replace(/\*\*/g,'').trim(),text:'',head:true};steps.push(cur);gap=false;return;}
+  if(cur&&cur.head){cur.text+=(cur.text?(gap?'\n\n':'\n'):'')+t;}
   else if(cur&&!gap){cur.text+='\n'+t;}
-  else{cur={title:'',text:t};steps.push(cur);}
+  else{cur={title:'',text:t,head:false};steps.push(cur);}
   gap=false;
  });
  const out=[];
- steps.forEach(st=>{
+ steps.forEach((st,idx)=>{
   st.text=st.text.replace(/\*\*(.+?)\*\*/g,'$1').trim();
+  st.part=false;
   if(!st.title){
    const tx=st.text;
    const mm=tx.match(/^([\s\S]{12,90}?[.!?\u0964:])(?:\s+|$)([\s\S]*)$/);
    if(mm){st.title=mm[1].replace(/:$/,'');st.text=mm[2].trim();}
-   else if(tx.length<=90){st.title=tx;st.text='';}
+   else if(tx.length<=90){st.title=tx;st.text='';st.part=streaming&&idx===steps.length-1;}
    else{let i=tx.lastIndexOf(' ',64);if(i<24)i=64;st.title=tx.slice(0,i).trim()+'\u2026';st.text=tx.slice(i).trim();}
   }
   if(st.title||st.text)out.push(st);
  });
- _tkCache.set(m,{n:r.length,s:out});
+ _tkCache.set(m,{k:key,s:out});
  return out;
 }
 function tkSecs(m){const t=m.thinkMs||((m._thinkEnd&&m.thinkT0)?m._thinkEnd-m.thinkT0:0);return t?(t/1000).toFixed(1)+'s':'';}
-/* What the inline row shows. Returns null when there is nothing real to show. */
+/* One short sentence from a step the model itself titled; only once that sentence is complete. */
+function tkBrief(st){
+ if(!st||!st.head||!st.text)return '';
+ const t=st.text.replace(/\s+/g,' ');
+ const mm=t.match(/^(.{20,150}?[.!?\u0964])(?:\s|$)/);
+ return mm?mm[1]:'';
+}
+/* What the inline row shows: only the current key step. Null when there is nothing real to show. */
 function thinkView(m){
  const steps=thinkSteps(m),streaming=m.status==='streaming';
  const doneView=()=>({live:false,can:true,title:tkSecs(m)?'Thought for '+tkSecs(m):'Thinking',desc:steps.length+(steps.length===1?' step':' steps')});
  if(!streaming)return steps.length?doneView():null;
  if(m._genCurrent)return{live:true,can:steps.length>0,title:'Generating '+m._genCurrent,desc:''};
  if(m.content){if(!steps.length)return null;if(!m._thinkEnd)m._thinkEnd=Date.now();return doneView();}
- const last=steps[steps.length-1];
- if(last)return{live:true,can:true,title:last.title,desc:last.text.replace(/\s+/g,' ')};
- return{live:true,can:false,title:'Thinking\u2026',desc:''};
+ const key=steps.filter(x=>!x.part&&x.title.length>=6);
+ const last=key[key.length-1];
+ if(last)return{live:true,can:true,title:last.title,desc:tkBrief(last)};
+ return{live:true,can:steps.length>0,title:'Thinking\u2026',desc:''};
 }
-function thinkRowHtml(v){
- return '<div class="tk'+(v.live?' live':'')+(v.can?' can':'')+'"'+(v.can?' data-think="1"':'')+' aria-live="polite"><div class="tk-rail">'+TK_ORB+'<span class="tk-line"></span></div><div class="tk-txt"><div class="tk-t">'+esc(v.title)+'</div><div class="tk-d"'+(v.desc?'':' hidden')+'>'+esc(v.desc)+'</div></div></div>';
+function thinkRowHtml(v,enter){
+ return '<div class="tk'+(v.live?' live':'')+(v.can?' can':'')+(enter?' enter':'')+'"'+(v.can?' data-think="1"':'')+' aria-live="polite"><div class="tk-rail">'+TK_ORB+'<span class="tk-line"></span></div><div class="tk-txt"><div class="tk-t">'+esc(v.title)+'</div><div class="tk-dw'+(v.desc?' on':'')+'"><div class="tk-d">'+esc(v.desc)+'</div></div></div></div>';
 }
-function thinkRow(m){const v=thinkView(m);if(!v)return '';m._hadThink=true;return thinkRowHtml(v);}
+function thinkRow(m){
+ const v=thinkView(m);if(!v)return '';
+ const enter=m.status==='streaming'&&!m._tkSeen;m._tkSeen=true;m._hadThink=true;
+ return thinkRowHtml(v,enter);
+}
+function applyThinkView(tk,v){
+ const t=tk.querySelector('.tk-t'),d=tk.querySelector('.tk-d'),dw=tk.querySelector('.tk-dw'),txt=tk.querySelector('.tk-txt');
+ const changed=t.textContent!==v.title;
+ tk.classList.toggle('live',v.live);tk.classList.toggle('can',v.can);
+ if(v.can)tk.setAttribute('data-think','1');else tk.removeAttribute('data-think');
+ if(changed){txt.classList.remove('swap');void txt.offsetWidth;txt.classList.add('swap');t.textContent=v.title;tk._shown=Date.now();}
+ if(v.desc&&d.textContent!==v.desc)d.textContent=v.desc;
+ dw.classList.toggle('on',!!v.desc);
+ if(!tk._shown)tk._shown=Date.now();
+}
 function patchThinkRow(mel,m){
  const v=thinkView(m);let tk=mel.querySelector(':scope > .tk');
- if(!v){if(tk)tk.remove();}
- else if(!tk){mel.insertAdjacentHTML('afterbegin',thinkRowHtml(v));m._hadThink=true;}
- else{
-  tk.classList.toggle('live',v.live);tk.classList.toggle('can',v.can);
-  if(v.can)tk.setAttribute('data-think','1');else tk.removeAttribute('data-think');
-  const t=tk.querySelector('.tk-t'),d=tk.querySelector('.tk-d');
-  if(t.textContent!==v.title)t.textContent=v.title;
-  if(d.textContent!==v.desc)d.textContent=v.desc;
-  d.hidden=!v.desc;
+ if(tk&&tk._out&&v){tk.remove();tk=null;}
+ if(!v){
+  if(tk&&!tk._out){tk._out=true;tk.classList.add('out');setTimeout(()=>{if(tk._out&&tk.parentNode)tk.remove();},320);}
+ }else if(!tk){
+  mel.insertAdjacentHTML('afterbegin',thinkRowHtml(v,true));m._hadThink=true;m._tkSeen=true;
+  const n=mel.querySelector(':scope > .tk');if(n)n._shown=Date.now();
+ }else{
+  const cur=tk.querySelector('.tk-t').textContent;
+  /* give each key step a moment on screen so the row changes calmly */
+  if(v.live&&cur!==v.title&&tk._shown&&Date.now()-tk._shown<TK_DWELL){
+   if(!tk._pend)tk._pend=setTimeout(()=>{tk._pend=0;const v2=thinkView(m);if(v2&&tk.isConnected)applyThinkView(tk,v2);},TK_DWELL-(Date.now()-tk._shown)+10);
+  }else{
+   if(tk._pend){clearTimeout(tk._pend);tk._pend=0;}
+   applyThinkView(tk,v);
+  }
  }
  if(_tk.mid===m.id)renderThinkSheet(m);
 }
 function findThinkMsg(mid){
  return [].concat((S.chat&&S.chat.messages)||[],(S.project&&S.project.agent)||[]).find(x=>x&&x.id===mid);
 }
-function renderThinkSheet(m){
+/* Bottom "Steps" sheet: every step, updated in place while the model is still thinking */
+function renderThinkSheet(m,first){
  const el=document.getElementById('tkSheet');if(!el||!el.classList.contains('show'))return;
  const list=el.querySelector('.tk-list');
  const steps=thinkSteps(m),streaming=m.status==='streaming';
  const liveIdx=(streaming&&!m.content&&!m._genCurrent)?steps.length-1:-1;
- let html=steps.map((st,i)=>'<div class="tk-it"><div class="tk-bar"><span class="tk-dot'+(i===liveIdx?' live':'')+'"></span><span class="tk-vl"></span></div><div class="tk-body"><div class="tk-st">'+esc(st.title)+'</div>'+(st.text?'<div class="tk-sd">'+esc(st.text)+'</div>':'')+'</div></div>').join('');
- if(m._genCurrent)html+='<div class="tk-it"><div class="tk-bar"><span class="tk-dot live"></span><span class="tk-vl"></span></div><div class="tk-body"><div class="tk-st">Generating '+esc(m._genCurrent)+'</div></div></div>';
- if(el.dataset.sig===html)return;
+ const items=steps.map((st,i)=>({t:st.title,d:st.text,live:i===liveIdx}));
+ if(m._genCurrent)items.push({t:'Generating '+m._genCurrent,d:'',live:true});
  const near=list.scrollHeight-list.scrollTop-list.clientHeight<70;
- el.dataset.sig=html;list.innerHTML=html;
- if(streaming&&near)list.scrollTop=list.scrollHeight;
+ items.forEach((it,i)=>{
+  let n=list.children[i];
+  if(!n){
+   n=document.createElement('div');n.className='tk-it';
+   if(first)n.style.animationDelay=Math.min(i,10)*45+'ms';
+   n.innerHTML='<div class="tk-bar"><span class="tk-dot"></span><span class="tk-vl"></span></div><div class="tk-body"><div class="tk-st"></div><div class="tk-sd"></div></div>';
+   list.appendChild(n);
+  }
+  const st=n.querySelector('.tk-st'),sd=n.querySelector('.tk-sd');
+  if(st.textContent!==it.t)st.textContent=it.t;
+  if(sd.textContent!==it.d)sd.textContent=it.d;
+  sd.hidden=!it.d;
+  n.querySelector('.tk-dot').classList.toggle('live',it.live);
+ });
+ while(list.children.length>items.length)list.lastChild.remove();
+ if(streaming&&near&&!first)list.scrollTo({top:list.scrollHeight,behavior:'smooth'});
 }
 function openThinkSheet(mid){
  const m=findThinkMsg(mid);if(!m)return;
@@ -1093,8 +1153,8 @@ function openThinkSheet(mid){
   [el.querySelector('.tk-grip-wrap'),el.querySelector('.tk-h')].forEach(x=>{x.addEventListener('touchstart',st,{passive:true});x.addEventListener('touchmove',mv,{passive:true});x.addEventListener('touchend',en);x.addEventListener('touchcancel',en);});
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&_tk.mid)closeThinkSheet();});
  }
- _tk.mid=mid;el.dataset.sig='';el.classList.add('show');
- renderThinkSheet(m);
+ _tk.mid=mid;el.querySelector('.tk-list').innerHTML='';el.classList.add('show');
+ renderThinkSheet(m,true);
  const list=el.querySelector('.tk-list');list.scrollTop=(m.status==='streaming')?list.scrollHeight:0;
 }
 function closeThinkSheet(){const el=document.getElementById('tkSheet');if(el)el.classList.remove('show');_tk.mid=null;}
@@ -1174,7 +1234,6 @@ function msgHtml(m){
   ${thinkRow(m)}
   ${genCard(m)}
   <div class="ai-bubble">
-    <span class="ai-agents-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="url(#fdGrad)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4.2v2.2"/><circle cx="12" cy="3" r="1" fill="url(#fdGrad)" stroke="none"/><rect x="4.6" y="6.8" width="14.8" height="12.6" rx="4.6"/><rect x="1.5" y="11.4" width="1.9" height="4.2" rx=".95" fill="url(#fdGrad)" stroke="none"/><rect x="20.6" y="11.4" width="1.9" height="4.2" rx=".95" fill="url(#fdGrad)" stroke="none"/><circle cx="9.2" cy="13.1" r="1.4" fill="url(#fdGrad)" stroke="none"/><circle cx="14.8" cy="13.1" r="1.4" fill="url(#fdGrad)" stroke="none"/></svg></span>
     <div class="msg-body">${m.content?md(m.content):''}${m.status==='streaming'?'<span class="caret"></span>':''}</div>
   </div>
   ${m.activity&&m.activity.length?activityCard(m):''}
@@ -1202,6 +1261,35 @@ function schedulePinScroll(agent){
  _pinTimers[key]=setTimeout(()=>{_pinTimers[key]=0;if(S.pinned)sc.scrollTo({top:sc.scrollHeight,behavior:'smooth'});},100);
 }
 function pinScroll(agent){const sc=agent?$('#agentScroll'):$('#chatScroll');if(!sc)return;if(S.pinned)sc.scrollTo({top:sc.scrollHeight,behavior:'smooth'});}
+/* After sending: the user's message glides to the top and the reply fills the space below it. */
+const _fill={};
+function tkHeaderBottom(sel,sc){const h=sel==='#msgs'?document.querySelector('#screen-chat .ftop'):document.getElementById('pjTabs');if(!h)return 0;const r=h.getBoundingClientRect();return r.height?r.bottom-sc.getBoundingClientRect().top:0;}
+function tkOffset(sel,sc,host){const cs=getComputedStyle(sc),hs=getComputedStyle(host);const base=(parseFloat(cs.paddingTop)||0)+(parseFloat(hs.paddingTop)||0);return Math.max(base,tkHeaderBottom(sel,sc)+10);}
+function tkPrevUser(el){let u=el.previousElementSibling;while(u&&!u.classList.contains('user'))u=u.previousElementSibling;return u;}
+function applyFill(sel){
+ const host=$(sel);if(!host)return;
+ host.querySelectorAll('.msg.ai.fill').forEach(x=>{x.classList.remove('fill');x.style.minHeight='';});
+ const mid=_fill[sel];if(!mid)return;
+ const ai=host.querySelector('.msg.ai[data-mid="'+mid+'"]');if(!ai||ai!==host.lastElementChild)return;
+ const u=tkPrevUser(ai),sc=host.parentElement;if(!u||!sc)return;
+ const cs=getComputedStyle(sc),hs=getComputedStyle(host);
+ const between=ai.offsetTop-u.offsetTop;
+ const tail=(parseFloat(hs.paddingBottom)||0)+(parseFloat(cs.paddingBottom)||0);
+ const h=Math.max(0,sc.clientHeight-tkOffset(sel,sc,host)-between-tail);
+ ai.classList.add('fill');ai.style.minHeight=h+'px';
+}
+function startReply(sel,mid){
+ _fill[sel]=mid;S.pinned=true;
+ const host=$(sel);if(!host)return;
+ applyFill(sel);
+ const ai=host.querySelector('.msg.ai[data-mid="'+mid+'"]'),sc=host.parentElement,u=ai&&tkPrevUser(ai);
+ if(!u||!sc)return;
+ u.classList.add('msg-in');
+ requestAnimationFrame(()=>{
+  const target=sc.scrollTop+(u.getBoundingClientRect().top-sc.getBoundingClientRect().top)-tkOffset(sel,sc,host);
+  sc.scrollTo({top:Math.max(0,target),behavior:'smooth'});
+ });
+}
 
 /* ---------- navigation ---------- */
 function openScreen(id,opts={}){const cur=$('.screen.active');
@@ -1262,7 +1350,7 @@ function openChatMenu(it){if(fdMenuEl)return;const c=S.chats.find(x=>x.id===it.d
 /* ---------- chat ---------- */
 function newChat(){S.chat={id:uid(),title:'',createdAt:Date.now(),updatedAt:Date.now(),messages:[]};
  S.chats.unshift(S.chat);S.pendingAttachments=[];renderChat();saveSettings();}
-function renderThread(sel,msgs){const host=$(sel);host.innerHTML=msgs.length?msgs.map(msgHtml).join(''):'';syncThinkHeights(host);}
+function renderThread(sel,msgs){const host=$(sel);host.innerHTML=msgs.length?msgs.map(msgHtml).join(''):'';syncThinkHeights(host);applyFill(sel);}
 function renderChat(){updateChips();renderAtts();
  const msgs=$('#msgs');
  if(!S.chat.messages.length){msgs.innerHTML=`<div class="empty">
@@ -1343,9 +1431,9 @@ async function sendChat(){if(S.streaming)return;
  S.chat.messages.push({id:uid(),role:'user',content:text||'(attachments)',rawAtts:atts,attachments:atts.map(a=>({name:a.name||a.path,size:a.size,kind:a.kind})),createdAt:Date.now(),status:'done'});
  if(S.webAccess){const last=S.chat.messages[S.chat.messages.length-1];try{last.webContext=await searchWeb(text);}catch(e){S.chat.messages.pop();toast(e.message||'Web search failed.','warn');return;}}
  S.pendingAttachments=[];inp.value='';if(draftKey())localStorage.removeItem(draftKey());autoGrow(inp);
- S.chat.updatedAt=Date.now();renderChat();persistChat();S.pinned=true;pinScroll(false);
+ S.chat.updatedAt=Date.now();renderChat();persistChat();
  const am={id:uid(),role:'assistant',content:'',createdAt:Date.now(),status:'streaming',_hadThink:true};
- S.chat.messages.push(am);renderThread('#msgs',S.chat.messages);pinScroll(false);
+ S.chat.messages.push(am);renderThread('#msgs',S.chat.messages);startReply('#msgs',am.id);
  S.streaming=true;S.abort=new AbortController();updateSendBtn();
  try{await providerChat({provider:activeProvider(),messages:buildChatMessages(S.chat),signal:S.abort.signal,
   onDelta:d=>{am.content+=d;syncGenFiles(am);updateLive(am,'#msgs');},
@@ -1912,9 +2000,8 @@ async function sendAgent(){if(S.agentStreaming)return;
  if(!activeProvider().model){toast('No model selected. Use the Model button in the composer.','warn');openModelModal();return;}
  p.agent.push({id:uid(),role:'user',content:text||'(selected files)',attachments:atts.map(a=>({name:a.path||a.name,size:a.size,kind:a.kind})),createdAt:Date.now(),status:'done'});
  S.agentAttachments=[];inp.value='';if(agentDraftKey())localStorage.removeItem(agentDraftKey());autoGrow(inp);
- renderThread('#agentMsgs',p.agent);S.pinned=true;pinScroll(true);
  const am={id:uid(),role:'assistant',content:'',createdAt:Date.now(),status:'streaming',activity:[]};
- p.agent.push(am);renderThread('#agentMsgs',p.agent);pinScroll(true);
+ p.agent.push(am);renderThread('#agentMsgs',p.agent);startReply('#agentMsgs',am.id);
  S.agentStreaming=true;S.agentAbort=new AbortController();updateSendBtn();
  try{
   let round=0,need=[];
@@ -2689,7 +2776,7 @@ async function retryQueue(mid){if(S.agentStreaming)return;const p=S.project,am=p
  const f=am.queue.find(x=>x.status==='failed');if(f)f.status='retrying';
  try{await runQueue(am);}finally{finishAgent(am);}}
 
-async function sendAgent2(){if(S.agentStreaming)return;const p=S.project;if(!p)return;const inp=$('#agentInput'),text=inp.value.trim(),atts=S.agentAttachments.slice();if(!text&&!atts.length)return;if(!activeProvider()){toast('Set up an AI provider first (Menu > Set Up AI).','warn');renderProviders();openScreen('screen-providers');return;}if(!activeProvider().model){toast('No model selected. Use the Model button in the composer.','warn');openModelModal();return;}const errAtt=atts.find(a=>a.path==='build-failed.log'),fromBuild=!!(S._fixPending&&errAtt);S._fixPending=false;p.agent.push({id:uid(),role:'user',content:text||'(selected files)',attachments:atts.map(a=>({name:a.path||a.name,size:a.size,kind:a.kind})),createdAt:Date.now(),status:'done'});S.agentAttachments=[];inp.value='';if(agentDraftKey())localStorage.removeItem(agentDraftKey());autoGrow(inp);renderAgentAtts();const am={id:uid(),role:'assistant',content:'',createdAt:Date.now(),status:'streaming',activity:[],queue:[],task:text||'Work with the attached files.',fromBuild,errText:errAtt?errAtt.content||'':'',extra:atts.filter(a=>a!==errAtt&&typeof a.content==='string').map(a=>({path:a.path||a.name,content:a.content.slice(0,20000)}))};p.agent.push(am);renderThread('#agentMsgs',p.agent);S.pinned=true;pinScroll(true);S.agentStreaming=true;S.agentAbort=new AbortController();updateSendBtn();try{const evU=agStart(am,'Understanding the request','search');let hits=am.errText?filesInText(p,am.errText,true):[];filesInText(p,text,false).forEach(x=>{if(!hits.includes(x))hits.push(x)});const given=new Set(am.extra.map(a=>a.path));hits=hits.filter(x=>!given.has(x)).slice(0,3);let ctx='',used=0;const read=[];for(const x of hits){const f=p.files[x];if(!f||f.binary)continue;const cc=f.content||'';if(used+cc.length>30000)continue;used+=cc.length;read.push(x);ctx+='\n### FILE: '+x+'\n'+cc+'\n### END FILE\n'}agAct(am,read.length?'Read '+read.join(', ')+' (targeted)':'Planning from project file list',read.length?'file':'info');let up='TASK:\n'+am.task;if(am.errText)up+='\n\nREAL FAILURE LOG:\n'+errSummary(am.errText);am.extra.forEach(a=>{up+='\n\nATTACHED FILE '+a.path+':\n'+a.content});up+='\n\nPROJECT FILE LIST:\n'+Object.keys(p.files).sort().slice(0,400).join('\n')+'\n\nFILES ALREADY READ:'+(ctx||' none')+'\n\nRECENT PROJECT CHANGES (earlier in this chat): '+(recentChanges(p,am).join(', ')||'none')+'\n\nCONVERSATION RULES: First decide the intent of the LATEST user message, using earlier messages for context (a follow-up such as "make it black" refers to the work already discussed). Intents: greeting, chat, question, project_question, explain, inspect, code_change, bug_fix, build_fix, clarify. For greeting/chat/question/project_question/explain/inspect/clarify, answer naturally in the language the user writes in, put the reply in "answer", keep files [], and NEVER mention build errors, infrastructure or file changes. Use clarify only if a code request is truly ambiguous. Set "infrastructure" true ONLY when a REAL FAILURE LOG is attached above and shows no project-code error; otherwise it is always false.\n\nReturn ONLY one JSON object: {"intent":"","analysis":{"root_cause":"","failed_task":"","failed_step":"","error_type":"","error_file":"","error_line":null,"relevant_dependency":null,"recommended_fix":""},"infrastructure":false,"summary":"one short line","answer":"reply text when no file change is needed, else empty","files":[{"path":"relative/path","action":"modify|create|delete","reason":"short","refs":[]}]}. For a code change or bug fix list only the files that must change (minimal set)."';const hist=p.agent.filter(m=>m!==am&&m.status==='done'&&m.content).slice(0,-1).slice(-6).map(m=>({role:m.role,content:m.content}));let raw='';const tP=Date.now();await providerChat({provider:activeProvider(),messages:[{role:'system',content:AG_SYS},...hist,{role:'user',content:up}],signal:S.agentAbort.signal,onDelta:d=>{raw+=d},onReasoning:think(am)});let plan;try{plan=JSON.parse((raw.match(/\{[\s\S]*\}/)||[''])[0])}catch(_){plan=null}if(!plan||typeof plan!=='object'){if(!am.fromBuild&&!am.errText&&raw.trim())plan={intent:'chat',answer:raw.trim(),files:[]};else throw new Error('The model did not return a valid plan. Try again.');}const seen=new Set();am.queue=(plan.files||[]).map(f=>({path:normPath(f&&f.path),action:String(f&&f.action||'modify').toLowerCase(),reason:String(f&&f.reason||''),refs:((f&&f.refs)||[]).map(normPath).filter(r=>p.files[r]).slice(0,2)})).filter(f=>f.path&&!isUnsafe(f.path)&&!seen.has(f.path)&&seen.add(f.path)).slice(0,12).map(f=>{if(f.action!=='delete')f.action=p.files[f.path]?'modify':'create';f.status='queued';return f});am.plan=String(plan.summary||'');const an=plan.analysis||{};if(an.root_cause&&(am.fromBuild||am.errText))agAct(am,'Root cause: '+String(an.root_cause).slice(0,300)+(an.error_file?' ('+an.error_file+(an.error_line?':'+an.error_line:'')+')':''),'search');const intent=String(plan.intent||'').toLowerCase().replace(/[^a-z_]/g,''),talk=/^(greeting|chat|question|project_question|explain|inspect|clarify|identity)$/.test(intent);if(talk)am.queue=[];
+async function sendAgent2(){if(S.agentStreaming)return;const p=S.project;if(!p)return;const inp=$('#agentInput'),text=inp.value.trim(),atts=S.agentAttachments.slice();if(!text&&!atts.length)return;if(!activeProvider()){toast('Set up an AI provider first (Menu > Set Up AI).','warn');renderProviders();openScreen('screen-providers');return;}if(!activeProvider().model){toast('No model selected. Use the Model button in the composer.','warn');openModelModal();return;}const errAtt=atts.find(a=>a.path==='build-failed.log'),fromBuild=!!(S._fixPending&&errAtt);S._fixPending=false;p.agent.push({id:uid(),role:'user',content:text||'(selected files)',attachments:atts.map(a=>({name:a.path||a.name,size:a.size,kind:a.kind})),createdAt:Date.now(),status:'done'});S.agentAttachments=[];inp.value='';if(agentDraftKey())localStorage.removeItem(agentDraftKey());autoGrow(inp);renderAgentAtts();const am={id:uid(),role:'assistant',content:'',createdAt:Date.now(),status:'streaming',activity:[],queue:[],task:text||'Work with the attached files.',fromBuild,errText:errAtt?errAtt.content||'':'',extra:atts.filter(a=>a!==errAtt&&typeof a.content==='string').map(a=>({path:a.path||a.name,content:a.content.slice(0,20000)}))};p.agent.push(am);renderThread('#agentMsgs',p.agent);startReply('#agentMsgs',am.id);S.agentStreaming=true;S.agentAbort=new AbortController();updateSendBtn();try{const evU=agStart(am,'Understanding the request','search');let hits=am.errText?filesInText(p,am.errText,true):[];filesInText(p,text,false).forEach(x=>{if(!hits.includes(x))hits.push(x)});const given=new Set(am.extra.map(a=>a.path));hits=hits.filter(x=>!given.has(x)).slice(0,3);let ctx='',used=0;const read=[];for(const x of hits){const f=p.files[x];if(!f||f.binary)continue;const cc=f.content||'';if(used+cc.length>30000)continue;used+=cc.length;read.push(x);ctx+='\n### FILE: '+x+'\n'+cc+'\n### END FILE\n'}agAct(am,read.length?'Read '+read.join(', ')+' (targeted)':'Planning from project file list',read.length?'file':'info');let up='TASK:\n'+am.task;if(am.errText)up+='\n\nREAL FAILURE LOG:\n'+errSummary(am.errText);am.extra.forEach(a=>{up+='\n\nATTACHED FILE '+a.path+':\n'+a.content});up+='\n\nPROJECT FILE LIST:\n'+Object.keys(p.files).sort().slice(0,400).join('\n')+'\n\nFILES ALREADY READ:'+(ctx||' none')+'\n\nRECENT PROJECT CHANGES (earlier in this chat): '+(recentChanges(p,am).join(', ')||'none')+'\n\nCONVERSATION RULES: First decide the intent of the LATEST user message, using earlier messages for context (a follow-up such as "make it black" refers to the work already discussed). Intents: greeting, chat, question, project_question, explain, inspect, code_change, bug_fix, build_fix, clarify. For greeting/chat/question/project_question/explain/inspect/clarify, answer naturally in the language the user writes in, put the reply in "answer", keep files [], and NEVER mention build errors, infrastructure or file changes. Use clarify only if a code request is truly ambiguous. Set "infrastructure" true ONLY when a REAL FAILURE LOG is attached above and shows no project-code error; otherwise it is always false.\n\nReturn ONLY one JSON object: {"intent":"","analysis":{"root_cause":"","failed_task":"","failed_step":"","error_type":"","error_file":"","error_line":null,"relevant_dependency":null,"recommended_fix":""},"infrastructure":false,"summary":"one short line","answer":"reply text when no file change is needed, else empty","files":[{"path":"relative/path","action":"modify|create|delete","reason":"short","refs":[]}]}. For a code change or bug fix list only the files that must change (minimal set)."';const hist=p.agent.filter(m=>m!==am&&m.status==='done'&&m.content).slice(0,-1).slice(-6).map(m=>({role:m.role,content:m.content}));let raw='';const tP=Date.now();await providerChat({provider:activeProvider(),messages:[{role:'system',content:AG_SYS},...hist,{role:'user',content:up}],signal:S.agentAbort.signal,onDelta:d=>{raw+=d},onReasoning:think(am)});let plan;try{plan=JSON.parse((raw.match(/\{[\s\S]*\}/)||[''])[0])}catch(_){plan=null}if(!plan||typeof plan!=='object'){if(!am.fromBuild&&!am.errText&&raw.trim())plan={intent:'chat',answer:raw.trim(),files:[]};else throw new Error('The model did not return a valid plan. Try again.');}const seen=new Set();am.queue=(plan.files||[]).map(f=>({path:normPath(f&&f.path),action:String(f&&f.action||'modify').toLowerCase(),reason:String(f&&f.reason||''),refs:((f&&f.refs)||[]).map(normPath).filter(r=>p.files[r]).slice(0,2)})).filter(f=>f.path&&!isUnsafe(f.path)&&!seen.has(f.path)&&seen.add(f.path)).slice(0,12).map(f=>{if(f.action!=='delete')f.action=p.files[f.path]?'modify':'create';f.status='queued';return f});am.plan=String(plan.summary||'');const an=plan.analysis||{};if(an.root_cause&&(am.fromBuild||am.errText))agAct(am,'Root cause: '+String(an.root_cause).slice(0,300)+(an.error_file?' ('+an.error_file+(an.error_line?':'+an.error_line:'')+')':''),'search');const intent=String(plan.intent||'').toLowerCase().replace(/[^a-z_]/g,''),talk=/^(greeting|chat|question|project_question|explain|inspect|clarify|identity)$/.test(intent);if(talk)am.queue=[];
 if(am.fromBuild&&plan.infrastructure===true&&!am.queue.length){am.content='No project-code error was found in the build log. The failure appears to be infrastructure/build-service related.'+(an.root_cause?'\n\n'+an.root_cause:'')+'\nNo project files were changed.';agEnd(am,evU,'done','Build log analysed \u2014 no project-code error found');am.status='done';return;}
 agEnd(am,evU,'done',intent?'Request understood ('+intent.replace(/_/g,' ')+')':'Request understood',{detail:'Planner responded in '+((Date.now()-tP)/1000).toFixed(1)+'s'});
 if(!am.queue.length){let ans=String(plan.answer||'').trim();if(!ans&&!am.fromBuild)ans=await agentChatReply(am,hist,text);if(!ans)ans=am.plan||'I could not find a change to make. Could you describe what you want changed?';am.content=ans;agAct(am,am.fromBuild?'No file changes were needed':'Replied \u2014 no file operations were needed','info');am.status='done';return;}
@@ -2859,4 +2946,10 @@ section.screen .topbar>button.ibtn[data-menu]:active{
 .act-row.new{animation:actIn .18s ease-out}
 @keyframes actIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){.card.act .act-wrap,.card.act .act-chev{transition:none}.act-row.new{animation:none}}
+</style>
+<style id="flay-ai-plain-text">
+/* AI replies: plain text on the page, no icon, no bubble (ChatGPT style) */
+.msg.ai .ai-bubble,#screen-chat .msg.ai .ai-bubble,#screen-project #agentMsgs .msg.ai .ai-bubble,#screen-projects .msg.ai .ai-bubble{display:block!important;background:none!important;background-image:none!important;border:0!important;border-radius:0!important;box-shadow:none!important;padding:0!important;margin:0!important;gap:0!important}
+.msg.ai .msg-body{font-size:16px;line-height:1.7;color:var(--text)}
+.msg.ai{align-self:stretch}
 </style>
