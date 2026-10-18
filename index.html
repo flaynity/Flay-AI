@@ -1350,7 +1350,7 @@ function msgHtml(m){
   ${thinkRow(m)}
   ${genCard(m)}
   <div class="ai-bubble">
-    <div class="msg-body">${m.content?md(m.content):''}${m.status==='streaming'?'<span class="caret"></span>':''}</div>
+    <div class="msg-body">${m.content?md(m.content,m):''}${m.status==='streaming'?'<span class="caret"></span>':''}</div>
   </div>
   ${m.activity&&m.activity.length?activityCard(m):''}
   ${m.ops?changesCard(m):''}</div>`;}
@@ -1362,7 +1362,7 @@ function updateLive(m,hostSel){
   rafP=false;const host=$(hostSel);if(!host)return;
   let mel=host.querySelector(`[data-mid="${m.id}"]`);if(!mel)return;
   const body=mel.querySelector('.msg-body');
-  if(body)body.innerHTML=(m.content?md(m.content):'')+(m.status==='streaming'?'<span class="caret"></span>':'');
+  if(body)body.innerHTML=(m.content?md(m.content,m):'')+(m.status==='streaming'?'<span class="caret"></span>':'');
   patchThinkRow(mel,m);
   if(m.generatedFiles&&m.generatedFiles.length&&!m.ops){const sig=m.generatedFiles.map(g=>g.status).join('|');let gc=mel.querySelector('.card.gen');
    if(!gc){const w=document.createElement('div');w.innerHTML=genCard(m);const bEl=mel.querySelector('.ai-bubble')||body;bEl&&bEl.before(w.firstElementChild);}
@@ -1516,6 +1516,7 @@ function isLinkIntent(t){t=String(t||'').trim();if(!t||t.length>400)return false
  const code=/(\bfix\b|\bedit\b|\bchange\b|\bupdate\b|\bimplement\b|\bcreate\b|\bbuild\b|\bmake\b|\badd\b|\bremove\b|\bhref\b|\banchor\b|\bcss\b|\bhtml\b|\bjs\b|\bjavascript\b|\bbutton\b|\bcode\b|\bfile\b|\bscreen\b|\bpage\b|\u0995\u09cb\u09a1|\u09ab\u09be\u0987\u09b2|\u09a0\u09bf\u0995 \u0995\u09b0|\u098f\u09a1\u09bf\u099f|\u09aa\u09b0\u09bf\u09ac\u09b0\u09cd\u09a4\u09a8|\u09af\u09cb\u0997 \u0995\u09b0|\u09ac\u09be\u09a8\u09be\u0993|\u09ac\u09be\u09a8\u09be\u09a4\u09c7|\u09a4\u09c8\u09b0\u09bf|\u09a1\u09bf\u09b2\u09bf\u099f|\u09ae\u09c1\u099b|\u0986\u09aa\u09a1\u09c7\u099f)/i;
  return noun.test(t)&&ask.test(t)&&!code.test(t);}
 function fastThink(){const r=S.settings.reasoning;return (r==='off'||r==='deep'||r==='extra'||r==='max')?r:'fast';}
+const ASK_RULE='When you need the user to choose something before you can answer well (their goal, platform, type, budget, level, etc.), do not ask in plain text. Instead write one short lead-in sentence in the user language, then exactly one fenced code block tagged askcard containing a JSON object like {"questions":[{"q":"question text","type":"single","options":["option A","option B","option C"]}],"button":"short action label"}. Rules: 1 to 4 questions, all genuinely about the current request; type is single (pick one, default), multi (pick several) or text (free text, optional "placeholder"); 2 to 6 short options per choice question; "button" is a short action label in the user language describing what you will do next. Never output sample, demo or placeholder questions, and never use a card when the request is already clear enough to answer. After the block stop and wait for the answer. The answers come back as a normal user message.';
 const SYS_CHAT=`You are Synora AI, a precise senior AI coding assistant for Android (Kotlin/Java), web and general programming. Be concise and correct. Base answers on attached file contents when provided.
 
 Code delivery rules:
@@ -1529,9 +1530,32 @@ Code delivery rules:
 - If the user asks to see the full code of an already generated file inside the chat, quote it VERBATIM from the GENERATED FILES section of the conversation into a normal code block. Never regenerate or alter it in that case.
 - Never invent tool results, statuses or completions.
 - ${THINK_RULE}
-- ${LINKS_RULE} If the request is only “Link” and the intended link is unclear from context, ask which link they want instead of generating an unrelated list.`;
+- ${LINKS_RULE} If the request is only “Link” and the intended link is unclear from context, ask which link they want instead of generating an unrelated list.
+- ${ASK_RULE}`;
 
-async function searchWeb(query,signal){const q=String(query||'').trim();if(!q)return '';const url='https://r.jina.ai/http://www.google.com/search?q='+encodeURIComponent(q);let res;try{res=await fetch(url,{headers:{Accept:'text/plain'},signal});}catch(e){if(e.name==='AbortError')throw e;throw new Error('Web search failed: '+(e.message||'network error'));}if(!res.ok)throw new Error('Web search failed (HTTP '+res.status+').');const raw=(await res.text()).trim();if(!raw)throw new Error('Web search returned no results.');const links=[];const seen=new Set();const re=/\[([^\]]{2,180})\]\((https?:\/\/[^)]+)\)/g;let m;while((m=re.exec(raw))&&links.length<8){const title=m[1].replace(/\s+/g,' ').trim();const link=m[2].trim();if(!seen.has(link)&&!/google\.com\/search/i.test(link)){seen.add(link);links.push({title,link});}}let text=raw.replace(/\\r/g,'').replace(/\\n{3,}/g,'\\n\\n').slice(0,12000);if(links.length)text+='\\n\\n--- Extracted result links ---\\n'+links.map((x,i)=>(i+1)+'. '+x.title+'\\n'+x.link).join('\\n');return 'LIVE WEB SEARCH RESULTS FOR: '+q+'\\nUse these results as external context. Do not claim to have browsed anything beyond the supplied results. Cite source URLs when relevant.\\n\\n'+text;}
+/* Live web search: returns the text context for the AI and the real result links (sources) for the UI */
+const SRC_BAD=/(^|\.)(google|gstatic|googleusercontent|googleapis)\.[a-z.]+$|^r\.jina\.ai$/i;
+async function searchWebFull(query,signal){
+ const q=String(query||'').trim();if(!q)return{context:'',sources:[]};
+ const url='https://r.jina.ai/http://www.google.com/search?q='+encodeURIComponent(q);
+ let res;try{res=await fetch(url,{headers:{Accept:'text/plain'},signal});}catch(e){if(e.name==='AbortError')throw e;throw new Error('Web search failed: '+(e.message||'network error'));}
+ if(!res.ok)throw new Error('Web search failed (HTTP '+res.status+').');
+ const raw=(await res.text()).trim();if(!raw)throw new Error('Web search returned no results.');
+ const sources=[],seen=new Set(),re=/\[([^\]]{2,400})\]\((https?:\/\/[^)\s]+)\)/g;let m;
+ while((m=re.exec(raw))&&sources.length<10){
+  let link=m[2],u;try{u=new URL(link);}catch(_){continue;}
+  if(/(^|\.)google\.[a-z.]+$/i.test(u.hostname)&&u.pathname==='/url'){const t=u.searchParams.get('q')||u.searchParams.get('url')||'';try{u=new URL(t);link=t;}catch(_){continue;}}
+  if(!/^https?:$/.test(u.protocol)||SRC_BAD.test(u.hostname))continue;
+  const key=u.hostname+u.pathname.replace(/\/$/,'');if(seen.has(key))continue;
+  const lines=m[1].split('\n').map(x=>x.replace(/[#*_`>]/g,'').replace(/\s+/g,' ').trim()).filter(Boolean);
+  const title=lines.find(x=>!/^https?:\/\//i.test(x)&&!/ › /.test(x)&&x.length>=4)||'';
+  if(!title||/^(images?|videos?|maps|news|shopping|cached|similar|translate this page|more results?|sign in|settings|privacy|terms)$/i.test(title))continue;
+  seen.add(key);sources.push({title:title.slice(0,160),url:link,host:u.hostname.replace(/^www\./,'')});
+ }
+ let text=raw.replace(/\r/g,'').replace(/\n{3,}/g,'\n\n').slice(0,12000);
+ if(sources.length)text+='\n\n--- Extracted result links ---\n'+sources.map((x,i)=>(i+1)+'. '+x.title+'\n'+x.url).join('\n');
+ return{context:'LIVE WEB SEARCH RESULTS FOR: '+q+'\nUse these results as external context. Do not claim to have browsed anything beyond the supplied results. Cite source URLs when relevant.\n\n'+text,sources};}
+async function searchWeb(query,signal){return (await searchWebFull(query,signal)).context;}
 function setWebAccess(on){S.webAccess=!!on;['#chipWeb','#chipWeb2'].forEach(s=>{const b=$(s);if(b){b.classList.toggle('web-on',S.webAccess);b.setAttribute('aria-pressed',S.webAccess?'true':'false');b.title=S.webAccess?'Web access ON':'Web access OFF';}});}
 
 function buildChatMessages(chat){
@@ -1557,25 +1581,26 @@ function buildChatMessages(chat){
  return msgs;}
 
 /* ---------- send (chat) ---------- */
-async function sendChat(){if(S.streaming)return;
- const inp=$('#chatInput');const text=inp.value.trim();
- const atts=S.pendingAttachments.slice();
+async function sendChat(over){if(S.streaming)return;
+ const ov=typeof over==='string';
+ const inp=$('#chatInput');const text=ov?over.trim():inp.value.trim();
+ const atts=ov?[]:S.pendingAttachments.slice();
  if(!text&&!atts.length)return;
  if(!activeProvider()){toast('Set up an AI provider first (Menu > Set Up AI).','warn');renderProviders();openScreen('screen-providers');return;}
  if(!activeProvider().model){toast('No model selected. Use the Model button in the composer.','warn');openModelModal();return;}
  if(!S.chat)newChat();
  if(!S.chat.title)S.chat.title=(text||atts[0].name||'New chat').slice(0,60);
  S.chat.messages.push({id:uid(),role:'user',content:text||'(attachments)',rawAtts:atts,attachments:atts.map(a=>({name:a.name||a.path,size:a.size,kind:a.kind})),createdAt:Date.now(),status:'done'});
- if(S.webAccess){const last=S.chat.messages[S.chat.messages.length-1];try{last.webContext=await searchWeb(text);}catch(e){S.chat.messages.pop();toast(e.message||'Web search failed.','warn');return;}}
- S.pendingAttachments=[];inp.value='';if(draftKey())localStorage.removeItem(draftKey());autoGrow(inp);
+ if(S.webAccess){const last=S.chat.messages[S.chat.messages.length-1];try{const ws=await searchWebFull(text.slice(0,300));last.webContext=ws.context;last.webSources=ws.sources;}catch(e){S.chat.messages.pop();toast(e.message||'Web search failed.','warn');return;}}
+ if(!ov){S.pendingAttachments=[];inp.value='';if(draftKey())localStorage.removeItem(draftKey());autoGrow(inp);}
  S.chat.updatedAt=Date.now();renderChat();persistChat();
- const am={id:uid(),role:'assistant',content:'',createdAt:Date.now(),status:'streaming',_hadThink:true};
+ const am={id:uid(),role:'assistant',content:'',createdAt:Date.now(),status:'streaming',_hadThink:true,sources:S.chat.messages[S.chat.messages.length-1].webSources||undefined};
  S.chat.messages.push(am);renderThread('#msgs',S.chat.messages);startReply('#msgs',am.id);
  S.streaming=true;S.abort=new AbortController();updateSendBtn();
  try{
   if(isLinkIntent(text)&&!atts.length&&!S.webAccess){
    am._webSearching=true;updateLive(am,'#msgs');
-   try{S.chat.messages[S.chat.messages.length-2].webContext=await searchWeb(text+' official website',S.abort.signal);}
+   try{const ws=await searchWebFull(text.slice(0,300)+' official website',S.abort.signal);S.chat.messages[S.chat.messages.length-2].webContext=ws.context;if(ws.sources.length)am.sources=ws.sources;}
    catch(e){if(e.name==='AbortError')throw e;}
    am._webSearching=false;
   }
@@ -1586,7 +1611,7 @@ async function sendChat(){if(S.streaming)return;
  catch(e){if(e.name==='AbortError'){am.status='stopped';}
   else{am.status='error';console.error('Flay AI chat request failed:',e);am.content+=(am.content?'\n\n':'')+'**Unable to get a response.**\nPlease try again.';}}
  finally{am._webSearching=false;if(am.thinkT0)am.thinkMs=Date.now()-am.thinkT0;finishGen(am);
-  S.streaming=false;S.abort=null;S.chat.updatedAt=Date.now();persistChat();
+  S.streaming=false;S.abort=null;S.chat.updatedAt=Date.now();persistChat();window.__actEnter=am.id;
   renderThread('#msgs',S.chat.messages);pinScroll(false);updateSendBtn();}}
 
 /* chat events */
@@ -2758,7 +2783,7 @@ async function agentLinkReply(am,text){
  const sig=S.agentAbort.signal,p=S.project;
  am._webSearching=true;updateLive(am,'#agentMsgs');
  let ctx='';
- try{try{ctx=await searchWeb(text+' official website',sig);}catch(e){if(e.name==='AbortError')throw e;}}
+ try{try{const ws=await searchWebFull(text.slice(0,300)+' official website',sig);ctx=ws.context;if(ws.sources.length)am.sources=ws.sources;}catch(e){if(e.name==='AbortError')throw e;}}
  finally{am._webSearching=false;}
  const hist=p.agent.filter(m=>m!==am&&m.status==='done'&&m.content).slice(0,-1).slice(-6).map(m=>({role:m.role,content:stripFences(m.content)}));
  const u=text+(ctx?'\n\n--- LIVE WEB CONTEXT ---\n'+ctx+'\n--- END LIVE WEB CONTEXT ---':'');
@@ -2927,17 +2952,17 @@ function finishAgent(am){const p=S.project;if(am.thinkT0&&!am.thinkMs)am.thinkMs
   am.content=(am.plan?am.plan+'\n\n':'')+lines.filter(Boolean).join('\n')+((c+m+d)?'\n\nSaved to Code Tab and verified.':'');
   if(am.status==='streaming')am.status=am.stopped?'stopped':bad.length?'error':'done';}
  else if(am.status==='streaming')am.status='done';
- S.agentStreaming=false;S.agentAbort=null;p.updatedAt=Date.now();p.expanded=[...S.expanded];persistProject(p);
+ S.agentStreaming=false;S.agentAbort=null;p.updatedAt=Date.now();p.expanded=[...S.expanded];persistProject(p);window.__actEnter=am.id;
  renderThread('#agentMsgs',p.agent);pinScroll(true);updateSendBtn();}
 async function retryQueue(mid){if(S.agentStreaming)return;const p=S.project,am=p&&p.agent.find(x=>x.id===mid);if(!am||!am.queue)return;
  S.agentStreaming=true;S.agentAbort=new AbortController();am.status='streaming';am.stopped=false;updateSendBtn();
  const f=am.queue.find(x=>x.status==='failed');if(f)f.status='retrying';
  try{await runQueue(am);}finally{finishAgent(am);}}
 
-async function sendAgent2(){if(S.agentStreaming)return;const p=S.project;if(!p)return;const inp=$('#agentInput'),text=inp.value.trim(),atts=S.agentAttachments.slice();if(!text&&!atts.length)return;if(!activeProvider()){toast('Set up an AI provider first (Menu > Set Up AI).','warn');renderProviders();openScreen('screen-providers');return;}if(!activeProvider().model){toast('No model selected. Use the Model button in the composer.','warn');openModelModal();return;}const errAtt=atts.find(a=>a.path==='build-failed.log'),fromBuild=!!(S._fixPending&&errAtt);S._fixPending=false;p.agent.push({id:uid(),role:'user',content:text||'(selected files)',attachments:atts.map(a=>({name:a.path||a.name,size:a.size,kind:a.kind})),createdAt:Date.now(),status:'done'});S.agentAttachments=[];inp.value='';if(agentDraftKey())localStorage.removeItem(agentDraftKey());autoGrow(inp);renderAgentAtts();const am={id:uid(),role:'assistant',content:'',createdAt:Date.now(),status:'streaming',activity:[],queue:[],task:text||'Work with the attached files.',fromBuild,errText:errAtt?errAtt.content||'':'',extra:atts.filter(a=>a!==errAtt&&typeof a.content==='string').map(a=>({path:a.path||a.name,content:a.content.slice(0,20000)}))};p.agent.push(am);renderThread('#agentMsgs',p.agent);startReply('#agentMsgs',am.id);S.agentStreaming=true;S.agentAbort=new AbortController();updateSendBtn();try{if(isLinkIntent(text)&&!atts.length){try{await agentLinkReply(am,text);}finally{am._webSearching=false;}return;}const evU=agStart(am,'Understanding the request','search');let hits=am.errText?filesInText(p,am.errText,true):[];filesInText(p,text,false).forEach(x=>{if(!hits.includes(x))hits.push(x)});const given=new Set(am.extra.map(a=>a.path));hits=hits.filter(x=>!given.has(x)).slice(0,3);let ctx='',used=0;const read=[];for(const x of hits){const f=p.files[x];if(!f||f.binary)continue;const cc=f.content||'';if(used+cc.length>30000)continue;used+=cc.length;read.push(x);ctx+='\n### FILE: '+x+'\n'+cc+'\n### END FILE\n'}agAct(am,read.length?'Read '+read.join(', ')+' (targeted)':'Planning from project file list',read.length?'file':'info');let up='TASK:\n'+am.task;if(am.errText)up+='\n\nREAL FAILURE LOG:\n'+errSummary(am.errText);am.extra.forEach(a=>{up+='\n\nATTACHED FILE '+a.path+':\n'+a.content});up+='\n\nPROJECT FILE LIST:\n'+Object.keys(p.files).sort().slice(0,400).join('\n')+'\n\nFILES ALREADY READ:'+(ctx||' none')+'\n\nRECENT PROJECT CHANGES (earlier in this chat): '+(recentChanges(p,am).join(', ')||'none')+'\n\nCONVERSATION RULES: First decide the intent of the LATEST user message, using earlier messages for context (a follow-up such as "make it black" refers to the work already discussed). Intents: greeting, chat, question, project_question, explain, inspect, code_change, bug_fix, build_fix, clarify. For greeting/chat/question/project_question/explain/inspect/clarify, answer naturally in the language the user writes in, put the reply in "answer", keep files [], and NEVER mention build errors, infrastructure or file changes. Use clarify only if a code request is truly ambiguous. Set "infrastructure" true ONLY when a REAL FAILURE LOG is attached above and shows no project-code error; otherwise it is always false.\n\nReturn ONLY one JSON object: {"intent":"","analysis":{"root_cause":"","failed_task":"","failed_step":"","error_type":"","error_file":"","error_line":null,"relevant_dependency":null,"recommended_fix":""},"infrastructure":false,"summary":"one short line","answer":"reply text when no file change is needed, else empty","files":[{"path":"relative/path","action":"modify|create|delete","reason":"short","refs":[]}]}. For a code change or bug fix list only the files that must change (minimal set)."';const hist=p.agent.filter(m=>m!==am&&m.status==='done'&&m.content).slice(0,-1).slice(-6).map(m=>({role:m.role,content:m.content}));let raw='';const tP=Date.now();await providerChat({provider:activeProvider(),messages:[{role:'system',content:AG_SYS},...hist,{role:'user',content:up}],signal:S.agentAbort.signal,onDelta:d=>{raw+=d},onReasoning:think(am)});let plan;try{plan=JSON.parse((raw.match(/\{[\s\S]*\}/)||[''])[0])}catch(_){plan=null}if(!plan||typeof plan!=='object'){if(!am.fromBuild&&!am.errText&&raw.trim())plan={intent:'chat',answer:raw.trim(),files:[]};else throw new Error('The model did not return a valid plan. Try again.');}const seen=new Set();am.queue=(plan.files||[]).map(f=>({path:normPath(f&&f.path),action:String(f&&f.action||'modify').toLowerCase(),reason:String(f&&f.reason||''),refs:((f&&f.refs)||[]).map(normPath).filter(r=>p.files[r]).slice(0,2)})).filter(f=>f.path&&!isUnsafe(f.path)&&!seen.has(f.path)&&seen.add(f.path)).slice(0,12).map(f=>{if(f.action!=='delete')f.action=p.files[f.path]?'modify':'create';f.status='queued';return f});am.plan=String(plan.summary||'');const an=plan.analysis||{};if(an.root_cause&&(am.fromBuild||am.errText))agAct(am,'Root cause: '+String(an.root_cause).slice(0,300)+(an.error_file?' ('+an.error_file+(an.error_line?':'+an.error_line:'')+')':''),'search');const intent=String(plan.intent||'').toLowerCase().replace(/[^a-z_]/g,''),talk=/^(greeting|chat|question|project_question|explain|inspect|clarify|identity)$/.test(intent);if(talk)am.queue=[];
+async function sendAgent2(over){if(S.agentStreaming)return;const ov=typeof over==='string';const p=S.project;if(!p)return;const inp=$('#agentInput'),text=ov?over.trim():inp.value.trim(),atts=ov?[]:S.agentAttachments.slice();if(!text&&!atts.length)return;if(!activeProvider()){toast('Set up an AI provider first (Menu > Set Up AI).','warn');renderProviders();openScreen('screen-providers');return;}if(!activeProvider().model){toast('No model selected. Use the Model button in the composer.','warn');openModelModal();return;}const errAtt=atts.find(a=>a.path==='build-failed.log'),fromBuild=!!(S._fixPending&&errAtt);S._fixPending=false;p.agent.push({id:uid(),role:'user',content:text||'(selected files)',attachments:atts.map(a=>({name:a.path||a.name,size:a.size,kind:a.kind})),createdAt:Date.now(),status:'done'});if(!ov){S.agentAttachments=[];inp.value='';if(agentDraftKey())localStorage.removeItem(agentDraftKey());autoGrow(inp);renderAgentAtts();}const am={id:uid(),role:'assistant',content:'',createdAt:Date.now(),status:'streaming',activity:[],queue:[],task:text||'Work with the attached files.',fromBuild,errText:errAtt?errAtt.content||'':'',extra:atts.filter(a=>a!==errAtt&&typeof a.content==='string').map(a=>({path:a.path||a.name,content:a.content.slice(0,20000)}))};p.agent.push(am);renderThread('#agentMsgs',p.agent);startReply('#agentMsgs',am.id);S.agentStreaming=true;S.agentAbort=new AbortController();updateSendBtn();try{if(isLinkIntent(text)&&!atts.length){try{await agentLinkReply(am,text);}finally{am._webSearching=false;}return;}const evU=agStart(am,'Understanding the request','search');let hits=am.errText?filesInText(p,am.errText,true):[];filesInText(p,text,false).forEach(x=>{if(!hits.includes(x))hits.push(x)});const given=new Set(am.extra.map(a=>a.path));hits=hits.filter(x=>!given.has(x)).slice(0,3);let ctx='',used=0;const read=[];for(const x of hits){const f=p.files[x];if(!f||f.binary)continue;const cc=f.content||'';if(used+cc.length>30000)continue;used+=cc.length;read.push(x);ctx+='\n### FILE: '+x+'\n'+cc+'\n### END FILE\n'}agAct(am,read.length?'Read '+read.join(', ')+' (targeted)':'Planning from project file list',read.length?'file':'info');let webCtx='';if(S.webAccess&&text&&!am.errText){am._webSearching=true;updateLive(am,'#agentMsgs');try{const ws=await searchWebFull(text.slice(0,300),S.agentAbort.signal);webCtx=ws.context;if(ws.sources.length)am.sources=ws.sources;}catch(e){if(e.name==='AbortError')throw e;agAct(am,'Web search failed: '+String(e.message||e),'warn','warn');}finally{am._webSearching=false;}}let up='TASK:\n'+am.task;if(am.errText)up+='\n\nREAL FAILURE LOG:\n'+errSummary(am.errText);am.extra.forEach(a=>{up+='\n\nATTACHED FILE '+a.path+':\n'+a.content});if(webCtx)up+='\n\nLIVE WEB CONTEXT:\n'+webCtx;up+='\n\nPROJECT FILE LIST:\n'+Object.keys(p.files).sort().slice(0,400).join('\n')+'\n\nFILES ALREADY READ:'+(ctx||' none')+'\n\nRECENT PROJECT CHANGES (earlier in this chat): '+(recentChanges(p,am).join(', ')||'none')+'\n\nCONVERSATION RULES: First decide the intent of the LATEST user message, using earlier messages for context (a follow-up such as "make it black" refers to the work already discussed). Intents: greeting, chat, question, project_question, explain, inspect, code_change, bug_fix, build_fix, clarify. For greeting/chat/question/project_question/explain/inspect/clarify, answer naturally in the language the user writes in, put the reply in "answer", keep files [], and NEVER mention build errors, infrastructure or file changes. Use clarify only if a code request is truly ambiguous; then put a short lead-in sentence in "answer" and put the choices in "ask" as {"questions":[{"q":"question text","type":"single","options":["option A","option B"]}],"button":"short action label"} (type is single, multi or text; 1 to 4 real questions about THIS request; never sample or demo questions); in every other case "ask" is null. Set "infrastructure" true ONLY when a REAL FAILURE LOG is attached above and shows no project-code error; otherwise it is always false.\n\nReturn ONLY one JSON object: {"intent":"","analysis":{"root_cause":"","failed_task":"","failed_step":"","error_type":"","error_file":"","error_line":null,"relevant_dependency":null,"recommended_fix":""},"infrastructure":false,"summary":"one short line","answer":"reply text when no file change is needed, else empty","ask":null,"files":[{"path":"relative/path","action":"modify|create|delete","reason":"short","refs":[]}]}. For a code change or bug fix list only the files that must change (minimal set)."';const hist=p.agent.filter(m=>m!==am&&m.status==='done'&&m.content).slice(0,-1).slice(-6).map(m=>({role:m.role,content:m.content}));let raw='';const tP=Date.now();await providerChat({provider:activeProvider(),messages:[{role:'system',content:AG_SYS},...hist,{role:'user',content:up}],signal:S.agentAbort.signal,onDelta:d=>{raw+=d},onReasoning:think(am)});let plan;try{plan=JSON.parse((raw.match(/\{[\s\S]*\}/)||[''])[0])}catch(_){plan=null}if(!plan||typeof plan!=='object'){if(!am.fromBuild&&!am.errText&&raw.trim())plan={intent:'chat',answer:raw.trim(),files:[]};else throw new Error('The model did not return a valid plan. Try again.');}const seen=new Set();am.queue=(plan.files||[]).map(f=>({path:normPath(f&&f.path),action:String(f&&f.action||'modify').toLowerCase(),reason:String(f&&f.reason||''),refs:((f&&f.refs)||[]).map(normPath).filter(r=>p.files[r]).slice(0,2)})).filter(f=>f.path&&!isUnsafe(f.path)&&!seen.has(f.path)&&seen.add(f.path)).slice(0,12).map(f=>{if(f.action!=='delete')f.action=p.files[f.path]?'modify':'create';f.status='queued';return f});am.plan=String(plan.summary||'');const an=plan.analysis||{};if(an.root_cause&&(am.fromBuild||am.errText))agAct(am,'Root cause: '+String(an.root_cause).slice(0,300)+(an.error_file?' ('+an.error_file+(an.error_line?':'+an.error_line:'')+')':''),'search');const intent=String(plan.intent||'').toLowerCase().replace(/[^a-z_]/g,''),talk=/^(greeting|chat|question|project_question|explain|inspect|clarify|identity)$/.test(intent);if(talk)am.queue=[];
 if(am.fromBuild&&plan.infrastructure===true&&!am.queue.length){am.content='No project-code error was found in the build log. The failure appears to be infrastructure/build-service related.'+(an.root_cause?'\n\n'+an.root_cause:'')+'\nNo project files were changed.';agEnd(am,evU,'done','Build log analysed \u2014 no project-code error found');am.status='done';return;}
 agEnd(am,evU,'done',intent?'Request understood ('+intent.replace(/_/g,' ')+')':'Request understood',{detail:'Planner responded in '+((Date.now()-tP)/1000).toFixed(1)+'s'});
-if(!am.queue.length){let ans=String(plan.answer||'').trim();if(!ans&&!am.fromBuild)ans=await agentChatReply(am,hist,text);if(!ans)ans=am.plan||'I could not find a change to make. Could you describe what you want changed?';am.content=ans;agAct(am,am.fromBuild?'No file changes were needed':'Replied \u2014 no file operations were needed','info');am.status='done';return;}
+if(!am.queue.length){let ans=String(plan.answer||'').trim();const askB=window.acBlock?window.acBlock(plan.ask):'';if(!ans&&!am.fromBuild&&!askB)ans=await agentChatReply(am,hist,text);if(!ans)ans=am.plan||'I could not find a change to make. Could you describe what you want changed?';am.content=(ans+(askB?'\n\n'+askB:'')).trim();agAct(am,am.fromBuild?'No file changes were needed':'Replied \u2014 no file operations were needed','info');am.status='done';return;}
 agAct(am,'Preparing implementation plan: '+am.queue.length+' file(s), processed one at a time','tools','done',{detail:am.queue.map(x=>x.action+' '+x.path).join(', ')});p.lastSnapshot={messageId:am.id,files:JSON.parse(JSON.stringify(p.files))};am.ops={results:[],diffs:{}};refreshQueue(am);await runQueue(am)}catch(e){if(e.name==='AbortError'){am.status='stopped';am.stopped=true}else{am.status='error';am.activity.push({icon:'alert',label:String(e.message||e),status:'fail'})}}finally{finishAgent(am)}}
 window.sendAgent=sendAgent2;
 
@@ -2955,6 +2980,304 @@ $('#agentMsgs').addEventListener('click',e=>{const r=e.target.closest('[data-ret
 </html>
 
 
+<style id="synora-msg-actions">
+/* ===== AI message action bar ===== */
+.msg-actions{display:flex;align-items:center;gap:2px;margin:12px 0 2px -10px;min-height:44px;flex-wrap:nowrap}
+.ma-btn{width:42px;height:42px;border-radius:14px;display:inline-flex;align-items:center;justify-content:center;flex:none;color:#C4C7D4;transition:background .15s,color .15s,transform .12s}
+.ma-btn .ic{width:22px;height:22px;pointer-events:none}
+.ma-btn:active{transform:scale(.86);background:rgba(255,255,255,.08)}
+.ma-btn.on{color:var(--accent)}
+.ma-btn[data-act=like].on .ic,.ma-btn[data-act=dislike].on .ic{fill:currentColor}
+.ma-btn[data-act=sound].on{background:var(--accent-soft)}
+.ma-btn.ok{color:var(--ok)}
+.ma-src{margin-left:auto;display:inline-flex;align-items:center;gap:10px;height:42px;padding:0 6px 0 2px;border-radius:14px;color:#C4C7D4;font-size:15px;font-weight:500;flex:none;transition:background .15s,transform .12s}
+.ma-src:active{transform:scale(.95);background:rgba(255,255,255,.08)}
+.ma-fvs{display:inline-flex;align-items:center}
+.ma-fv{width:28px;height:28px;border-radius:50%;background:#fff;border:2px solid var(--bg);display:inline-flex;align-items:center;justify-content:center;margin-left:-9px;overflow:hidden}
+.ma-fv:first-child{margin-left:0}
+.ma-fv img{width:18px;height:18px;object-fit:contain;display:block}
+@keyframes maPop{from{opacity:0;transform:translateY(12px) scale(.85)}to{opacity:1;transform:none}}
+.msg-actions.enter .ma-btn,.msg-actions.enter .ma-src{animation:maPop .55s cubic-bezier(.2,1,.3,1) both;animation-delay:calc(var(--i,0)*65ms + 60ms)}
+@media (prefers-reduced-motion:reduce){.msg-actions.enter .ma-btn,.msg-actions.enter .ma-src{animation:none}}
+
+/* ===== Sources bottom sheet ===== */
+.src-sheet{position:fixed;inset:0;z-index:95;display:none}
+.src-sheet.show{display:block}
+.src-scrim{position:absolute;inset:0;background:rgba(0,0,0,.55);animation:srcFade .25s ease}
+@keyframes srcFade{from{opacity:0}}
+.src-panel{position:absolute;left:0;right:0;bottom:0;max-height:84vh;display:flex;flex-direction:column;background:#2E2E2E;border-radius:30px 30px 0 0;box-shadow:0 -10px 40px rgba(0,0,0,.5);padding-bottom:env(safe-area-inset-bottom);animation:srcUp .38s cubic-bezier(.2,.8,.2,1)}
+@keyframes srcUp{from{transform:translateY(100%)}}
+.src-panel.drag{animation:none;transition:none}
+.src-grip-wrap{padding:14px 0 6px;flex:none;touch-action:none}
+.src-grip{width:54px;height:6px;border-radius:3px;background:#505050;margin:0 auto}
+.src-h{padding:14px 24px 16px;font-size:17px;color:#D4D4D4;border-bottom:1px solid #4A4A4A;flex:none;touch-action:none}
+.src-list{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:0 24px 18px}
+.src-it{display:block;padding:20px 0 22px;border-bottom:1px solid #444;color:#fff;text-decoration:none}
+.src-it:last-child{border-bottom:0}
+.src-site{display:flex;align-items:center;gap:12px;font-size:16px;color:#E4E4E4;margin-bottom:9px}
+.src-site img{width:28px;height:28px;border-radius:50%;background:#fff;padding:3px;object-fit:contain;flex:none}
+.src-t{font-size:18px;font-weight:700;line-height:1.4;color:#fff;word-break:break-word}
+.src-u{margin-top:6px;font-size:12.5px;color:#9A9A9A;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ===== Question card ===== */
+.msg-body .ac{margin:14px 0 6px;padding:20px 18px 18px;border-radius:30px;border:1.5px solid rgba(255,255,255,.1);background:#050507;line-height:1.5}
+.ac-title{font-size:15px;font-weight:600;color:var(--text2);margin:0 2px 14px}
+.ac-qt{font-size:16.5px;font-weight:500;color:#fff;margin:2px 2px 12px}
+.ac-opts{display:flex;flex-direction:column;gap:2px}
+.ac-opt{display:flex;align-items:center;gap:14px;width:100%;padding:9px 2px;text-align:left;font-size:16px;color:#F1F1F4;border-radius:14px}
+.ac-opt:active:not(:disabled){background:rgba(255,255,255,.05)}
+.ac-opt:disabled{cursor:default}
+.ac-r{width:30px;height:30px;border-radius:50%;border:1.5px solid rgba(255,255,255,.28);flex:none;display:flex;align-items:center;justify-content:center;transition:background .15s,border-color .15s}
+.ac-opt.multi .ac-r{border-radius:9px}
+.ac-opt.on .ac-r{background:#F4F4F6;border-color:#F4F4F6}
+.ac-opt:not(.multi).on .ac-r::after{content:"";width:9px;height:9px;border-radius:50%;background:#000}
+.ac-opt.multi.on .ac-r::after{content:"";width:9px;height:15px;border:solid #000;border-width:0 3px 3px 0;transform:rotate(45deg) translate(-1px,-1px)}
+.ac-ot{flex:1;min-width:0;word-break:break-word}
+.ac-div{height:1px;background:rgba(255,255,255,.08);margin:18px 2px 20px}
+.ac-in{width:100%;height:48px;border-radius:9999px;border:1.5px solid rgba(255,255,255,.18);background:#0B0C12;color:#fff;padding:0 18px;font-size:15.5px;outline:none}
+.ac-in:focus{border-color:var(--accent)}
+.ac-in:disabled{opacity:.6}
+.ac-go{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;height:54px;margin-top:22px;border-radius:9999px;background:#F5F5F7;color:#000;font-size:16px;font-weight:600;transition:transform .12s,opacity .15s,background .2s}
+.ac-go:active:not(:disabled){transform:scale(.98)}
+.ac-go:disabled{opacity:.55;cursor:default}
+.ac-go .ic{width:18px;height:18px}
+.ac.sent .ac-go{background:rgba(255,255,255,.1);color:#8FE3AE;opacity:1}
+.ac.sent .ac-opt:not(.on){opacity:.4}
+.ac-sk{display:flex;flex-direction:column;gap:14px}
+.ac-sk i{display:block;height:16px;width:70%;border-radius:8px;background:rgba(255,255,255,.08);animation:acSk 1.2s ease-in-out infinite}
+.ac-sk i.s{width:45%}
+@keyframes acSk{50%{opacity:.4}}
+</style>
+<script id="synora-msg-actions-js">
+(function(){
+'use strict';
+/* ---------- icons ---------- */
+const SV=(p,c)=>'<svg class="ic'+(c?' '+c:'')+'" viewBox="0 0 24 24" aria-hidden="true">'+p+'</svg>';
+const IC={
+ copy:SV('<rect x="9" y="9" width="13" height="13" rx="3"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>'),
+ check:SV('<path d="M20 6 9 17l-5-5"/>'),
+ up:SV('<path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/>'),
+ down:SV('<path d="M17 14V2"/><path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z"/>'),
+ vol:SV('<path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"/><path d="M16 9a5 5 0 0 1 0 6"/><path d="M19.364 18.364a9 9 0 0 0 0-12.728"/>'),
+ stop:SV('<rect x="6" y="6" width="12" height="12" rx="2.5"/>','fill')
+};
+const favUrl=(h,z)=>'https://www.google.com/s2/favicons?domain='+encodeURIComponent(h||'')+'&sz='+z;
+const goodUrl=u=>/^https?:\/\/[^\s"'<>]+$/i.test(String(u||''));
+const TTS={mid:null,tok:0,q:[],i:0,agent:false,chat:null,cur:null};
+
+/* ---------- plain text of a message (copy / speech) ---------- */
+function msgPlain(m){
+ let t=String(m.content||'');
+ t=t.replace(/```flayfiles[\s\S]*?(```|$)/g,'');
+ t=t.replace(/```askcard[ \t]*\n?([\s\S]*?)(```|$)/g,(x,j)=>{try{const o=acNorm(JSON.parse(j));return o?'\n'+o.questions.map((q,i)=>(i+1)+'. '+q.q+(q.options.length?'\n'+q.options.map(z=>'- '+z).join('\n'):'')).join('\n')+'\n':'';}catch(_){return '';}});
+ t=t.replace(/```weblinks[ \t]*\n?([\s\S]*?)(```|$)/g,(x,j)=>wlItems(j).map(i=>(i.name||wlHost(i.url))+(i.desc?' - '+i.desc:'')+'\n'+i.url).join('\n\n'));
+ return t.replace(/\n{3,}/g,'\n\n').trim();
+}
+function ttsText(m){
+ let t=msgPlain(m);
+ t=t.replace(/```[\s\S]*?(```|$)/g,' ');
+ t=t.replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g,'$1').replace(/https?:\/\/\S+/g,' ');
+ t=t.replace(/^\s{0,3}#{1,6}\s*/gm,'').replace(/^\s*[-*•]\s+/gm,'').replace(/(\*\*|__)/g,'').replace(/`/g,'');
+ t=t.replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}️]/gu,' ').replace(/[*_~>|]/g,' ');
+ return t.replace(/[ \t]+/g,' ').replace(/\n{2,}/g,'\n').trim();
+}
+function ttsChunks(t){
+ const sents=t.match(/[^।.!?\n]+[।.!?]*\s*|\n+/g)||[t],out=[];let cur='';
+ const push=()=>{const s=cur.trim();if(s)out.push(s);cur='';};
+ const cut=s=>{const r=[];while(s.length>200){let i=s.lastIndexOf(' ',180);if(i<60)i=180;r.push(s.slice(0,i));s=s.slice(i);}r.push(s);return r;};
+ for(const s of sents){
+  if(s.length>200){push();cut(s).forEach(x=>{if(x.trim())out.push(x.trim());});continue;}
+  if((cur+s).length>170)push();cur+=s;}
+ push();
+ return out.map(s=>({t:s,l:((s.match(/[ঀ-৿]/g)||[]).length>=3)?'bn-BD':'en-US'}));
+}
+function ttsVoice(l){let vs=[];try{vs=speechSynthesis.getVoices()||[];}catch(_){}
+ const norm=v=>String(v.lang||'').replace('_','-').toLowerCase(),want=l.toLowerCase(),p=want.slice(0,2);
+ return vs.find(v=>norm(v)===want)||vs.find(v=>norm(v).slice(0,2)===p)||null;}
+function ttsMark(){document.querySelectorAll('.ma-btn[data-act="sound"]').forEach(b=>{const me=b.closest('[data-mid]'),on=!!me&&me.dataset.mid===TTS.mid;b.classList.toggle('on',on);b.innerHTML=on?IC.stop:IC.vol;b.setAttribute('aria-label',on?'Stop':'Read aloud');});}
+function ttsStop(noCancel){TTS.tok++;TTS.mid=null;TTS.q=[];TTS.cur=null;if(!noCancel){try{speechSynthesis.cancel();}catch(_){}}ttsMark();}
+function ttsNext(tok){
+ if(tok!==TTS.tok)return;
+ if(TTS.i>=TTS.q.length){ttsStop(true);return;}
+ const seg=TTS.q[TTS.i++],u=new SpeechSynthesisUtterance(seg.t),v=ttsVoice(seg.l);
+ u.lang=(v&&v.lang)?v.lang:seg.l;if(v)u.voice=v;u.rate=1;u.pitch=1;
+ u.onend=()=>{if(tok===TTS.tok)ttsNext(tok);};
+ u.onerror=ev=>{if(tok!==TTS.tok)return;const er=ev&&ev.error;if(er==='interrupted'||er==='canceled')return;ttsStop(true);
+  toast(er==='language-unavailable'||er==='voice-unavailable'?'এই ফোনে তার ভাষার Text-to-Speech ভয়েস নেই। Settings > Text-to-speech এ গিয়ে ভয়েস ইনস্টল করো।':'পড়ে শোনানো যায়নি।','err');};
+ TTS.cur=u;
+ try{speechSynthesis.speak(u);}catch(e){ttsStop(true);toast('পড়ে শোনানো যায়নি।','err');}
+}
+function ttsToggle(m,agent){
+ if(!('speechSynthesis' in window)||typeof SpeechSynthesisUtterance==='undefined'){toast('এই ডিভাইসে Text-to-Speech সাপোর্ট নেই।','err');return;}
+ if(TTS.mid===m.id){ttsStop();return;}
+ const text=ttsText(m);if(!text){toast('পড়ার মতো টেক্সট নেই।','warn');return;}
+ ttsStop();
+ TTS.mid=m.id;TTS.agent=!!agent;TTS.chat=S.chat&&S.chat.id;TTS.q=ttsChunks(text);TTS.i=0;const tok=++TTS.tok;ttsMark();
+ setTimeout(()=>ttsNext(tok),90);
+}
+window.ttsStop=ttsStop;
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&TTS.mid)ttsStop();});
+
+/* ---------- action bar ---------- */
+function actionsHtml(m){
+ if(!m||m.role!=='assistant'||(m.status!=='done'&&m.status!=='stopped'))return '';
+ const src=(Array.isArray(m.sources)?m.sources:[]).filter(s=>s&&goodUrl(s.url));
+ if(!msgPlain(m)&&!src.length)return '';
+ const enter=window.__actEnter===m.id;if(enter)window.__actEnter=null;
+ const sp=TTS.mid===m.id;let i=0;
+ const b=(act,ic,label,on)=>'<button type="button" class="ma-btn'+(on?' on':'')+'" data-act="'+act+'" aria-label="'+label+'" style="--i:'+(i++)+'">'+ic+'</button>';
+ const fav=src.slice(0,3).map(s=>'<span class="ma-fv"><img src="'+esc(favUrl(s.host,64))+'" alt=""></span>').join('');
+ return '<div class="msg-actions'+(enter?' enter':'')+'">'
+  +b('copy',IC.copy,'Copy')+b('like',IC.up,'Like',m.fb==='like')+b('dislike',IC.down,'Dislike',m.fb==='dislike')+b('sound',sp?IC.stop:IC.vol,sp?'Stop':'Read aloud',sp)
+  +(src.length?'<button type="button" class="ma-src" data-act="sources" aria-label="Sources" style="--i:'+i+'"><span class="ma-fvs">'+fav+'</span><span>Sources</span></button>':'')
+  +'</div>';
+}
+const _mh=window.msgHtml;
+window.msgHtml=function(m){let h=_mh(m);if(m&&m.role==='assistant'){const a=actionsHtml(m);if(a)h=h.replace(/<\/div>\s*$/,()=>a+'</div>');}return h;};
+
+/* ---------- question cards ---------- */
+function acNorm(o){
+ if(!o||typeof o!=='object')return null;
+ const qs=(Array.isArray(o.questions)?o.questions:[]).slice(0,4).map(q=>{
+  if(!q||typeof q!=='object')return null;
+  const t=String(q.q||q.question||'').trim().slice(0,200);if(!t)return null;
+  let type=String(q.type||'single').toLowerCase();if(!['single','multi','text'].includes(type))type='single';
+  const opts=(Array.isArray(q.options)?q.options:[]).map(x=>String(x&&typeof x==='object'?(x.label||x.text||''):x).trim().slice(0,120)).filter(Boolean).slice(0,6);
+  if(type!=='text'&&opts.length<2)type='text';
+  return{q:t,type,options:type==='text'?[]:opts,placeholder:String(q.placeholder||'').slice(0,80)};
+ }).filter(Boolean);
+ if(!qs.length)return null;
+ return{title:String(o.title||'').trim().slice(0,120),questions:qs,button:String(o.button||o.submit||'').trim().slice(0,60)||'পাঠান'};
+}
+window.acBlock=function(ask){const n=acNorm(ask);return n?'```askcard\n'+JSON.stringify(n)+'\n```':'';};
+function acState(m,idx,o){
+ let st;if(m){m.ac=m.ac||{};st=m.ac[idx]=m.ac[idx]||{sel:{},txt:{},sent:false};}else st={sel:{},txt:{},sent:false};
+ o.questions.forEach((q,qi)=>{if(q.type==='text'){if(st.txt[qi]===undefined)st.txt[qi]='';}else if(st.sel[qi]===undefined)st.sel[qi]=q.type==='single'?[0]:[];});
+ return st;
+}
+function acParseAt(m,idx){const re=/```askcard[ \t]*\n?([\s\S]*?)```/g;let mm,i=0;while((mm=re.exec(m.content||''))){if(i===idx){try{return acNorm(JSON.parse(mm[1].trim()));}catch(_){return null;}}i++;}return null;}
+function acHtml(c,m,idx){
+ if(!c)return '';
+ if(c.open)return (m&&m.status==='streaming')?'<div class="ac ac-sk" aria-busy="true"><i></i><i class="s"></i><i></i></div>':'';
+ let o=null;try{o=acNorm(JSON.parse(String(c.j).trim()));}catch(_){}
+ if(!o)return '';
+ const st=acState(m,idx,o),lock=st.sent||(m&&m.status==='streaming');
+ let h='<div class="ac'+(st.sent?' sent':'')+'" data-ac="'+idx+'">';
+ if(o.title)h+='<div class="ac-title">'+esc(o.title)+'</div>';
+ o.questions.forEach((q,qi)=>{
+  if(qi)h+='<div class="ac-div"></div>';
+  h+='<div class="ac-q" data-qi="'+qi+'"><div class="ac-qt">'+(qi+1)+'. '+esc(q.q)+'</div>';
+  if(q.type==='text')h+='<input class="ac-in" type="text" data-ac-text="'+qi+'" value="'+esc(st.txt[qi]||'')+'" placeholder="'+esc(q.placeholder)+'" autocomplete="off"'+(lock?' disabled':'')+'>';
+  else{
+   h+='<div class="ac-opts" role="'+(q.type==='multi'?'group':'radiogroup')+'">';
+   q.options.forEach((op,oi)=>{const on=(st.sel[qi]||[]).includes(oi);
+    h+='<button type="button" class="ac-opt'+(on?' on':'')+(q.type==='multi'?' multi':'')+'" data-ac-opt="'+oi+'" data-qi="'+qi+'" role="'+(q.type==='multi'?'checkbox':'radio')+'" aria-checked="'+on+'"'+(lock?' disabled':'')+'><span class="ac-r"></span><span class="ac-ot">'+esc(op)+'</span></button>';});
+   h+='</div>';}
+  h+='</div>';});
+ h+='<button type="button" class="ac-go" data-ac-go'+(lock?' disabled':'')+'>'+(st.sent?IC.check+'<span>পাঠানো হয়েছে</span>':'<span>'+esc(o.button)+'</span>')+'</button></div>';
+ return h;
+}
+const _md=window.md;
+window.md=function(src,ctx){
+ src=String(src==null?'':src);const cards=[];
+ src=src.replace(/```askcard[ \t]*\n?([\s\S]*?)(```|$)/g,(x,j,cl)=>{cards.push({j,open:!cl});return '\n\u0003'+(cards.length-1)+'\u0003\n';});
+ let h=_md(src);
+ if(cards.length)h=h.replace(/(?:<br>)?\u0003(\d+)\u0003(?:<br>)?/g,(x,i)=>acHtml(cards[+i],ctx,+i));
+ return h;
+};
+function acFind(el){
+ const me=el.closest('[data-mid]');if(!me)return null;const agent=!!el.closest('#agentMsgs');
+ const arr=agent?(S.project?S.project.agent:[]):(S.chat?S.chat.messages:[]);
+ const m=arr.find(x=>x.id===me.dataset.mid);return m?{m,agent}:null;
+}
+const persistFor=f=>{try{f.agent?persistProject(S.project):persistChat();}catch(_){}};
+function acSubmit(btn){
+ const card=btn.closest('.ac'),f=acFind(card);if(!f)return;
+ const idx=+card.dataset.ac,o=acParseAt(f.m,idx);if(!o)return;
+ const st=acState(f.m,idx,o);if(st.sent)return;
+ if(f.agent?S.agentStreaming:S.streaming){toast('AI এখনো উত্তর দিচ্ছে, একটু অপেক্ষা করো।','warn');return;}
+ const p=activeProvider();if(!p||!p.model){toast('আগে Menu > Set Up AI থেকে provider ও model ঠিক করো।','warn');return;}
+ const lines=o.questions.map((q,qi)=>{const a=q.type==='text'?String(st.txt[qi]||'').trim():(st.sel[qi]||[]).map(i=>q.options[i]).filter(Boolean).join(', ');return (qi+1)+'. '+q.q+' '+(a||'—');});
+ const text=o.button+'\n\n'+lines.join('\n');
+ st.sent=true;persistFor(f);
+ card.classList.add('sent');card.querySelectorAll('.ac-opt,.ac-in,.ac-go').forEach(x=>{x.disabled=true;});
+ const go=card.querySelector('.ac-go');if(go)go.innerHTML=IC.check+'<span>পাঠানো হয়েছে</span>';
+ if(f.agent)window.sendAgent(text);else window.sendChat(text);
+}
+function acClick(e){
+ const opt=e.target.closest('[data-ac-opt]');
+ if(opt){
+  if(opt.disabled)return;const card=opt.closest('.ac'),f=acFind(card);if(!f)return;
+  const idx=+card.dataset.ac,qi=+opt.dataset.qi,oi=+opt.dataset.acOpt,o=acParseAt(f.m,idx);if(!o)return;
+  const st=acState(f.m,idx,o);if(st.sent)return;const q=o.questions[qi];if(!q)return;
+  if(q.type==='multi'){const a=st.sel[qi]||[],k=a.indexOf(oi);if(k>=0)a.splice(k,1);else a.push(oi);st.sel[qi]=a;}else st.sel[qi]=[oi];
+  card.querySelectorAll('.ac-opt[data-qi="'+qi+'"]').forEach(b=>{const on=st.sel[qi].includes(+b.dataset.acOpt);b.classList.toggle('on',on);b.setAttribute('aria-checked',on);});
+  persistFor(f);return;}
+ const go=e.target.closest('[data-ac-go]');if(go&&!go.disabled)acSubmit(go);
+}
+function acInput(e){
+ const t=e.target.closest&&e.target.closest('[data-ac-text]');if(!t)return;
+ const card=t.closest('.ac'),f=acFind(card);if(!f)return;const idx=+card.dataset.ac,o=acParseAt(f.m,idx);if(!o)return;
+ const st=acState(f.m,idx,o);if(st.sent)return;st.txt[+t.dataset.acText]=t.value;persistFor(f);
+}
+function acKey(e){if(e.key==='Enter'&&e.target.matches&&e.target.matches('.ac-in')){e.preventDefault();const go=e.target.closest('.ac').querySelector('.ac-go');if(go&&!go.disabled)acSubmit(go);}}
+
+/* ---------- Sources sheet (live results only) ---------- */
+function siteName(h){const p=String(h||'').toLowerCase().replace(/^www\./,'').split('.');if(p.length<2)return p[0]||'';
+ if(p.length>=3&&['co','com','org','net','gov','edu','ac'].includes(p[p.length-2])&&p[p.length-1].length===2)return p[p.length-3];return p[p.length-2];}
+function shortUrl(u){try{const x=new URL(u);return x.hostname.replace(/^www\./,'')+(x.pathname!=='/'?x.pathname:'');}catch(_){return u;}}
+function closeSources(){const el=document.getElementById('srcSheet');if(el)el.classList.remove('show');}
+function openSources(m){
+ const src=(Array.isArray(m.sources)?m.sources:[]).filter(s=>s&&goodUrl(s.url));
+ if(!src.length){toast('এই উত্তরে কোনো Source নেই।','info');return;}
+ let el=document.getElementById('srcSheet');
+ if(!el){
+  el=document.createElement('div');el.id='srcSheet';el.className='src-sheet';
+  el.innerHTML='<div class="src-scrim" data-src-close="1"></div><div class="src-panel" role="dialog" aria-label="Sources"><div class="src-grip-wrap"><div class="src-grip"></div></div><div class="src-h">Sources</div><div class="src-list"></div></div>';
+  document.body.appendChild(el);
+  el.addEventListener('click',e=>{if(e.target.hasAttribute('data-src-close'))closeSources();});
+  const panel=el.querySelector('.src-panel');let y0=null,dy=0;
+  const st=e=>{y0=e.touches[0].clientY;dy=0;panel.classList.add('drag');};
+  const mv=e=>{if(y0===null)return;dy=Math.max(0,e.touches[0].clientY-y0);panel.style.transform='translateY('+dy+'px)';};
+  const en=()=>{if(y0===null)return;panel.classList.remove('drag');const close=dy>90;panel.style.transform='';y0=null;if(close)closeSources();};
+  [el.querySelector('.src-grip-wrap'),el.querySelector('.src-h')].forEach(x=>{x.addEventListener('touchstart',st,{passive:true});x.addEventListener('touchmove',mv,{passive:true});x.addEventListener('touchend',en);x.addEventListener('touchcancel',en);});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&el.classList.contains('show'))closeSources();});
+ }
+ const list=el.querySelector('.src-list');
+ list.innerHTML=src.map(s=>'<a class="src-it" href="'+esc(s.url)+'" target="_blank" rel="noopener noreferrer"><div class="src-site"><img src="'+esc(favUrl(s.host,64))+'" alt=""><span>'+esc(siteName(s.host))+'</span></div><div class="src-t">'+esc(s.title||s.host)+'</div><div class="src-u">'+esc(shortUrl(s.url))+'</div></a>').join('');
+ list.scrollTop=0;el.classList.add('show');
+}
+document.addEventListener('error',e=>{const t=e.target;if(t&&t.tagName==='IMG'&&t.closest&&t.closest('.ma-fv,.src-site'))t.style.visibility='hidden';},true);
+
+/* ---------- click handling (chat + project agent) ---------- */
+function actionClick(ab){
+ const f=acFind(ab);if(!f)return;const m=f.m,act=ab.dataset.act;
+ if(act==='copy'){copyText(msgPlain(m)).then(()=>{ab.innerHTML=IC.check;ab.classList.add('ok');toast('কপি হয়েছে','ok');setTimeout(()=>{ab.innerHTML=IC.copy;ab.classList.remove('ok');},1400);});return;}
+ if(act==='like'||act==='dislike'){
+  m.fb=(m.fb===act?null:act);const bar=ab.closest('.msg-actions');
+  bar.querySelector('[data-act="like"]').classList.toggle('on',m.fb==='like');bar.querySelector('[data-act="dislike"]').classList.toggle('on',m.fb==='dislike');
+  persistFor(f);return;}
+ if(act==='sound'){ttsToggle(m,f.agent);return;}
+ if(act==='sources'){openSources(m);}
+}
+function onClick(e){const ab=e.target.closest('.ma-btn,.ma-src');if(ab){e.preventDefault();actionClick(ab);return;}if(e.target.closest('.ac'))acClick(e);}
+['#msgs','#agentMsgs'].forEach(sel=>{const h=$(sel);if(!h)return;h.addEventListener('click',onClick);h.addEventListener('input',acInput);h.addEventListener('keydown',acKey);});
+
+/* ---------- stop speech when the context changes ---------- */
+const _rc=window.renderChat;window.renderChat=function(){if(TTS.mid&&!TTS.agent&&TTS.chat!==(S.chat&&S.chat.id))ttsStop();return _rc.apply(this,arguments);};
+const _op=window.openProject;window.openProject=function(){if(TTS.mid)ttsStop();return _op.apply(this,arguments);};
+const _sr=window.startReply;window.startReply=function(sel,mid){if(TTS.mid)ttsStop();return _sr(sel,mid);};
+
+/* ---------- smooth auto-scroll: follow while streaming, settle at the message end ---------- */
+const _ps=window.pinScroll;
+window.pinScroll=function(agent){_ps(agent);const sc=agent?$('#agentScroll'):$('#chatScroll');if(sc){sc._settle=true;clearTimeout(sc._stt);sc._stt=setTimeout(()=>{sc._settle=false;},1800);}};
+if(window.ResizeObserver){
+ [['#msgs','#chatScroll',()=>S.streaming],['#agentMsgs','#agentScroll',()=>S.agentStreaming]].forEach(([h,s,live])=>{
+  const host=$(h),sc=$(s);if(!host||!sc)return;
+  new ResizeObserver(()=>{if(S.pinned&&(live()||sc._settle))msgFollow(sc);}).observe(host);});
+}
+})();
+</script>
 <style id="flay-menu-gradient-border">
 /* Premium gradient border and pink glow for page-header Menu buttons */
 section.screen .topbar>button.ibtn[data-menu]{
