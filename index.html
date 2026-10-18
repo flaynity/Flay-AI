@@ -1377,7 +1377,9 @@ function updateLive(m,hostSel){
   let mel=host.querySelector(`[data-mid="${m.id}"]`);if(!mel)return;
   const body=mel.querySelector('.msg-body');
   const vt=typedText(m);
-  if(body)body.innerHTML=(vt?md(vt,m):'')+(m.status==='streaming'?'<span class="caret"></span>':'');
+  if(body){const _ps=[...body.querySelectorAll('.pcard .ph-body')].map(e=>e.scrollTop);
+   body.innerHTML=(vt?md(vt,m):'')+(m.status==='streaming'?'<span class="caret"></span>':'');
+   body.querySelectorAll('.pcard .ph-body').forEach((e,i)=>{if(e.closest('.pcard').classList.contains('open'))e.scrollTop=e.scrollHeight;else e.scrollTop=_ps[i]||0;});}
   if(m.status==='streaming'&&m._vis!==undefined&&m._vis<String(m.content||'').length)updateLive(m,hostSel);
   patchThinkRow(mel,m);
   if(m.generatedFiles&&m.generatedFiles.length&&!m.ops){const sig=m.generatedFiles.map(g=>g.status).join('|');let gc=mel.querySelector('.card.gen');
@@ -1540,17 +1542,13 @@ function pmd(t,msg){const L=String(t).split('\n');let buf=[],out='';
  L.forEach(l=>{const m=l.match(/^(#{1,4})\s+(.*)$/);
   if(m){fl();const n=m[1].length;out+='<h'+n+' class="ph">'+md(m[2],msg).replace(/(<br>)+$/,'')+'</h'+n+'>';}else buf.push(l);});
  fl();return out;}
-const _pcSeen=new Map();
 function pHtml(c,msg,idx){
- /* while the model is still writing the prompt, show NO card (only a small status line); the card appears all at once when the text is complete */
- if(c.open&&msg&&msg.status==='streaming')return '<div class="gen-note pc-wait"><span>Writing\u2026</span></div>';
- let cls='pcard',st='';
- if(msg&&msg.id){const k=msg.id+':'+idx;if(!_pcSeen.has(k)){_pcSeen.set(k,msg.status==='streaming'?Date.now():0);}
-  const t0=_pcSeen.get(k),el=t0?Date.now()-t0:99999;
-  if(t0&&el<450){cls+=' pc-in';st=' style="animation-delay:-'+el+'ms"';}}
- return '<div class="'+cls+'"'+st+' data-raw="'+esc(c.text)+'"><div class="ph-bar"><span class="ph-l">'+icon('doc','sm')+'<span>Writing</span></span>'
+ /* the Writing card is visible from the first word; the prompt types smoothly inside it and the card scrolls down by itself */
+ const live=!!c.open&&(!msg||msg.status==='streaming');
+ const st=live?' style="--pd:-'+(Date.now()%1000)+'ms"':'';
+ return '<div class="pcard'+(live?' open':'')+'"'+st+' data-raw="'+esc(c.text)+'"><div class="ph-bar"><span class="ph-l">'+icon('doc','sm')+'<span>Writing</span></span>'
   +'<span class="ph-a"><button type="button" class="ph-b" data-pcopy aria-label="Copy">'+icon('copy')+'</button><button type="button" class="ph-b" data-pshare aria-label="Share">'+icon('share')+'</button></span></div>'
-  +'<div class="ph-body">'+pmd(c.text,null)+'</div></div>';}
+  +'<div class="ph-body">'+pmd(c.text,null)+(live?'<span class="caret"></span>':'')+'</div></div>';}
 document.addEventListener('click',e=>{
  const b=e.target.closest('[data-pcopy],[data-pshare]');if(!b)return;
  const card=b.closest('.pcard'),txt=card?card.getAttribute('data-raw')||'':'';if(!txt)return;
@@ -1638,10 +1636,7 @@ function typedText(m){
  if(m.status!=='streaming'||m._vis===undefined&&!full)return full;
  if(m._vis===undefined)m._vis=0;
  if(m._vis<full.length){m._vis=Math.min(full.length,m._vis+Math.max(1,Math.ceil((full.length-m._vis)/9)));
-  const c=full.charCodeAt(m._vis-1);if(c>=0xD800&&c<=0xDBFF&&m._vis<full.length)m._vis++;
-  /* inside a prompt fence the text is hidden anyway: jump to its end so the Writing card appears instantly when it is complete */
-  const vis=full.slice(0,m._vis),k=Math.max(vis.lastIndexOf('~~~prompt'),vis.lastIndexOf('```prompt'));
-  if(k>=0){const f=vis.substr(k,3);if(vis.indexOf(f,k+9)<0){const e=full.indexOf(f,k+9);m._vis=e>=0?Math.min(full.length,e+3):full.length;}}}
+  const c=full.charCodeAt(m._vis-1);if(c>=0xD800&&c<=0xDBFF&&m._vis<full.length)m._vis++;}
  return full.slice(0,m._vis);}
 function typerDrain(m,sel,sig){return new Promise(res=>{const t0=Date.now();if(m._vis===undefined)m._vis=0;
  const f=()=>{if(!m.content||m._vis>=m.content.length||(sig&&sig.aborted)||Date.now()-t0>2800){m._vis=undefined;return res();}
@@ -2837,10 +2832,12 @@ document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;
 .ph-body ul{margin:.3em 0 .6em;padding-left:1.3em}
 .ph-body>br:last-child,.ph-body ul+br{display:none}
 .pcard+br{display:none}
-.pcard.pc-in{animation:pcPop .42s cubic-bezier(.2,.9,.3,1) both}
-@keyframes pcPop{0%{opacity:0;transform:translateY(10px) scale(.97)}100%{opacity:1;transform:none}}
-.pc-wait span{animation:phPulse 1s ease-in-out infinite}
-@keyframes phPulse{50%{opacity:.35}}
+.pcard.open .ph-l span::after{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:#a8a8ad;margin-left:8px;vertical-align:middle;animation:phPulse 1s ease-in-out infinite;animation-delay:var(--pd,0s)}
+@keyframes phPulse{50%{opacity:.25;transform:scale(.7)}}
+.ph-body{max-height:340px;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;scrollbar-width:none}
+.ph-body::-webkit-scrollbar{display:none}
+.pcard.open .ph-body{overflow-y:hidden;-webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 36px);mask-image:linear-gradient(to bottom,transparent 0,#000 36px)}
+.pcard.open ~ .caret{display:none}
 </style>
 <!-- FLAY AI UPDATE v2 -->
 <style>
