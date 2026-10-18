@@ -535,6 +535,7 @@ section.screen .topbar>button.ibtn[data-back]{width:46px!important;height:46px!i
 <symbol id="i-thumb-up" viewBox="0 0 24 24"><path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/></symbol>
 <symbol id="i-thumb-down" viewBox="0 0 24 24"><path d="M17 14V2"/><path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z"/></symbol>
 <symbol id="i-volume" viewBox="0 0 24 24"><path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"/><path d="M16 9a5 5 0 0 1 0 6"/><path d="M19.364 18.364a9 9 0 0 0 0-12.728"/></symbol>
+<symbol id="i-share" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.59 13.51 6.83 3.98"/><path d="m15.41 6.51-6.82 3.98"/></symbol>
 <symbol id="i-external" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></symbol>
 </svg>
 
@@ -987,11 +988,12 @@ function wlHtml(c){
  return h+'</div>';
 }
 function md(src,msg){
- const blocks=[];src=String(src??'');
- src=src.replace(/```flayfiles\n?([\s\S]*?)```/g,'@@(FILE_OUTPUT)@@');
+ const blocks=[];src=String(src??'');const pCards=[];
+ src=src.replace(/(```|~~~)prompt[ \t]*\n?([\s\S]*?)(\1|$)/g,(m,f,t,cl)=>{pCards.push({text:t.replace(/\n$/,''),open:!cl});return '\u0004'+(pCards.length-1)+'\u0004';});
+src=src.replace(/```flayfiles\n?([\s\S]*?)```/g,'@@(FILE_OUTPUT)@@');
  src=src.replace(/```flayfiles\n?[\s\S]*$/,'@@(FILE_OUTPUT_LIVE)@@');
  const wlCards=[],qCards=[];
- src=src.replace(/```weblinks[ \t]*\n?([\s\S]*?)(```|$)/g,(m,j,cl)=>{wlCards.push({items:wlItems(j),open:!cl});return '\u0002'+(wlCards.length-1)+'\u0002';});
+   src=src.replace(/```weblinks[ \t]*\n?([\s\S]*?)(```|$)/g,(m,j,cl)=>{wlCards.push({items:wlItems(j),open:!cl});return '\u0002'+(wlCards.length-1)+'\u0002';});
  src=src.replace(/```questions[ \t]*\n?([\s\S]*?)(```|$)/g,(m,j,cl)=>{qCards.push({json:j,open:!cl});return '\u0003'+(qCards.length-1)+'\u0003';});
  src=src.replace(/```([\w+-]*)\n?([\s\S]*?)```/g,(m,l,c)=>{blocks.push({l,c:c.replace(/\n$/,'')});return '\u0001'+(blocks.length-1)+'\u0001';});
  let h=esc(src);
@@ -1008,6 +1010,7 @@ function md(src,msg){
  h=out.replace(/<br><h3>/g,'<h3>').replace(/<\/h3><br>/g,'</h3>').replace(/(<\/ul>)<br>/g,'$1');
  h=h.replace(/(?:<br>)?\u0002(\d+)\u0002(?:<br>)?/g,(m,i)=>wlHtml(wlCards[+i]));
  h=h.replace(/(?:<br>)?\u0003(\d+)\u0003(?:<br>)?/g,(m,i)=>qHtml(qCards[+i],msg));
+  h=h.replace(/(?:<br>)?\u0004(\d+)\u0004(?:<br>)?/g,(m,i)=>pHtml(pCards[+i]));
  h=h.replace(/@@\(FILE_OUTPUT_LIVE\)@@/,`<div class="gen-note">${icon('fileplus','sm')}<span>Preparing file output…</span></div>`);
  h=h.replace(/@@\(FILE_OUTPUT\)@@/,`<div class="gen-note">${icon('fileplus','sm')}<span>Code was delivered as generated files — open them from the card above.</span></div>`);
  h=h.replace(/\u0001(\d+)\u0001/g,(m,i)=>{const b=blocks[+i];return `<div class="codeblock"><div class="cb-bar"><span>${esc(b.l||'code')}</span><button class="cb-copy" type="button">${icon('copy','xs')} Copy</button></div><pre><code>${esc(b.c)}</code></pre></div>`;});
@@ -1388,7 +1391,7 @@ function msgFollow(sc){
  if(!sc||sc._mraf||sc._hold)return;
  const step=()=>{sc._mraf=0;if(!S.pinned||sc._hold||!sc.isConnected)return;
   const target=sc.scrollHeight-sc.clientHeight,d=target-sc.scrollTop;
-  if(d>1){sc.scrollTop=Math.min(target,sc.scrollTop+Math.max(1,d*0.11));sc._mraf=requestAnimationFrame(step);}};
+  if(d>1){sc._prog=performance.now();sc.scrollTop=Math.min(target,sc.scrollTop+Math.max(1,d*0.11));sc._mraf=requestAnimationFrame(step);}};
  sc._mraf=requestAnimationFrame(step);
 }
 function bindMsgScroll(sc){
@@ -1420,8 +1423,10 @@ function applyFill(sel){
  ai.classList.add('fill');ai.style.minHeight=h+'px';
 }
 function startReply(sel,mid){
- _fill[sel]=mid;S.pinned=true;
+ S.pinned=true;
  const host=$(sel);if(!host)return;
+ if(sel==='#agentMsgs'){_fill[sel]=null;applyFill(sel);const sc0=host.parentElement;if(sc0){sc0._hold=false;requestAnimationFrame(()=>msgFollow(sc0));}return;}
+ _fill[sel]=mid;
  applyFill(sel);
  const ai=host.querySelector('.msg.ai[data-mid="'+mid+'"]'),sc=host.parentElement,u=ai&&tkPrevUser(ai);
  if(!u||!sc)return;
@@ -1528,26 +1533,62 @@ function isLinkIntent(t){t=String(t||'').trim();if(!t||t.length>400)return false
  const ask=/(\bgive\b|\bsend\b|\bshare\b|\bshow\b|\bprovide\b|\bfind\b|\bsuggest\b|\brecommend\b|\blist\b|\bneed\b|\bwant\b|\bwhere\b|\bwhich\b|\bbest\b|\btop\b|\u09a6\u09be\u0993|\u09a6\u09bf\u09a8|\u09a6\u09c7\u09a8|\u09a6\u09bf\u09ac\u09c7|\u09a6\u09bf\u09a4\u09c7|\u09a6\u09c7\u0996\u09be\u0993|\u09a6\u09c7\u0996\u09be\u09a8|\u09aa\u09be\u09a0\u09be\u0993|\u099a\u09be\u0987|\u09ac\u09b2\u09cb|\u09ac\u09b2\u09c1\u09a8|\u0996\u09c1\u0981\u099c\u09c7|\u0995\u09cb\u09a5\u09be\u09af\u09bc|\u0995\u09cb\u09a8\u099f\u09be)/i;
  const code=/(\bfix\b|\bedit\b|\bchange\b|\bupdate\b|\bimplement\b|\bcreate\b|\bbuild\b|\bmake\b|\badd\b|\bremove\b|\bhref\b|\banchor\b|\bcss\b|\bhtml\b|\bjs\b|\bjavascript\b|\bbutton\b|\bcode\b|\bfile\b|\bscreen\b|\bpage\b|\u0995\u09cb\u09a1|\u09ab\u09be\u0987\u09b2|\u09a0\u09bf\u0995 \u0995\u09b0|\u098f\u09a1\u09bf\u099f|\u09aa\u09b0\u09bf\u09ac\u09b0\u09cd\u09a4\u09a8|\u09af\u09cb\u0997 \u0995\u09b0|\u09ac\u09be\u09a8\u09be\u0993|\u09ac\u09be\u09a8\u09be\u09a4\u09c7|\u09a4\u09c8\u09b0\u09bf|\u09a1\u09bf\u09b2\u09bf\u099f|\u09ae\u09c1\u099b|\u0986\u09aa\u09a1\u09c7\u099f)/i;
  return noun.test(t)&&ask.test(t)&&!code.test(t);}
+/* ===== prompt / long-text card: appears at the first character and fills live ===== */
+const PROMPT_RULE='When the user asks you to write, create or generate a prompt, instructions, a spec, a plan, a document, an email or letter, or any other long copyable text, put that text inside ONE fence that starts with ~~~prompt on its own line and ends with ~~~ on its own line (use ~~~ and not backticks, so code inside stays intact). Put only the text itself inside it (markdown headings and lists are fine). Write at most one short sentence before it and one short sentence after it, outside the fence. Never use this fence for source code or for short answers.';
+function pmd(t,msg){const L=String(t).split('\n');let buf=[],out='';
+ const fl=()=>{if(buf.length){out+=md(buf.join('\n'),msg).replace(/^(<br>)+/,'');buf=[];}};
+ L.forEach(l=>{const m=l.match(/^(#{1,4})\s+(.*)$/);
+  if(m){fl();const n=m[1].length;out+='<h'+n+' class="ph">'+md(m[2],msg).replace(/(<br>)+$/,'')+'</h'+n+'>';}else buf.push(l);});
+ fl();return out;}
+function pHtml(c){
+ return '<div class="pcard'+(c.open?' open':'')+'" data-raw="'+esc(c.text)+'"><div class="ph-bar"><span class="ph-l">'+icon('doc','sm')+'<span>Writing</span></span>'
+  +'<span class="ph-a"><button type="button" class="ph-b" data-pcopy aria-label="Copy">'+icon('copy')+'</button><button type="button" class="ph-b" data-pshare aria-label="Share">'+icon('share')+'</button></span></div>'
+  +'<div class="ph-body">'+pmd(c.text,null)+'</div></div>';}
+document.addEventListener('click',e=>{
+ const b=e.target.closest('[data-pcopy],[data-pshare]');if(!b)return;
+ const card=b.closest('.pcard'),txt=card?card.getAttribute('data-raw')||'':'';if(!txt)return;
+ if(b.hasAttribute('data-pcopy')){copyText(txt);b.classList.add('ok');b.innerHTML=icon('check');setTimeout(()=>{b.classList.remove('ok');b.innerHTML=icon('copy');},1500);return;}
+ if(navigator.share){navigator.share({text:txt}).catch(()=>{});}else{copyText(txt);toast('Copied','ok');}
+});
+/* local, instant routing; the model is asked only when a message is truly ambiguous */
+function searchHeuristic(t){
+ t=String(t||'').trim();if(t.length<8)return 'no';
+ const yes=/(latest|current|today|news|price|pricing|how much|official|website|link|review|\bvs\b|compare|202\d|documentation|\bdocs\b|download|version|release|ad network|adsense|admob|monetag|সর্বশেষ|আজকের|দাম|খবর|অফিসিয়াল|ওয়েবসাইট|লিংক|রিভিউ|তুলনা)/i.test(t);
+ if(yes||isLinkIntent(t))return 'yes';
+ if(/(prompt|প্রম্পট|লিখে দাও|লিখে দিন|write (me )?(a|an|the)|fix|bug|error|rename|remove|delete|color|colour|button|header|layout|css|font|align|padding|margin|রঙ|বাটন|ঠিক কর|পরিবর্তন|ডিজাইন|explain|ব্যাখ্যা)/i.test(t))return 'no';
+ return t.length>40?'maybe':'no';}
+function partialAnswer(raw){
+ const m=/"answer"\s*:\s*"/.exec(raw);if(!m)return null;
+ const st=m.index+m[0].length;let j=st,es=false;
+ for(;j<raw.length;j++){const c=raw[j];if(es){es=false;continue;}if(c==='\\'){es=true;continue;}if(c==='"')break;}
+ let seg=raw.slice(st,j);if(j>=raw.length)seg=seg.replace(/\\(u[0-9a-fA-F]{0,3})?$/,'');
+ try{return JSON.parse('"'+seg+'"');}catch(_){return seg.replace(/\\n/g,'\n').replace(/\\"/g,'"').replace(/\\\\/g,'\\');}}
 /* ===== AI-decided live web research (search only when the AI decides it is needed) ===== */
 const DECIDE_SYS='You are a routing step that decides whether an assistant must search the live web before answering the user\'s LATEST message. Search ONLY when fresh or external facts are needed: current or recent information, prices, news, versions, official websites or links, specific real products/services/companies/APIs/SDKs/documentation, ad networks, comparisons of real services, or when the user asks to look something up or find something. Do NOT search for greetings, small talk, thanks, opinions, creative writing, math, general programming help, editing/fixing/explaining the user\'s own code or project files, UI/design changes, or stable common knowledge. When asked to build an app or website, search only if it depends on real external services, APIs, SDKs or up-to-date documentation. Reply with ONLY compact JSON: {"search":true,"queries":["1 to 3 short focused search queries"]} or {"search":false,"queries":[]}.';
 async function decideSearch(text,hist,sig,note){
  if(!S.webAccess)return{search:false,queries:[]};
  const t=String(text||'').trim();if(!t)return{search:false,queries:[]};
+ const hv=searchHeuristic(t);
+ if(hv==='no')return{search:false,queries:[]};
+ if(hv==='yes')return{search:true,queries:[t.replace(/\s+/g,' ').slice(0,160)]};
  let raw='';
+ const dac=new AbortController(),dto=setTimeout(()=>dac.abort(),2500),don=()=>dac.abort();
+ if(sig){if(sig.aborted)dac.abort();else sig.addEventListener('abort',don,{once:true});}
  try{
   await providerChat({provider:activeProvider(),
    messages:[{role:'system',content:DECIDE_SYS+(note?' Context: '+note:'')},
     ...(hist||[]).slice(-4).map(h=>({role:h.role,content:String(h.content||'').replace(/```[\s\S]*?(```|$)/g,'[code]').slice(0,300)})),
     {role:'user',content:t.slice(0,1200)}],
-   signal:sig,reasoning:'off',temperature:0,maxTokens:200,stream:false,onDelta:d=>{raw+=d;}});
- }catch(e){if(e.name==='AbortError')throw e;return isLinkIntent(t)?{search:true,queries:[t.slice(0,160)+' official website']}:{search:false,queries:[]};}
+   signal:dac.signal,reasoning:'off',temperature:0,maxTokens:200,stream:false,onDelta:d=>{raw+=d;}});
+ }catch(e){if(sig&&sig.aborted)throw new DOMException('Aborted','AbortError');return{search:false,queries:[]};}
+ finally{clearTimeout(dto);if(sig)sig.removeEventListener('abort',don);}
  let j=null;try{j=JSON.parse((raw.match(/\{[\s\S]*\}/)||[''])[0]);}catch(_){}
  if(!j||j.search!==true)return{search:false,queries:[]};
  let q=(Array.isArray(j.queries)?j.queries:[]).map(x=>String(x||'').replace(/\s+/g,' ').trim().slice(0,160)).filter(Boolean).slice(0,3);
  if(!q.length)q=[t.slice(0,160)];
  return{search:true,queries:q};}
 async function readPage(url,sig){
- const ac=new AbortController(),to=setTimeout(()=>ac.abort(),12000),on=()=>ac.abort();
+ const ac=new AbortController(),to=setTimeout(()=>ac.abort(),6000),on=()=>ac.abort();
  if(sig){if(sig.aborted)ac.abort();else sig.addEventListener('abort',on,{once:true});}
  try{const r=await fetch('https://r.jina.ai/'+url,{headers:{Accept:'text/plain'},signal:ac.signal});if(!r.ok)return null;
   const raw=await r.text();const ti=(raw.match(/^Title:\s*(.+)$/m)||[])[1]||'';
@@ -1571,8 +1612,8 @@ async function researchWeb(m,queries,sig,hostSel,opts){
   m.webSteps.push({t:'Found '+all.length+' web pages',d:all.slice(0,8).map(s=>s.host).join('\n'),srcs:hosts(all)});upd();
   let pages=[];
   if(opts.read!==false){
-   m._webTitle='Reading pages…';m._webDesc=all.slice(0,4).map(s=>s.host).join(' · ');upd();
-   const pick=all.slice(0,4);
+   m._webTitle='Reading pages…';m._webDesc=all.slice(0,3).map(s=>s.host).join(' · ');upd();
+   const pick=all.slice(0,3);
    const got=await Promise.all(pick.map(async s=>({s,p:await readPage(s.url,sig)})));gone();
    pages=got.filter(x=>x.p);
    if(pages.length)m.webSteps.push({t:'Read '+pages.length+(pages.length===1?' page':' pages'),d:pages.map(x=>x.p.title||x.s.title||x.s.host).join('\n'),srcs:hosts(pages.map(x=>x.s))});
@@ -1625,6 +1666,7 @@ function abHtml(m){
  return h+'</div>';}
 function plainText(m,sp){
  let t=String(m.content||'');
+ t=t.replace(/(```|~~~)prompt[ \t]*\n?([\s\S]*?)(\1|$)/g,(x,f,b)=>b);
  t=t.replace(/```flayfiles[\s\S]*?(```|$)/g,'');
  t=t.replace(/```weblinks[ \t]*\n?([\s\S]*?)(```|$)/g,(x,j)=>wlItems(j).map((o,i)=>(i+1)+'. '+(o.name||'')+(o.tag?' - '+o.tag:'')+(o.desc?'. '+o.desc:'')+(sp?'':'\n'+o.url)).join('\n'));
  t=t.replace(/```questions[ \t]*\n?([\s\S]*?)(```|$)/g,(x,j)=>{let q;try{q=JSON.parse(String(j).trim());}catch(_){return '';}
@@ -1651,7 +1693,7 @@ function srcParse(raw){const out=[],seen=new Set(),perHost={};const clean=String
  return out;}
 async function searchWebFull(query,signal){
  const q=String(query||'').replace(/\s+/g,' ').trim().slice(0,220);if(!q)return{text:'',sources:[]};
- const ac=new AbortController(),to=setTimeout(()=>ac.abort(),14000),onAb=()=>ac.abort();
+ const ac=new AbortController(),to=setTimeout(()=>ac.abort(),7000),onAb=()=>ac.abort();
  if(signal){if(signal.aborted)ac.abort();else signal.addEventListener('abort',onAb,{once:true});}
  try{
   const enc=encodeURIComponent(q);
@@ -1749,6 +1791,7 @@ Code delivery rules:
 - Never invent tool results, statuses or completions.
 - ${THINK_RULE}
 - ${QUESTIONS_RULE}
+- ${PROMPT_RULE}
 - ${LINKS_RULE} If the request is only “Link” and the intended link is unclear from context, ask which link they want instead of generating an unrelated list.`;
 
 async function searchWeb(query,signal){const q=String(query||'').trim();if(!q)return '';const url='https://r.jina.ai/http://www.google.com/search?q='+encodeURIComponent(q);let res;try{res=await fetch(url,{headers:{Accept:'text/plain'},signal});}catch(e){if(e.name==='AbortError')throw e;throw new Error('Web search failed: '+(e.message||'network error'));}if(!res.ok)throw new Error('Web search failed (HTTP '+res.status+').');const raw=(await res.text()).trim();if(!raw)throw new Error('Web search returned no results.');const links=[];const seen=new Set();const re=/\[([^\]]{2,180})\]\((https?:\/\/[^)]+)\)/g;let m;while((m=re.exec(raw))&&links.length<8){const title=m[1].replace(/\s+/g,' ').trim();const link=m[2].trim();if(!seen.has(link)&&!/google\.com\/search/i.test(link)){seen.add(link);links.push({title,link});}}let text=raw.replace(/\\r/g,'').replace(/\\n{3,}/g,'\\n\\n').slice(0,12000);if(links.length)text+='\\n\\n--- Extracted result links ---\\n'+links.map((x,i)=>(i+1)+'. '+x.title+'\\n'+x.link).join('\\n');return 'LIVE WEB SEARCH RESULTS FOR: '+q+'\\nUse these results as external context. Do not claim to have browsed anything beyond the supplied results. Cite source URLs when relevant.\\n\\n'+text;}
@@ -1819,9 +1862,9 @@ $('#chatInput').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&
 $('#btnSend').onclick=()=>{if(S.streaming){S.abort&&S.abort.abort();}else sendChat();};
 $('#btnNewChat').onclick=()=>{newChat();toast('New chat started. Provider and projects are preserved.','ok');};
 $('#btnScrollDown').onclick=()=>{const sc=$('#chatScroll');S.pinned=true;sc._hold=false;msgFollow(sc);};
-$('#chatScroll').addEventListener('scroll',e=>{const el=e.target;S.pinned=el.scrollHeight-el.scrollTop-el.clientHeight<(el._hold?40:130);
+$('#chatScroll').addEventListener('scroll',e=>{const el=e.target;if(el._prog&&performance.now()-el._prog<90)return;S.pinned=el.scrollHeight-el.scrollTop-el.clientHeight<(el._hold?40:130);
 $('#btnScrollDown').classList.toggle('hidden',S.pinned);});
-$('#agentScroll').addEventListener('scroll',e=>{const el=e.target;S.pinned=el.scrollHeight-el.scrollTop-el.clientHeight<(el._hold?40:130);});
+$('#agentScroll').addEventListener('scroll',e=>{const el=e.target;if(el._prog&&performance.now()-el._prog<90)return;S.pinned=el.scrollHeight-el.scrollTop-el.clientHeight<(el._hold?40:130);});
 bindMsgScroll($('#chatScroll'));bindMsgScroll($('#agentScroll'));
 $('#msgs').addEventListener('click',threadClick('#msgs'));
 function threadClick(sel){return e=>{
@@ -2766,6 +2809,26 @@ document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;
 .qbtn:active{transform:scale(.98)}
 .qbtn:disabled{opacity:.45}
 .qcard.done .qo{pointer-events:none;opacity:.8}
+
+/* prompt / writing card */
+.pcard{margin:14px 0 8px;background:#202020;border-radius:28px;padding:14px 20px 18px;color:#f1f1f3}
+.ph-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.ph-l{display:inline-flex;align-items:center;gap:10px;color:#a8a8ad;font-size:16px}
+.pcard.open .ph-l span::after{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:#a8a8ad;margin-left:8px;vertical-align:middle;animation:phPulse 1s ease-in-out infinite}
+@keyframes phPulse{50%{opacity:.25;transform:scale(.7)}}
+.ph-a{display:inline-flex;gap:6px}
+.ph-b{width:40px;height:40px;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;color:#d4d4d8}
+.ph-b .ic{width:22px;height:22px}
+.ph-b:active{background:rgba(255,255,255,.08)}
+.ph-b.ok{color:#fff}
+.ph-body{font-size:15.5px;line-height:1.65;color:#ececee;word-break:break-word}
+.ph-body h1.ph{font-size:1.7em;line-height:1.25;margin:.6em 0 .4em;color:#fff;font-weight:700}
+.ph-body h2.ph{font-size:1.45em;line-height:1.3;margin:.8em 0 .4em;color:#fff;font-weight:700}
+.ph-body h3.ph,.ph-body h4.ph{font-size:1.15em;margin:.8em 0 .3em;color:#fff;font-weight:700}
+.ph-body strong{color:#fff}
+.ph-body ul{margin:.3em 0 .6em;padding-left:1.3em}
+.ph-body>br:last-child,.ph-body ul+br{display:none}
+.pcard+br{display:none}
 </style>
 <!-- FLAY AI UPDATE v2 -->
 <style>
@@ -3039,7 +3102,7 @@ function buildReport(L,ex,prior){const r=L.b.run,v=x=>x===undefined||x===null||x
 function buildFix(){const p=S.project,L=S._lastBuild;if(!p||!L||L.state!=='failed'){toast('No failed build is available to fix.','warn');return;}if(!L.logs){toast('Failure log unavailable.','err');return;}const c=classify(L),ex=c.ex,r=L.b.run;if(c.kind==='infrastructure'){const bid=$('.screen.active')?.id;goBack();if(bid!=='screen-project')return;setTab('agent');p.agent.push({id:uid(),role:'assistant',content:'No project-code error was found. The failure appears to be infrastructure/build-service related.\nNo project files were changed.',createdAt:Date.now(),status:'done'});persistProject(p);renderThread('#agentMsgs',p.agent);pinScroll(true);return;}const sig=ex.failedTask+'|'+ex.first.replace(/\d+/g,'#');const prior=p.lastFix&&p.lastFix.sig===sig?'PREVIOUS ATTEMPT DID NOT RESOLVE THE ROOT CAUSE: the same failure occurred again. Re-analyze and do not repeat the previous change blindly.':'';p.lastFix={sig,runId:r.id||'',files:[]};const rep=buildReport(L,ex,prior),ctx=JSON.stringify({run:r,jobs:L.b.jobs.map(j=>({...j,logs:undefined})),failedTask:ex.failedTask,errorLocations:ex.locations,exitCode:ex.exitCode,firstError:ex.first,previousAttemptFailed:!!prior},null,1);S.agentAttachments=[{kind:'doc',path:'build-failed.log',name:'build-failed.log',size:rep.length,content:rep},{kind:'doc',path:'build-context.json',name:'build-context.json',size:ctx.length,content:ctx}];S._fixPending=true;const backId=$('.screen.active')?.id;goBack();if(backId!=='screen-project')return;setTab('agent');renderAgentAtts();const inp=$('#agentInput');inp.value=(prior?prior+' ':'')+'Fix the real Android build failure in build-failed.log and build-context.json. First determine root cause, failed task/step, error file and line. Make the smallest safe change, validate it, save it.';autoGrow(inp);setTimeout(()=>sendAgent(),120);}
 window.startBuildTerminal=startBuild;$('#btFix').onclick=buildFix;
 
-const AG_SYS='You are Synora AI, a precise Android/web coding agent. Make the smallest safe change. Never print project source code in prose. Reply in the language the user writes in. Greetings and general questions get a normal friendly answer; never mention build errors or file changes unless that is what actually happened. '+THINK_RULE+' '+QUESTIONS_RULE;
+const AG_SYS='You are Synora AI, a precise Android/web coding agent. Make the smallest safe change. Never print project source code in prose. Reply in the language the user writes in. Greetings and general questions get a normal friendly answer; never mention build errors or file changes unless that is what actually happened. '+THINK_RULE+' '+QUESTIONS_RULE+' '+PROMPT_RULE;
 async function agentLinkReply(am,text){
  const sig=S.agentAbort.signal,p=S.project;
  am._webSearching=true;updateLive(am,'#agentMsgs');
@@ -3221,7 +3284,7 @@ async function retryQueue(mid){if(S.agentStreaming)return;const p=S.project,am=p
  const f=am.queue.find(x=>x.status==='failed');if(f)f.status='retrying';
  try{await runQueue(am);}finally{finishAgent(am);}}
 
-async function sendAgent2(){if(S.agentStreaming)return;const p=S.project;if(!p)return;const inp=$('#agentInput'),text=inp.value.trim(),atts=S.agentAttachments.slice();if(!text&&!atts.length)return;if(!activeProvider()){toast('Set up an AI provider first (Menu > Set Up AI).','warn');renderProviders();openScreen('screen-providers');return;}if(!activeProvider().model){toast('No model selected. Use the Model button in the composer.','warn');openModelModal();return;}const errAtt=atts.find(a=>a.path==='build-failed.log'),fromBuild=!!(S._fixPending&&errAtt);S._fixPending=false;p.agent.push({id:uid(),role:'user',content:text||'(selected files)',attachments:atts.map(a=>({name:a.path||a.name,size:a.size,kind:a.kind})),createdAt:Date.now(),status:'done'});S.agentAttachments=[];inp.value='';if(agentDraftKey())localStorage.removeItem(agentDraftKey());autoGrow(inp);renderAgentAtts();const am={id:uid(),role:'assistant',content:'',createdAt:Date.now(),status:'streaming',activity:[],queue:[],task:text||'Work with the attached files.',fromBuild,errText:errAtt?errAtt.content||'':'',extra:atts.filter(a=>a!==errAtt&&typeof a.content==='string').map(a=>({path:a.path||a.name,content:a.content.slice(0,20000)}))};p.agent.push(am);renderThread('#agentMsgs',p.agent);startReply('#agentMsgs',am.id);S.agentStreaming=true;S.agentAbort=new AbortController();updateSendBtn();try{if(isLinkIntent(text)&&!atts.length){try{await agentLinkReply(am,text);}finally{am._webSearching=false;}return;}const evU=agStart(am,'Understanding the request','search');let webCtx='';if(S.webAccess&&!am.fromBuild&&text&&!atts.length){const hd=p.agent.filter(x=>x!==am&&x.status==='done'&&x.content).slice(0,-1).slice(-4);const dec=await decideSearch(text,hd,S.agentAbort.signal,'The user is talking to a coding agent that builds Android WebView apps and websites inside a project.');if(dec.search&&dec.queries.length)webCtx=await researchWeb(am,dec.queries,S.agentAbort.signal,'#agentMsgs');}let hits=am.errText?filesInText(p,am.errText,true):[];filesInText(p,text,false).forEach(x=>{if(!hits.includes(x))hits.push(x)});const given=new Set(am.extra.map(a=>a.path));hits=hits.filter(x=>!given.has(x)).slice(0,3);let ctx='',used=0;const read=[];for(const x of hits){const f=p.files[x];if(!f||f.binary)continue;const cc=f.content||'';if(used+cc.length>30000)continue;used+=cc.length;read.push(x);ctx+='\n### FILE: '+x+'\n'+cc+'\n### END FILE\n'}agAct(am,read.length?'Read '+read.join(', ')+' (targeted)':'Planning from project file list',read.length?'file':'info');let up='TASK:\n'+am.task;if(am.errText)up+='\n\nREAL FAILURE LOG:\n'+errSummary(am.errText);am.extra.forEach(a=>{up+='\n\nATTACHED FILE '+a.path+':\n'+a.content});if(webCtx)up+='\n\nLIVE WEB CONTEXT (fresh research done for this request; use the concrete details in it):\n'+webCtx.slice(0,9000);up+='\n\nPROJECT FILE LIST:\n'+Object.keys(p.files).sort().slice(0,400).join('\n')+'\n\nFILES ALREADY READ:'+(ctx||' none')+'\n\nRECENT PROJECT CHANGES (earlier in this chat): '+(recentChanges(p,am).join(', ')||'none')+'\n\nCONVERSATION RULES: First decide the intent of the LATEST user message, using earlier messages for context (a follow-up such as "make it black" refers to the work already discussed). Intents: greeting, chat, question, project_question, explain, inspect, code_change, bug_fix, build_fix, clarify. For greeting/chat/question/project_question/explain/inspect/clarify, answer naturally in the language the user writes in, put the reply in "answer", keep files [], and NEVER mention build errors, infrastructure or file changes. Use clarify only if a code request is truly ambiguous. For clarify set "questions" to {"groups":[{"q":"question text","options":["choice 1","choice 2"]}],"button":"short action label"} written from the real context in the language of the user (1 to 4 groups, 2 to 6 options each, no numbering); otherwise questions is null. Set "infrastructure" true ONLY when a REAL FAILURE LOG is attached above and shows no project-code error; otherwise it is always false.\n\nReturn ONLY one JSON object: {"intent":"","analysis":{"root_cause":"","failed_task":"","failed_step":"","error_type":"","error_file":"","error_line":null,"relevant_dependency":null,"recommended_fix":""},"infrastructure":false,"summary":"one short line","answer":"reply text when no file change is needed, else empty","questions":null,"files":[{"path":"relative/path","action":"modify|create|delete","reason":"short","refs":[]}]}. For a code change or bug fix list only the files that must change (minimal set)."';const hist=p.agent.filter(m=>m!==am&&m.status==='done'&&m.content).slice(0,-1).slice(-6).map(m=>({role:m.role,content:m.content}));let raw='';const tP=Date.now();await providerChat({provider:activeProvider(),messages:[{role:'system',content:AG_SYS},...hist,{role:'user',content:up}],signal:S.agentAbort.signal,onDelta:d=>{raw+=d},onReasoning:think(am)});let plan;try{plan=JSON.parse((raw.match(/\{[\s\S]*\}/)||[''])[0])}catch(_){plan=null}if(!plan||typeof plan!=='object'){if(!am.fromBuild&&!am.errText&&raw.trim())plan={intent:'chat',answer:raw.trim(),files:[]};else throw new Error('The model did not return a valid plan. Try again.');}const seen=new Set();am.queue=(plan.files||[]).map(f=>({path:normPath(f&&f.path),action:String(f&&f.action||'modify').toLowerCase(),reason:String(f&&f.reason||''),refs:((f&&f.refs)||[]).map(normPath).filter(r=>p.files[r]).slice(0,2)})).filter(f=>f.path&&!isUnsafe(f.path)&&!seen.has(f.path)&&seen.add(f.path)).slice(0,12).map(f=>{if(f.action!=='delete')f.action=p.files[f.path]?'modify':'create';f.status='queued';return f});am.plan=String(plan.summary||'');const an=plan.analysis||{};if(an.root_cause&&(am.fromBuild||am.errText))agAct(am,'Root cause: '+String(an.root_cause).slice(0,300)+(an.error_file?' ('+an.error_file+(an.error_line?':'+an.error_line:'')+')':''),'search');const intent=String(plan.intent||'').toLowerCase().replace(/[^a-z_]/g,''),talk=/^(greeting|chat|question|project_question|explain|inspect|clarify|identity)$/.test(intent);if(talk)am.queue=[];
+async function sendAgent2(){if(S.agentStreaming)return;const p=S.project;if(!p)return;const inp=$('#agentInput'),text=inp.value.trim(),atts=S.agentAttachments.slice();if(!text&&!atts.length)return;if(!activeProvider()){toast('Set up an AI provider first (Menu > Set Up AI).','warn');renderProviders();openScreen('screen-providers');return;}if(!activeProvider().model){toast('No model selected. Use the Model button in the composer.','warn');openModelModal();return;}const errAtt=atts.find(a=>a.path==='build-failed.log'),fromBuild=!!(S._fixPending&&errAtt);S._fixPending=false;p.agent.push({id:uid(),role:'user',content:text||'(selected files)',attachments:atts.map(a=>({name:a.path||a.name,size:a.size,kind:a.kind})),createdAt:Date.now(),status:'done'});S.agentAttachments=[];inp.value='';if(agentDraftKey())localStorage.removeItem(agentDraftKey());autoGrow(inp);renderAgentAtts();const am={id:uid(),role:'assistant',content:'',createdAt:Date.now(),status:'streaming',activity:[],queue:[],task:text||'Work with the attached files.',fromBuild,errText:errAtt?errAtt.content||'':'',extra:atts.filter(a=>a!==errAtt&&typeof a.content==='string').map(a=>({path:a.path||a.name,content:a.content.slice(0,20000)}))};p.agent.push(am);renderThread('#agentMsgs',p.agent);startReply('#agentMsgs',am.id);S.agentStreaming=true;S.agentAbort=new AbortController();updateSendBtn();try{if(isLinkIntent(text)&&!atts.length){try{await agentLinkReply(am,text);}finally{am._webSearching=false;}return;}const evU=agStart(am,'Understanding the request','search');let webCtx='';if(S.webAccess&&!am.fromBuild&&text&&!atts.length){const hd=p.agent.filter(x=>x!==am&&x.status==='done'&&x.content).slice(0,-1).slice(-4);const dec=await decideSearch(text,hd,S.agentAbort.signal,'The user is talking to a coding agent that builds Android WebView apps and websites inside a project.');if(dec.search&&dec.queries.length)webCtx=await researchWeb(am,dec.queries,S.agentAbort.signal,'#agentMsgs');}let hits=am.errText?filesInText(p,am.errText,true):[];filesInText(p,text,false).forEach(x=>{if(!hits.includes(x))hits.push(x)});const given=new Set(am.extra.map(a=>a.path));hits=hits.filter(x=>!given.has(x)).slice(0,3);let ctx='',used=0;const read=[];for(const x of hits){const f=p.files[x];if(!f||f.binary)continue;const cc=f.content||'';if(used+cc.length>30000)continue;used+=cc.length;read.push(x);ctx+='\n### FILE: '+x+'\n'+cc+'\n### END FILE\n'}agAct(am,read.length?'Read '+read.join(', ')+' (targeted)':'Planning from project file list',read.length?'file':'info');let up='TASK:\n'+am.task;if(am.errText)up+='\n\nREAL FAILURE LOG:\n'+errSummary(am.errText);am.extra.forEach(a=>{up+='\n\nATTACHED FILE '+a.path+':\n'+a.content});if(webCtx)up+='\n\nLIVE WEB CONTEXT (fresh research done for this request; use the concrete details in it):\n'+webCtx.slice(0,9000);up+='\n\nPROJECT FILE LIST:\n'+Object.keys(p.files).sort().slice(0,400).join('\n')+'\n\nFILES ALREADY READ:'+(ctx||' none')+'\n\nRECENT PROJECT CHANGES (earlier in this chat): '+(recentChanges(p,am).join(', ')||'none')+'\n\nCONVERSATION RULES: First decide the intent of the LATEST user message, using earlier messages for context (a follow-up such as "make it black" refers to the work already discussed). Intents: greeting, chat, question, project_question, explain, inspect, code_change, bug_fix, build_fix, clarify. For greeting/chat/question/project_question/explain/inspect/clarify, answer naturally in the language the user writes in, put the reply in "answer", keep files [], and NEVER mention build errors, infrastructure or file changes. Use clarify only if a code request is truly ambiguous. For clarify set "questions" to {"groups":[{"q":"question text","options":["choice 1","choice 2"]}],"button":"short action label"} written from the real context in the language of the user (1 to 4 groups, 2 to 6 options each, no numbering); otherwise questions is null. Set "infrastructure" true ONLY when a REAL FAILURE LOG is attached above and shows no project-code error; otherwise it is always false.\n\nReturn ONLY one JSON object: {"intent":"","analysis":{"root_cause":"","failed_task":"","failed_step":"","error_type":"","error_file":"","error_line":null,"relevant_dependency":null,"recommended_fix":""},"infrastructure":false,"summary":"one short line","answer":"reply text when no file change is needed, else empty","questions":null,"files":[{"path":"relative/path","action":"modify|create|delete","reason":"short","refs":[]}]}. For a code change or bug fix list only the files that must change (minimal set)."';const hist=p.agent.filter(m=>m!==am&&m.status==='done'&&m.content).slice(0,-1).slice(-6).map(m=>({role:m.role,content:m.content}));let raw='';const tP=Date.now();await providerChat({provider:activeProvider(),messages:[{role:'system',content:AG_SYS},...hist,{role:'user',content:up}],signal:S.agentAbort.signal,reasoning:'fast',onDelta:d=>{raw+=d;const pa=partialAnswer(raw);if(pa&&pa!==am.content){am.content=pa;updateLive(am,'#agentMsgs');}},onReasoning:think(am)});let plan;try{plan=JSON.parse((raw.match(/\{[\s\S]*\}/)||[''])[0])}catch(_){plan=null}if(!plan||typeof plan!=='object'){if(!am.fromBuild&&!am.errText&&raw.trim())plan={intent:'chat',answer:raw.trim(),files:[]};else throw new Error('The model did not return a valid plan. Try again.');}const seen=new Set();am.queue=(plan.files||[]).map(f=>({path:normPath(f&&f.path),action:String(f&&f.action||'modify').toLowerCase(),reason:String(f&&f.reason||''),refs:((f&&f.refs)||[]).map(normPath).filter(r=>p.files[r]).slice(0,2)})).filter(f=>f.path&&!isUnsafe(f.path)&&!seen.has(f.path)&&seen.add(f.path)).slice(0,12).map(f=>{if(f.action!=='delete')f.action=p.files[f.path]?'modify':'create';f.status='queued';return f});am.plan=String(plan.summary||'');const an=plan.analysis||{};if(an.root_cause&&(am.fromBuild||am.errText))agAct(am,'Root cause: '+String(an.root_cause).slice(0,300)+(an.error_file?' ('+an.error_file+(an.error_line?':'+an.error_line:'')+')':''),'search');const intent=String(plan.intent||'').toLowerCase().replace(/[^a-z_]/g,''),talk=/^(greeting|chat|question|project_question|explain|inspect|clarify|identity)$/.test(intent);if(talk)am.queue=[];
 if(am.fromBuild&&plan.infrastructure===true&&!am.queue.length){am.content='No project-code error was found in the build log. The failure appears to be infrastructure/build-service related.'+(an.root_cause?'\n\n'+an.root_cause:'')+'\nNo project files were changed.';agEnd(am,evU,'done','Build log analysed \u2014 no project-code error found');am.status='done';return;}
 agEnd(am,evU,'done',intent?'Request understood ('+intent.replace(/_/g,' ')+')':'Request understood',{detail:'Planner responded in '+((Date.now()-tP)/1000).toFixed(1)+'s'});
 if(!am.queue.length){let ans=String(plan.answer||'').trim();if(!ans&&!am.fromBuild&&!(plan.questions&&plan.questions.groups))ans=await agentChatReply(am,hist,text);if(!ans)ans=am.plan||'I could not find a change to make. Could you describe what you want changed?';am.content=ans+qBlock(plan.questions);agAct(am,am.fromBuild?'No file changes were needed':'Replied \u2014 no file operations were needed','info');await typerDrain(am,'#agentMsgs',S.agentAbort.signal);am.status='done';return;}
