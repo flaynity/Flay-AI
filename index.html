@@ -1010,7 +1010,7 @@ src=src.replace(/```flayfiles\n?([\s\S]*?)```/g,'@@(FILE_OUTPUT)@@');
  h=out.replace(/<br><h3>/g,'<h3>').replace(/<\/h3><br>/g,'</h3>').replace(/(<\/ul>)<br>/g,'$1');
  h=h.replace(/(?:<br>)?\u0002(\d+)\u0002(?:<br>)?/g,(m,i)=>wlHtml(wlCards[+i]));
  h=h.replace(/(?:<br>)?\u0003(\d+)\u0003(?:<br>)?/g,(m,i)=>qHtml(qCards[+i],msg));
-  h=h.replace(/(?:<br>)?\u0004(\d+)\u0004(?:<br>)?/g,(m,i)=>pHtml(pCards[+i]));
+  h=h.replace(/(?:<br>)?\u0004(\d+)\u0004(?:<br>)?/g,(m2,i)=>pHtml(pCards[+i],msg,+i));
  h=h.replace(/@@\(FILE_OUTPUT_LIVE\)@@/,`<div class="gen-note">${icon('fileplus','sm')}<span>Preparing file output…</span></div>`);
  h=h.replace(/@@\(FILE_OUTPUT\)@@/,`<div class="gen-note">${icon('fileplus','sm')}<span>Code was delivered as generated files — open them from the card above.</span></div>`);
  h=h.replace(/\u0001(\d+)\u0001/g,(m,i)=>{const b=blocks[+i];return `<div class="codeblock"><div class="cb-bar"><span>${esc(b.l||'code')}</span><button class="cb-copy" type="button">${icon('copy','xs')} Copy</button></div><pre><code>${esc(b.c)}</code></pre></div>`;});
@@ -1534,14 +1534,21 @@ function isLinkIntent(t){t=String(t||'').trim();if(!t||t.length>400)return false
  const code=/(\bfix\b|\bedit\b|\bchange\b|\bupdate\b|\bimplement\b|\bcreate\b|\bbuild\b|\bmake\b|\badd\b|\bremove\b|\bhref\b|\banchor\b|\bcss\b|\bhtml\b|\bjs\b|\bjavascript\b|\bbutton\b|\bcode\b|\bfile\b|\bscreen\b|\bpage\b|\u0995\u09cb\u09a1|\u09ab\u09be\u0987\u09b2|\u09a0\u09bf\u0995 \u0995\u09b0|\u098f\u09a1\u09bf\u099f|\u09aa\u09b0\u09bf\u09ac\u09b0\u09cd\u09a4\u09a8|\u09af\u09cb\u0997 \u0995\u09b0|\u09ac\u09be\u09a8\u09be\u0993|\u09ac\u09be\u09a8\u09be\u09a4\u09c7|\u09a4\u09c8\u09b0\u09bf|\u09a1\u09bf\u09b2\u09bf\u099f|\u09ae\u09c1\u099b|\u0986\u09aa\u09a1\u09c7\u099f)/i;
  return noun.test(t)&&ask.test(t)&&!code.test(t);}
 /* ===== prompt / long-text card: appears at the first character and fills live ===== */
-const PROMPT_RULE='When the user asks you to write, create or generate a prompt, instructions, a spec, a plan, a document, an email or letter, or any other long copyable text, put that text inside ONE fence that starts with ~~~prompt on its own line and ends with ~~~ on its own line (use ~~~ and not backticks, so code inside stays intact). Put only the text itself inside it (markdown headings and lists are fine). Write at most one short sentence before it and one short sentence after it, outside the fence. Never use this fence for source code or for short answers.';
+const PROMPT_RULE='WRITING CARD RULE: Whenever you write a prompt (including a prompt for another AI or coding agent), instructions, a spec, a plan, a document, a report, a README, a description, an email or letter, a script or story, or ANY other long detailed text the user may want to copy, put that text inside ONE fence that starts with ~~~prompt on its own line and ends with ~~~ on its own line (use ~~~ and not backticks, so code inside stays intact). Always write the closing ~~~ line. Put only the text itself inside it (markdown headings and lists are fine). Write at most one short sentence before it and one short sentence after it, outside the fence. Never use this fence for source code or for short answers. In JSON answers, write the fence inside the answer string with \\n line breaks.';
 function pmd(t,msg){const L=String(t).split('\n');let buf=[],out='';
  const fl=()=>{if(buf.length){out+=md(buf.join('\n'),msg).replace(/^(<br>)+/,'');buf=[];}};
  L.forEach(l=>{const m=l.match(/^(#{1,4})\s+(.*)$/);
   if(m){fl();const n=m[1].length;out+='<h'+n+' class="ph">'+md(m[2],msg).replace(/(<br>)+$/,'')+'</h'+n+'>';}else buf.push(l);});
  fl();return out;}
-function pHtml(c){
- return '<div class="pcard'+(c.open?' open':'')+'" data-raw="'+esc(c.text)+'"><div class="ph-bar"><span class="ph-l">'+icon('doc','sm')+'<span>Writing</span></span>'
+const _pcSeen=new Map();
+function pHtml(c,msg,idx){
+ /* while the model is still writing the prompt, show NO card (only a small status line); the card appears all at once when the text is complete */
+ if(c.open&&msg&&msg.status==='streaming')return '<div class="gen-note pc-wait"><span>Writing\u2026</span></div>';
+ let cls='pcard',st='';
+ if(msg&&msg.id){const k=msg.id+':'+idx;if(!_pcSeen.has(k)){_pcSeen.set(k,msg.status==='streaming'?Date.now():0);}
+  const t0=_pcSeen.get(k),el=t0?Date.now()-t0:99999;
+  if(t0&&el<450){cls+=' pc-in';st=' style="animation-delay:-'+el+'ms"';}}
+ return '<div class="'+cls+'"'+st+' data-raw="'+esc(c.text)+'"><div class="ph-bar"><span class="ph-l">'+icon('doc','sm')+'<span>Writing</span></span>'
   +'<span class="ph-a"><button type="button" class="ph-b" data-pcopy aria-label="Copy">'+icon('copy')+'</button><button type="button" class="ph-b" data-pshare aria-label="Share">'+icon('share')+'</button></span></div>'
   +'<div class="ph-body">'+pmd(c.text,null)+'</div></div>';}
 document.addEventListener('click',e=>{
@@ -1631,7 +1638,10 @@ function typedText(m){
  if(m.status!=='streaming'||m._vis===undefined&&!full)return full;
  if(m._vis===undefined)m._vis=0;
  if(m._vis<full.length){m._vis=Math.min(full.length,m._vis+Math.max(1,Math.ceil((full.length-m._vis)/9)));
-  const c=full.charCodeAt(m._vis-1);if(c>=0xD800&&c<=0xDBFF&&m._vis<full.length)m._vis++;}
+  const c=full.charCodeAt(m._vis-1);if(c>=0xD800&&c<=0xDBFF&&m._vis<full.length)m._vis++;
+  /* inside a prompt fence the text is hidden anyway: jump to its end so the Writing card appears instantly when it is complete */
+  const vis=full.slice(0,m._vis),k=Math.max(vis.lastIndexOf('~~~prompt'),vis.lastIndexOf('```prompt'));
+  if(k>=0){const f=vis.substr(k,3);if(vis.indexOf(f,k+9)<0){const e=full.indexOf(f,k+9);m._vis=e>=0?Math.min(full.length,e+3):full.length;}}}
  return full.slice(0,m._vis);}
 function typerDrain(m,sel,sig){return new Promise(res=>{const t0=Date.now();if(m._vis===undefined)m._vis=0;
  const f=()=>{if(!m.content||m._vis>=m.content.length||(sig&&sig.aborted)||Date.now()-t0>2800){m._vis=undefined;return res();}
@@ -2814,8 +2824,6 @@ document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;
 .pcard{margin:14px 0 8px;background:#202020;border-radius:28px;padding:14px 20px 18px;color:#f1f1f3}
 .ph-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
 .ph-l{display:inline-flex;align-items:center;gap:10px;color:#a8a8ad;font-size:16px}
-.pcard.open .ph-l span::after{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:#a8a8ad;margin-left:8px;vertical-align:middle;animation:phPulse 1s ease-in-out infinite}
-@keyframes phPulse{50%{opacity:.25;transform:scale(.7)}}
 .ph-a{display:inline-flex;gap:6px}
 .ph-b{width:40px;height:40px;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;color:#d4d4d8}
 .ph-b .ic{width:22px;height:22px}
@@ -2829,6 +2837,10 @@ document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;
 .ph-body ul{margin:.3em 0 .6em;padding-left:1.3em}
 .ph-body>br:last-child,.ph-body ul+br{display:none}
 .pcard+br{display:none}
+.pcard.pc-in{animation:pcPop .42s cubic-bezier(.2,.9,.3,1) both}
+@keyframes pcPop{0%{opacity:0;transform:translateY(10px) scale(.97)}100%{opacity:1;transform:none}}
+.pc-wait span{animation:phPulse 1s ease-in-out infinite}
+@keyframes phPulse{50%{opacity:.35}}
 </style>
 <!-- FLAY AI UPDATE v2 -->
 <style>
