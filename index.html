@@ -987,6 +987,34 @@ function wlHtml(c){
  if(c.open)h+='<div class="wl-it wl-sk"><div class="wl-logo"></div><div class="wl-main"><i></i><i></i></div></div>';
  return h+'</div>';
 }
+/* ---------- code card (premium, same look as the Writing card) ---------- */
+const CB_TXT=/^(|text|txt|plain|plaintext|markdown|md|prompt|output|log|console)$/;
+const CB_NAMES={js:'JavaScript',javascript:'JavaScript',ts:'TypeScript',typescript:'TypeScript',py:'Python',python:'Python',kt:'Kotlin',kotlin:'Kotlin',java:'Java',html:'HTML',css:'CSS',json:'JSON',xml:'XML',svg:'SVG',sh:'Bash',bash:'Bash',shell:'Shell',yml:'YAML',yaml:'YAML',md:'Markdown',markdown:'Markdown',sql:'SQL',gradle:'Gradle',cpp:'C++',c:'C',cs:'C#',php:'PHP',go:'Go',rs:'Rust',rust:'Rust',swift:'Swift',rb:'Ruby',jsx:'JSX',tsx:'TSX',kts:'Kotlin'};
+const CB_KW='function|const|let|var|return|if|else|for|while|do|switch|case|break|continue|class|new|import|export|from|default|async|await|try|catch|finally|throw|this|super|extends|implements|interface|enum|static|public|private|protected|void|int|long|float|double|boolean|char|byte|short|string|String|bool|true|false|null|undefined|None|True|False|def|lambda|fun|val|override|object|package|when|abstract|final|struct|fn|mut|impl|pub|use|mod|match|namespace|using|typeof|instanceof|yield|echo|then|fi|elif|pass|raise|except|self|and|or|not|SELECT|FROM|WHERE|INSERT|UPDATE|DELETE|CREATE|TABLE|JOIN|ORDER|GROUP|BY|INTO|VALUES|SET';
+function hlCode(c,l){
+ l=String(l||'').toLowerCase();if(CB_TXT.test(l)||l==='diff')return esc(c);
+ const markup=/^(html|htm|xml|svg|vue)$/.test(l),hash=/^(py|python|sh|bash|shell|zsh|yaml|yml|rb|ruby|toml|ini|dockerfile|conf|properties)$/.test(l);
+ const P=[];
+ P.push([markup?'<!--[\\s\\S]*?(?:-->|$)':'\\/\\*[\\s\\S]*?(?:\\*\\/|$)','tk-c']);
+ if(!markup)P.push([hash?'#[^\\n]*':(l==='sql'?'--[^\\n]*':'\\/\\/[^\\n]*'),'tk-c']);
+ P.push(['"(?:\\\\.|[^"\\\\\\n])*"?','tk-s']);
+ if(!markup){P.push(["'(?:\\\\.|[^'\\\\\\n])*'?",'tk-s']);P.push(['`(?:\\\\.|[^`\\\\])*`?','tk-s']);}
+ if(markup)P.push(['<\\/?[A-Za-z][\\w:.-]*','tk-t']);
+ P.push(['\\b\\d+(?:\\.\\d+)?\\b','tk-n']);
+ if(!markup)P.push(['\\b(?:'+CB_KW+')\\b','tk-k']);
+ const re=new RegExp(P.map(x=>'('+x[0]+')').join('|'),'g');
+ let out='',last=0,m;
+ while((m=re.exec(c))){if(m[0]===''){re.lastIndex++;continue;}
+  let k=1;while(m[k]===undefined)k++;
+  out+=esc(c.slice(last,m.index))+'<span class="'+P[k-1][1]+'">'+esc(m[0])+'</span>';last=m.index+m[0].length;}
+ return out+esc(c.slice(last));}
+function cbHtml(b,msg){
+ const live=!!b.open&&(!msg||msg.status==='streaming'),lang=String(b.l||'').toLowerCase();
+ const label=lang?(CB_NAMES[lang]||lang.charAt(0).toUpperCase()+lang.slice(1)):'Code',wrap=CB_TXT.test(lang);
+ return '<div class="codeblock cbx'+(live?' open':'')+(wrap?' wrap':'')+'"'+(live?' style="--pd:-'+(Date.now()%1000)+'ms"':'')+'>'
+  +'<div class="cbx-bar"><span class="ph-l">'+icon('code','sm')+'<span>'+esc(label)+'</span></span>'
+  +'<span class="ph-a"><button class="cb-copy ph-b" type="button" aria-label="Copy">'+icon('copy')+'</button></span></div>'
+  +'<div class="cb-body"><pre><code>'+hlCode(b.c,lang)+'</code>'+(live?'<span class="caret"></span>':'')+'</pre></div></div>';}
 function md(src,msg){
  const blocks=[];src=String(src??'');const pCards=[];
  src=src.replace(/(```|~~~)prompt[ \t]*\n?([\s\S]*?)(\1|$)/g,(m,f,t,cl)=>{pCards.push({text:t.replace(/\n$/,''),open:!cl});return '\u0004'+(pCards.length-1)+'\u0004';});
@@ -995,25 +1023,52 @@ src=src.replace(/```flayfiles\n?([\s\S]*?)```/g,'@@(FILE_OUTPUT)@@');
  const wlCards=[],qCards=[];
    src=src.replace(/```weblinks[ \t]*\n?([\s\S]*?)(```|$)/g,(m,j,cl)=>{wlCards.push({items:wlItems(j),open:!cl});return '\u0002'+(wlCards.length-1)+'\u0002';});
  src=src.replace(/```questions[ \t]*\n?([\s\S]*?)(```|$)/g,(m,j,cl)=>{qCards.push({json:j,open:!cl});return '\u0003'+(qCards.length-1)+'\u0003';});
- src=src.replace(/```([\w+-]*)\n?([\s\S]*?)```/g,(m,l,c)=>{blocks.push({l,c:c.replace(/\n$/,'')});return '\u0001'+(blocks.length-1)+'\u0001';});
+ src=src.replace(/```([\w+#.-]*)[ \t]*\n?([\s\S]*?)(```|$)/g,(m0,l,c,cl)=>{const op=!cl;if(op)c=c.replace(/`{1,2}$/,'');blocks.push({l,c:c.replace(/\n$/,''),open:op});return '\u0001'+(blocks.length-1)+'\u0001';});
  let h=esc(src);
- h=h.replace(/^#{1,3} (.*)$/gm,'<h3>$1</h3>');
+ h=h.replace(/^(#{1,4})[ \t]+(.*)$/gm,(m0,a,t)=>{const n=a.length<=2?2:a.length;return '<h'+n+'>'+t+'</h'+n+'>';});
  h=h.replace(/\*\*([^*\n]+)\*\*/g,'<strong>$1</strong>');
  h=h.replace(/(^|[\s(>])\*([^*\n]+)\*/g,'$1<em>$2</em>');
  h=h.replace(/`([^`\n]+)`/g,'<code>$1</code>');
  const openLinkIcon='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 5h5v5"/><path d="M13 11l6-6"/><path d="M19 13v5a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5"/></svg>';
  h=h.replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g,(m,n,u)=>'<span class="msg-link"><span class="msg-link-name">'+n+'</span><a class="msg-link-open" href="'+u+'" target="_blank" rel="noopener noreferrer" aria-label="Open '+n.replace(/"/g,'&quot;')+'">'+openLinkIcon+'</a></span>');
- const lines=h.split('\n');let out='',inUl=false;
- for(const ln of lines){if(/^\s*[-*] /.test(ln)){if(!inUl){out+='<ul>';inUl=true;}out+='<li>'+ln.replace(/^\s*[-*] /,'')+'</li>';}
-  else{if(inUl){out+='</ul>';inUl=false;}out+=ln+'<br>';}}
- if(inUl)out+='</ul>';
- h=out.replace(/<br><h3>/g,'<h3>').replace(/<\/h3><br>/g,'</h3>').replace(/(<\/ul>)<br>/g,'$1');
+ const lines=h.split('\n');let out='';const st=[];
+ const LI=/^(\s*)([-*\u2022]|\d{1,3}[.)])\s+(.*)$/;
+ const closeTo=n=>{while(st.length&&st[st.length-1].ind>n)out+='</li></'+st.pop().t+'>';};
+ const isSep=l=>l.indexOf('|')>=0&&l.indexOf('-')>=0&&/^\s*\|?\s*:?-{2,}:?\s*(?:\|\s*:?-{2,}:?\s*)*\|?\s*$/.test(l);
+ const cells=l=>{l=l.trim();if(l[0]==='|')l=l.slice(1);if(l.slice(-1)==='|')l=l.slice(0,-1);return l.split('|').map(x=>x.trim());};
+ for(let i=0;i<lines.length;i++){const ln=lines[i];
+  if(ln.indexOf('|')>=0&&i+1<lines.length&&isSep(lines[i+1])){
+   const head=cells(ln),al=cells(lines[i+1]).map(x=>/^:-+:$/.test(x)?'center':/-:$/.test(x)?'right':'');
+   closeTo(-1);let j=i+2;const rows=[];
+   while(j<lines.length&&lines[j].trim()&&lines[j].indexOf('|')>=0){rows.push(cells(lines[j]));j++;}
+   const cell=(t,c,k)=>'<'+t+(al[k]?' style="text-align:'+al[k]+'"':'')+'>'+(c||'')+'</'+t+'>';
+   out+='<div class="tbl-wrap"><table><thead><tr>'+head.map((c,k)=>cell('th',c,k)).join('')+'</tr></thead><tbody>'
+    +rows.map(r=>'<tr>'+head.map((_,k)=>cell('td',r[k],k)).join('')+'</tr>').join('')+'</tbody></table></div>';
+   i=j-1;continue;}
+  if(/^\s*(?:-{3,}|\*{3,}|_{3,})\s*$/.test(ln)){closeTo(-1);out+='<hr>';continue;}
+  const mm=ln.match(LI);
+  if(mm){const ind=mm[1].replace(/\t/g,'    ').length,t=/\d/.test(mm[2])?'ol':'ul';closeTo(ind);
+   const top=st[st.length-1];
+   if(top&&top.ind===ind&&top.t===t)out+='</li><li>'+mm[3];
+   else{if(top&&top.ind===ind){out+='</li></'+top.t+'>';st.pop();}
+    out+='<'+t+(t==='ol'&&parseInt(mm[2],10)>1?' start="'+parseInt(mm[2],10)+'"':'')+'><li>'+mm[3];st.push({t,ind});}
+   continue;}
+  if(st.length){
+   if(!ln.trim()){let k=i+1;while(k<lines.length&&!lines[k].trim())k++;if(k<lines.length&&LI.test(lines[k]))continue;closeTo(-1);continue;}
+   if(/^\s{2,}\S/.test(ln)&&!/^<h[2-4]>/.test(ln.trim())){out+='<br>'+ln.trim();continue;}
+   closeTo(-1);}
+  if(/^&gt;\s?/.test(ln)){const q=[];while(i<lines.length&&/^&gt;\s?/.test(lines[i])){q.push(lines[i].replace(/^&gt;\s?/,''));i++;}i--;out+='<blockquote>'+q.join('<br>')+'</blockquote>';continue;}
+  if(/^<h[2-4]>.*<\/h[2-4]>$/.test(ln)){out+=ln;continue;}
+  out+=ln+'<br>';}
+ closeTo(-1);
+ h=out.replace(/<br>(<h[2-4]>)/g,'$1').replace(/(<\/h[2-4]>)<br>/g,'$1').replace(/<br>(<(?:div class="tbl-wrap"|hr|blockquote|ul|ol))/g,'$1').replace(/(<hr>|<\/table><\/div>|<\/blockquote>|<\/ul>|<\/ol>)<br>/g,'$1').replace(/^(?:<br>)+/,'');
  h=h.replace(/(?:<br>)?\u0002(\d+)\u0002(?:<br>)?/g,(m,i)=>wlHtml(wlCards[+i]));
  h=h.replace(/(?:<br>)?\u0003(\d+)\u0003(?:<br>)?/g,(m,i)=>qHtml(qCards[+i],msg));
   h=h.replace(/(?:<br>)?\u0004(\d+)\u0004(?:<br>)?/g,(m2,i)=>pHtml(pCards[+i],msg,+i));
  h=h.replace(/@@\(FILE_OUTPUT_LIVE\)@@/,`<div class="gen-note">${icon('fileplus','sm')}<span>Preparing file output…</span></div>`);
  h=h.replace(/@@\(FILE_OUTPUT\)@@/,`<div class="gen-note">${icon('fileplus','sm')}<span>Code was delivered as generated files — open them from the card above.</span></div>`);
- h=h.replace(/\u0001(\d+)\u0001/g,(m,i)=>{const b=blocks[+i];return `<div class="codeblock"><div class="cb-bar"><span>${esc(b.l||'code')}</span><button class="cb-copy" type="button">${icon('copy','xs')} Copy</button></div><pre><code>${esc(b.c)}</code></pre></div>`;});
+ h=h.replace(/(?:<br>)?\u0001(\d+)\u0001(?:<br>)?/g,(m0,i)=>cbHtml(blocks[+i],msg));
+ h=h.replace(/(?:<br>){2,}/g,'<div class="pg"></div>');
  return h;}
 /* ---------- diff ---------- */
 function lcsOps(A,B){const n=A.length,m=B.length,dp=Array.from({length:n+1},()=>new Uint16Array(m+1));
@@ -1377,9 +1432,9 @@ function updateLive(m,hostSel){
   let mel=host.querySelector(`[data-mid="${m.id}"]`);if(!mel)return;
   const body=mel.querySelector('.msg-body');
   const vt=typedText(m);
-  if(body){const _ps=[...body.querySelectorAll('.pcard .ph-body')].map(e=>e.scrollTop);
+  if(body){const SC='.pcard .ph-body,.codeblock .cb-body',_ps=[...body.querySelectorAll(SC)].map(e=>[e.scrollTop,e.scrollLeft]);
    body.innerHTML=(vt?md(vt,m):'')+(m.status==='streaming'?'<span class="caret"></span>':'');
-   body.querySelectorAll('.pcard .ph-body').forEach((e,i)=>{if(e.closest('.pcard').classList.contains('open'))e.scrollTop=e.scrollHeight;else e.scrollTop=_ps[i]||0;});}
+   body.querySelectorAll(SC).forEach((e,i)=>{if(e.closest('.pcard,.codeblock').classList.contains('open')){e.scrollTop=e.scrollHeight;e.scrollLeft=0;}else if(_ps[i]){e.scrollTop=_ps[i][0];e.scrollLeft=_ps[i][1];}});}
   if(m.status==='streaming'&&m._vis!==undefined&&m._vis<String(m.content||'').length)updateLive(m,hostSel);
   patchThinkRow(mel,m);
   if(m.generatedFiles&&m.generatedFiles.length&&!m.ops){const sig=m.generatedFiles.map(g=>g.status).join('|');let gc=mel.querySelector('.card.gen');
@@ -1874,7 +1929,7 @@ bindMsgScroll($('#chatScroll'));bindMsgScroll($('#agentScroll'));
 $('#msgs').addEventListener('click',threadClick('#msgs'));
 function threadClick(sel){return e=>{
  const more=e.target.closest('[data-more]');if(more){const b=more.closest('.msg').querySelector('.bubble');const o=b.classList.toggle('open');more.textContent=o?'Less':'More';return;}
- const cp=e.target.closest('.cb-copy');if(cp){const code=cp.closest('.codeblock').querySelector('code').textContent;copyText(code).then(()=>{cp.innerHTML=icon('check','xs')+' Copied';setTimeout(()=>cp.innerHTML=icon('copy','xs')+' Copy',1400);});return;}
+ const cp=e.target.closest('.cb-copy');if(cp){const code=cp.closest('.codeblock').querySelector('code').textContent;const io=cp.classList.contains('ph-b');copyText(code).then(()=>{cp.classList.add('ok');cp.innerHTML=io?icon('check'):icon('check','xs')+' Copied';setTimeout(()=>{cp.classList.remove('ok');cp.innerHTML=io?icon('copy'):icon('copy','xs')+' Copy';},1400);});return;}
  const rev=e.target.closest('[data-revert]');if(rev){revertChanges(rev.dataset.revert);return;}
  const gr=e.target.closest('[data-gen]');if(gr){const mid=gr.closest('[data-mid]').dataset.mid;
   const msg=(sel==='#agentMsgs'?(S.project?S.project.agent:[]):(S.chat?S.chat.messages:[])).find(x=>x.id===mid);
@@ -2837,7 +2892,39 @@ document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;
 .ph-body{max-height:340px;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;scrollbar-width:none}
 .ph-body::-webkit-scrollbar{display:none}
 .pcard.open .ph-body{overflow-y:hidden;-webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 36px);mask-image:linear-gradient(to bottom,transparent 0,#000 36px)}
-.pcard.open ~ .caret{display:none}
+.pcard.open ~ .caret,.codeblock.open ~ .caret{display:none}
+
+/* ===== premium code card (matches the Writing card) ===== */
+.codeblock.cbx{margin:14px 0 8px;background:#202020;border:0;border-radius:28px;padding:14px 20px 16px;color:#f1f1f3;overflow:hidden}
+.cbx .cbx-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;padding:0;background:none}
+.cbx .ph-l{text-transform:none}
+.codeblock.open .ph-l span::after{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:#a8a8ad;margin-left:8px;vertical-align:middle;animation:phPulse 1s ease-in-out infinite;animation-delay:var(--pd,0s)}
+.cbx .cb-body{max-height:340px;overflow:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;scrollbar-width:none}
+.cbx .cb-body::-webkit-scrollbar{display:none}
+.codeblock.open .cb-body{overflow:hidden;-webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 36px);mask-image:linear-gradient(to bottom,transparent 0,#000 36px)}
+.msg-body .codeblock.cbx pre,.codeblock.cbx pre{margin:0;padding:6px 0 2px;overflow:visible;background:none;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;line-height:1.65;color:#e8e8ec;tab-size:2;white-space:pre}
+.msg-body .codeblock.cbx pre code{display:block;width:max-content;min-width:100%;background:none;padding:0;border-radius:0;font-size:inherit;color:inherit;font-family:inherit;white-space:inherit}
+.codeblock.cbx.wrap pre{white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;font-family:inherit;font-size:15px;line-height:1.65}
+.msg-body .codeblock.cbx.wrap pre code{width:auto;min-width:0}
+.codeblock.open ~ .caret{display:none}
+.cbx pre .caret{margin-left:1px}
+.tk-c{color:#7d8590;font-style:italic}.tk-s{color:#9fe0a8}.tk-n{color:#f5c77e}.tk-k{color:#ff7ab6}.tk-t{color:#7cc4ff}
+/* ===== ChatGPT-like text blocks ===== */
+.msg-body h2{margin:1.1em 0 .35em;font-size:1.28em;line-height:1.35;color:#fff;font-weight:700}
+.msg-body h3{margin:1em 0 .3em;font-size:1.12em;line-height:1.4;color:#fff;font-weight:700}
+.msg-body h4{margin:.9em 0 .25em;font-size:1em;color:#fff;font-weight:700}
+.msg-body .pg{height:.55em}
+.msg-body hr{border:0;border-top:1px solid rgba(255,255,255,.14);margin:16px 0}
+.msg-body ul,.msg-body ol{margin:.35em 0 .6em;padding-left:1.4em}
+.msg-body li{margin:.18em 0;padding-left:.15em}
+.msg-body li>ul,.msg-body li>ol{margin:.2em 0 .2em}
+.msg-body blockquote{margin:.6em 0;padding:.1em 0 .1em 14px;border-left:3px solid rgba(255,255,255,.22);color:#c9ccd3}
+.msg-body .tbl-wrap{margin:12px 0;overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid rgba(255,255,255,.12);border-radius:14px;background:rgba(255,255,255,.025)}
+.msg-body table{border-collapse:collapse;width:100%;font-size:.94em;line-height:1.55}
+.msg-body th,.msg-body td{padding:10px 14px;text-align:left;vertical-align:top;border-bottom:1px solid rgba(255,255,255,.09);min-width:96px}
+.msg-body th{font-weight:700;color:#fff;background:rgba(255,255,255,.05);white-space:nowrap}
+.msg-body tbody tr:last-child td{border-bottom:0}
+.msg-body td strong,.msg-body th strong{color:#fff}
 </style>
 <!-- FLAY AI UPDATE v2 -->
 <style>
