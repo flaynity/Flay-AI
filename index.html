@@ -1100,6 +1100,11 @@ const TK_ORB=(()=>{const cols=['#D45BFF','#C455FF','#A860FF','#8C62FF','#7360FF'
 
 /* Split the model's real reasoning text into steps. Nothing is invented. */
 function thinkSteps(m){
+ const raw=thinkStepsRaw(m),w=m.webSteps;
+ if(!w||!w.length)return raw;
+ return w.map(x=>({title:x.t,text:x.d||'',head:true,part:false,web:true,srcs:x.srcs})).concat(raw);
+}
+function thinkStepsRaw(m){
  let r=String(m.reasoning||'').replace(/\r/g,'');
  const streaming=m.status==='streaming';
  /* a half-written heading line is ignored until it is complete, so titles never flicker */
@@ -1146,9 +1151,9 @@ function tkFull(st){return st&&st.text?st.text.replace(/\s+/g,' ').trim():'';}
 /* What the inline row shows: only the current key step. Null when there is nothing real to show. */
 function thinkView(m){
  const steps=thinkSteps(m),streaming=m.status==='streaming';
- const doneView=()=>({live:false,can:true,title:tkSecs(m)?'Thought for '+tkSecs(m):'Thinking',desc:steps.length+(steps.length===1?' step':' steps')});
+ const doneView=()=>({live:false,can:true,title:tkSecs(m)?'Thought for '+tkSecs(m):(m.webSteps&&m.webSteps.length?'Searched the web':'Thinking'),desc:steps.length+(steps.length===1?' step':' steps')});
  if(!streaming)return steps.length?doneView():null;
- if(m._webSearching)return{live:true,can:false,title:'Searching the web\u2026',desc:''};
+ if(m._webSearching)return{live:true,can:steps.length>0,title:m._webTitle||'Searching the web\u2026',desc:m._webDesc||''};
  if(m._genCurrent)return{live:true,can:steps.length>0,title:'Generating '+m._genCurrent,desc:''};
  if(m.content){if(!steps.length)return null;if(!m._thinkEnd)m._thinkEnd=Date.now();return doneView();}
  const key=steps.filter(x=>!x.part&&x.title.length>=6);
@@ -1202,7 +1207,7 @@ function renderThinkSheet(m,first){
  const list=el.querySelector('.tk-list');
  const steps=thinkSteps(m),streaming=m.status==='streaming';
  const liveIdx=(streaming&&!m.content&&!m._genCurrent)?steps.length-1:-1;
- const items=steps.map((st,i)=>({t:st.title,d:st.text,live:i===liveIdx}));
+ const items=steps.map((st,i)=>({t:st.title,d:st.text,live:i===liveIdx||(!!m._webSearching&&i===(m.webSteps||[]).length-1),srcs:st.srcs}));
  if(m._genCurrent)items.push({t:'Generating '+m._genCurrent,d:'',live:true});
  const near=list.scrollHeight-list.scrollTop-list.clientHeight<70;
  items.forEach((it,i)=>{
@@ -1210,13 +1215,14 @@ function renderThinkSheet(m,first){
   if(!n){
    n=document.createElement('div');n.className='tk-it';
    if(first)n.style.animationDelay=Math.min(i,10)*45+'ms';
-   n.innerHTML='<div class="tk-bar"><span class="tk-dot"></span><span class="tk-vl"></span></div><div class="tk-body"><div class="tk-st"></div><div class="tk-sd"></div></div>';
+   n.innerHTML='<div class="tk-bar"><span class="tk-dot"></span><span class="tk-vl"></span></div><div class="tk-body"><div class="tk-st"></div><div class="tk-sd"></div><div class="tk-favs"></div></div>';
    list.appendChild(n);
   }
   const st=n.querySelector('.tk-st'),sd=n.querySelector('.tk-sd');
   if(st.textContent!==it.t)st.textContent=it.t;
   if(sd.textContent!==it.d)sd.textContent=it.d;
   sd.hidden=!it.d;
+  {const fv=n.querySelector('.tk-favs'),sg=(it.srcs||[]).join(',');if(fv&&fv.dataset.sg!==sg){fv.dataset.sg=sg;fv.innerHTML=(it.srcs||[]).map(h=>'<img src="https://www.google.com/s2/favicons?domain='+encodeURIComponent(h)+'&sz=64" alt="" onerror="this.style.display=\'none\'">').join('');}}
   n.querySelector('.tk-dot').classList.toggle('live',it.live);
  });
  while(list.children.length>items.length)list.lastChild.remove();
@@ -1367,7 +1373,9 @@ function updateLive(m,hostSel){
   rafP=false;const host=$(hostSel);if(!host)return;
   let mel=host.querySelector(`[data-mid="${m.id}"]`);if(!mel)return;
   const body=mel.querySelector('.msg-body');
-  if(body)body.innerHTML=(m.content?md(m.content,m):'')+(m.status==='streaming'?'<span class="caret"></span>':'');
+  const vt=typedText(m);
+  if(body)body.innerHTML=(vt?md(vt,m):'')+(m.status==='streaming'?'<span class="caret"></span>':'');
+  if(m.status==='streaming'&&m._vis!==undefined&&m._vis<String(m.content||'').length)updateLive(m,hostSel);
   patchThinkRow(mel,m);
   if(m.generatedFiles&&m.generatedFiles.length&&!m.ops){const sig=m.generatedFiles.map(g=>g.status).join('|');let gc=mel.querySelector('.card.gen');
    if(!gc){const w=document.createElement('div');w.innerHTML=genCard(m);const bEl=mel.querySelector('.ai-bubble')||body;bEl&&bEl.before(w.firstElementChild);}
@@ -1520,6 +1528,73 @@ function isLinkIntent(t){t=String(t||'').trim();if(!t||t.length>400)return false
  const ask=/(\bgive\b|\bsend\b|\bshare\b|\bshow\b|\bprovide\b|\bfind\b|\bsuggest\b|\brecommend\b|\blist\b|\bneed\b|\bwant\b|\bwhere\b|\bwhich\b|\bbest\b|\btop\b|\u09a6\u09be\u0993|\u09a6\u09bf\u09a8|\u09a6\u09c7\u09a8|\u09a6\u09bf\u09ac\u09c7|\u09a6\u09bf\u09a4\u09c7|\u09a6\u09c7\u0996\u09be\u0993|\u09a6\u09c7\u0996\u09be\u09a8|\u09aa\u09be\u09a0\u09be\u0993|\u099a\u09be\u0987|\u09ac\u09b2\u09cb|\u09ac\u09b2\u09c1\u09a8|\u0996\u09c1\u0981\u099c\u09c7|\u0995\u09cb\u09a5\u09be\u09af\u09bc|\u0995\u09cb\u09a8\u099f\u09be)/i;
  const code=/(\bfix\b|\bedit\b|\bchange\b|\bupdate\b|\bimplement\b|\bcreate\b|\bbuild\b|\bmake\b|\badd\b|\bremove\b|\bhref\b|\banchor\b|\bcss\b|\bhtml\b|\bjs\b|\bjavascript\b|\bbutton\b|\bcode\b|\bfile\b|\bscreen\b|\bpage\b|\u0995\u09cb\u09a1|\u09ab\u09be\u0987\u09b2|\u09a0\u09bf\u0995 \u0995\u09b0|\u098f\u09a1\u09bf\u099f|\u09aa\u09b0\u09bf\u09ac\u09b0\u09cd\u09a4\u09a8|\u09af\u09cb\u0997 \u0995\u09b0|\u09ac\u09be\u09a8\u09be\u0993|\u09ac\u09be\u09a8\u09be\u09a4\u09c7|\u09a4\u09c8\u09b0\u09bf|\u09a1\u09bf\u09b2\u09bf\u099f|\u09ae\u09c1\u099b|\u0986\u09aa\u09a1\u09c7\u099f)/i;
  return noun.test(t)&&ask.test(t)&&!code.test(t);}
+/* ===== AI-decided live web research (search only when the AI decides it is needed) ===== */
+const DECIDE_SYS='You are a routing step that decides whether an assistant must search the live web before answering the user\'s LATEST message. Search ONLY when fresh or external facts are needed: current or recent information, prices, news, versions, official websites or links, specific real products/services/companies/APIs/SDKs/documentation, ad networks, comparisons of real services, or when the user asks to look something up or find something. Do NOT search for greetings, small talk, thanks, opinions, creative writing, math, general programming help, editing/fixing/explaining the user\'s own code or project files, UI/design changes, or stable common knowledge. When asked to build an app or website, search only if it depends on real external services, APIs, SDKs or up-to-date documentation. Reply with ONLY compact JSON: {"search":true,"queries":["1 to 3 short focused search queries"]} or {"search":false,"queries":[]}.';
+async function decideSearch(text,hist,sig,note){
+ if(!S.webAccess)return{search:false,queries:[]};
+ const t=String(text||'').trim();if(!t)return{search:false,queries:[]};
+ let raw='';
+ try{
+  await providerChat({provider:activeProvider(),
+   messages:[{role:'system',content:DECIDE_SYS+(note?' Context: '+note:'')},
+    ...(hist||[]).slice(-4).map(h=>({role:h.role,content:String(h.content||'').replace(/```[\s\S]*?(```|$)/g,'[code]').slice(0,300)})),
+    {role:'user',content:t.slice(0,1200)}],
+   signal:sig,reasoning:'off',temperature:0,maxTokens:200,stream:false,onDelta:d=>{raw+=d;}});
+ }catch(e){if(e.name==='AbortError')throw e;return isLinkIntent(t)?{search:true,queries:[t.slice(0,160)+' official website']}:{search:false,queries:[]};}
+ let j=null;try{j=JSON.parse((raw.match(/\{[\s\S]*\}/)||[''])[0]);}catch(_){}
+ if(!j||j.search!==true)return{search:false,queries:[]};
+ let q=(Array.isArray(j.queries)?j.queries:[]).map(x=>String(x||'').replace(/\s+/g,' ').trim().slice(0,160)).filter(Boolean).slice(0,3);
+ if(!q.length)q=[t.slice(0,160)];
+ return{search:true,queries:q};}
+async function readPage(url,sig){
+ const ac=new AbortController(),to=setTimeout(()=>ac.abort(),12000),on=()=>ac.abort();
+ if(sig){if(sig.aborted)ac.abort();else sig.addEventListener('abort',on,{once:true});}
+ try{const r=await fetch('https://r.jina.ai/'+url,{headers:{Accept:'text/plain'},signal:ac.signal});if(!r.ok)return null;
+  const raw=await r.text();const ti=(raw.match(/^Title:\s*(.+)$/m)||[])[1]||'';
+  const txt=raw.replace(/^(Title|URL Source|Published Time|Markdown Content):.*$/gm,'').replace(/!\[[^\]]*\]\([^)]*\)/g,'').replace(/\[([^\]]*)\]\([^)]*\)/g,'$1').replace(/https?:\/\/\S+/g,'').replace(/[ \t]+/g,' ').replace(/\n\s*\n+/g,'\n').trim().slice(0,2400);
+  return txt.length>80?{title:ti.trim(),text:txt}:null;}
+ catch(_){return null;}
+ finally{clearTimeout(to);if(sig)sig.removeEventListener('abort',on);}}
+async function researchWeb(m,queries,sig,hostSel,opts){
+ opts=opts||{};m.webSteps=m.webSteps||[];
+ const upd=()=>updateLive(m,hostSel),gone=()=>{if(sig&&sig.aborted)throw new DOMException('Aborted','AbortError');};
+ const hosts=a=>[...new Set(a.map(s=>s.host).filter(Boolean))].slice(0,6);
+ try{
+  m._webSearching=true;m._webTitle='Searching the web…';m._webDesc=queries.join(' · ');
+  m.webSteps.push({t:'Searching the web',d:queries.map(q=>'“'+q+'”').join('\n')});upd();
+  const rs=await Promise.all(queries.map(q=>searchWebFull(q,sig).catch(e=>{if(e.name==='AbortError')throw e;return{text:'',sources:[]};})));
+  gone();
+  const seen=new Set(),all=[];
+  for(let i=0;all.length<12;i++){let any=false;rs.forEach(r=>{const s=(r.sources||[])[i];if(s){any=true;if(!seen.has(s.url)&&all.length<12){seen.add(s.url);all.push(s);}}});if(!any)break;}
+  m.sources=all;
+  if(!all.length){m.webSteps.push({t:'No web pages found',d:''});return '';}
+  m.webSteps.push({t:'Found '+all.length+' web pages',d:all.slice(0,8).map(s=>s.host).join('\n'),srcs:hosts(all)});upd();
+  let pages=[];
+  if(opts.read!==false){
+   m._webTitle='Reading pages…';m._webDesc=all.slice(0,4).map(s=>s.host).join(' · ');upd();
+   const pick=all.slice(0,4);
+   const got=await Promise.all(pick.map(async s=>({s,p:await readPage(s.url,sig)})));gone();
+   pages=got.filter(x=>x.p);
+   if(pages.length)m.webSteps.push({t:'Read '+pages.length+(pages.length===1?' page':' pages'),d:pages.map(x=>x.p.title||x.s.title||x.s.host).join('\n'),srcs:hosts(pages.map(x=>x.s))});
+   else m.webSteps.push({t:'Could not read the pages',d:'Using the search results only.'});
+   upd();
+  }
+  let ctx='LIVE WEB RESEARCH. Queries: '+queries.join(' | ')+'\nUse this as external context. Base concrete facts on it and do not invent details that are not here.\n\nSOURCES:\n'+all.map((s,i)=>(i+1)+'. '+s.title+'\n'+s.url).join('\n');
+  if(pages.length)ctx+='\n\nPAGE EXCERPTS:\n'+pages.map(x=>'### '+(x.p.title||x.s.title)+' ('+x.s.url+')\n'+x.p.text).join('\n\n');
+  else{const raw=(rs.find(r=>r.text)||{}).text||'';if(raw)ctx+='\n\nSEARCH PAGE EXCERPT:\n'+raw.slice(0,3500);}
+  return ctx.slice(0,10000);
+ }finally{m._webSearching=false;upd();}}
+/* smooth typing: the visible text catches up with the streamed text a little every frame */
+function typedText(m){
+ const full=String(m.content||'');
+ if(m.status!=='streaming'||m._vis===undefined&&!full)return full;
+ if(m._vis===undefined)m._vis=0;
+ if(m._vis<full.length){m._vis=Math.min(full.length,m._vis+Math.max(1,Math.ceil((full.length-m._vis)/9)));
+  const c=full.charCodeAt(m._vis-1);if(c>=0xD800&&c<=0xDBFF&&m._vis<full.length)m._vis++;}
+ return full.slice(0,m._vis);}
+function typerDrain(m,sel,sig){return new Promise(res=>{const t0=Date.now();if(m._vis===undefined)m._vis=0;
+ const f=()=>{if(!m.content||m._vis>=m.content.length||(sig&&sig.aborted)||Date.now()-t0>2800){m._vis=undefined;return res();}
+  updateLive(m,sel);setTimeout(f,32);};f();});}
 /* ===== Synora: question cards, action bar, live sources, voice ===== */
 const QUESTIONS_RULE=`When the request is broad or ambiguous and a few choices are needed before you can answer well (for example platform, type, goal or budget), do not guess. Write one short sentence, then exactly one fenced block tagged questions containing JSON shaped like {"groups":[{"q":"question text","options":["choice A","choice B"]}],"button":"short action label"}. Create every question, option and the button label yourself from the real context, in the language of the user: 1 to 4 groups, 2 to 6 options each, no numbering, no placeholder text. The button label is the action the user triggers after choosing. Ask only when the choices truly matter; skip it for greetings, simple questions, or when the user already gave the details. After the user has answered, proceed with the answer and do not ask again.`;
 const _abAnim=new Set();
@@ -1688,7 +1763,7 @@ function buildChatMessages(chat){
   m.generatedFiles.forEach(g=>{if(g.status==='generated'&&typeof g.content==='string'&&g.content)
    genBlock+=`\n### FILE: ${g.path}\n${g.content.slice(0,30000)}\n### END FILE\n`;});});
  for(const m of hist){
-  if(m.role==='user'){let c=m.content||'';if(m.webContext&&m===hist[hist.length-1])c+='\n\n--- LIVE WEB CONTEXT ---\n'+m.webContext+'\n--- END LIVE WEB CONTEXT ---';const atts=m.rawAtts||[];
+  if(m.role==='user'){let c=m.content||'';if(m.webContext&&m===hist[hist.length-1])c+='\n\n--- LIVE WEB CONTEXT (fresh web research for this message; answer from it with concrete details, do not invent facts that are not in it) ---\n'+m.webContext+'\n--- END LIVE WEB CONTEXT ---';const atts=m.rawAtts||[];
    for(const a of atts){if(a.kind==='text')c+=`\n\n--- FILE: ${a.name} (${fmtBytes(a.size)}) ---\n${(a.content||'').slice(0,60000)}\n--- END FILE ---`;
     else if(a.kind==='zip')c+=`\n\n--- ZIP: ${a.name} ---\n${a.tree||''}\n--- END ZIP ---`;
     else if(a.kind==='image')c+=`\n[Image attached: ${a.name}, ${fmtBytes(a.size)}]`;}
@@ -1718,15 +1793,19 @@ async function sendChat(){if(S.streaming)return;
  S.chat.messages.push(am);renderThread('#msgs',S.chat.messages);startReply('#msgs',am.id);
  S.streaming=true;S.abort=new AbortController();updateSendBtn();
  try{
-  if(S.webAccess){
-   am._webSearching=true;updateLive(am,'#msgs');
-   try{const w=await searchWebFull(text+(isLinkIntent(text)&&!atts.length?' official website':''),S.abort.signal);const um=S.chat.messages[S.chat.messages.length-2];if(w.text)um.webContext=w.text.slice(0,7000);am.sources=w.sources||[];}
-   catch(e){if(e.name==='AbortError')throw e;}
-   am._webSearching=false;
+  if(S.webAccess&&text){
+   const hd=S.chat.messages.slice(0,-2).filter(x=>x.content&&x.status!=='error').slice(-4);
+   const linkQ=isLinkIntent(text)&&!atts.length;
+   const dec=linkQ?{search:true,queries:[text.slice(0,160)+' official website']}:await decideSearch(text+(atts.length?' [with attachments]':''),hd,S.abort.signal);
+   if(dec.search&&dec.queries.length){
+    const ctx=await researchWeb(am,dec.queries,S.abort.signal,'#msgs',{read:!linkQ});
+    const um=S.chat.messages[S.chat.messages.length-2];if(ctx)um.webContext=ctx;
+   }
   }
   await providerChat({provider:activeProvider(),messages:buildChatMessages(S.chat),signal:S.abort.signal,reasoning:fastThink(),
   onDelta:d=>{am.content+=d;syncGenFiles(am);updateLive(am,'#msgs');},
   onReasoning:r=>{if(!am.thinkT0)am.thinkT0=Date.now();am.reasoning=(am.reasoning||'')+r;updateLive(am,'#msgs');}});
+  await typerDrain(am,'#msgs',S.abort&&S.abort.signal);
   am.status='done';}
  catch(e){if(e.name==='AbortError'){am.status='stopped';}
   else{am.status='error';console.error('Flay AI chat request failed:',e);am.content+=(am.content?'\n\n':'')+'**Unable to get a response.**\nPlease try again.';}}
@@ -2628,33 +2707,32 @@ document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;
 
 <style id="synora-actions">
 /* ===== action bar ===== */
-.ab{display:flex;align-items:center;gap:2px;margin:12px 0 4px -8px}
+.ab{display:flex;align-items:center;gap:0;margin:8px 0 2px -9px}
 .ab-in{animation:abIn .55s cubic-bezier(.2,.8,.2,1) backwards}
 .ab-in .abtn{animation:abPop .55s cubic-bezier(.2,1.2,.4,1) backwards;animation-delay:calc(var(--i,0)*70ms + 120ms)}
 @keyframes abIn{from{opacity:0;transform:translateY(10px)}}
 @keyframes abPop{from{opacity:0;transform:scale(.55) translateY(6px)}}
-.abtn{position:relative;width:42px;height:42px;border-radius:14px;display:inline-flex;align-items:center;justify-content:center;flex:none;color:#94A3B8;transition:color .2s,background .2s,box-shadow .2s,transform .12s}
-.abtn:active{transform:scale(.88)}
-.abtn .ic{width:21px;height:21px}
-.abtn.ok{color:#10B981}
-.abtn.on .ic{fill:currentColor;fill-opacity:.9}
-.abtn.on-like{color:#FF2D7A;background:rgba(255,45,122,.12);box-shadow:0 0 18px rgba(255,45,122,.28)}
-.abtn.on-dislike{color:#A78BFA;background:rgba(167,139,250,.13);box-shadow:0 0 18px rgba(139,92,246,.3)}
+.abtn{position:relative;width:36px;height:36px;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;flex:none;color:#c9c9cf;transition:color .2s,background .2s,transform .12s}
+.abtn:active{transform:scale(.88);background:rgba(255,255,255,.08)}
+.abtn .ic{width:18px;height:18px}
+.abtn.ok{color:#fff}
+.abtn.on{color:#fff}
+.abtn.on .ic{fill:currentColor;fill-opacity:.92}
 .abtn.pop[data-ab="like"] .ic{animation:thumbUp .65s cubic-bezier(.3,1.5,.5,1)}
 .abtn.pop[data-ab="dislike"] .ic{animation:thumbDown .65s cubic-bezier(.3,1.5,.5,1)}
 @keyframes thumbUp{0%{transform:scale(1) rotate(0)}30%{transform:scale(.7) rotate(-20deg) translateY(2px)}62%{transform:scale(1.4) rotate(10deg) translateY(-3px)}100%{transform:scale(1) rotate(0)}}
 @keyframes thumbDown{0%{transform:scale(1) rotate(0)}30%{transform:scale(.75) rotate(16deg) translateY(-2px)}62%{transform:scale(1.3) rotate(-10deg) translateY(3px)}100%{transform:scale(1) rotate(0)}}
-.burst{position:absolute;inset:0;pointer-events:none;color:inherit}
-.burst::before{content:"";position:absolute;inset:7px;border-radius:50%;border:2px solid currentColor;opacity:.7;animation:abRing .6s ease-out forwards}
-.burst i{position:absolute;left:50%;top:50%;width:5px;height:5px;margin:-2.5px;border-radius:50%;background:currentColor;opacity:0;animation:abBurst .7s ease-out forwards}
+.burst{position:absolute;inset:0;pointer-events:none;color:#fff}
+.burst::before{content:"";position:absolute;inset:5px;border-radius:50%;border:1.5px solid currentColor;opacity:.7;animation:abRing .6s ease-out forwards}
+.burst i{position:absolute;left:50%;top:50%;width:4px;height:4px;margin:-2px;border-radius:50%;background:currentColor;opacity:0;animation:abBurst .7s ease-out forwards}
 @keyframes abRing{from{transform:scale(.4);opacity:.85}to{transform:scale(1.7);opacity:0}}
-@keyframes abBurst{from{opacity:1;transform:rotate(var(--a)) translateY(-8px) scale(1)}to{opacity:0;transform:rotate(var(--a)) translateY(-30px) scale(.2)}}
-.abtn.speaking{color:#00D2FF;background:rgba(0,210,255,.12);box-shadow:0 0 16px rgba(0,210,255,.25)}
+@keyframes abBurst{from{opacity:1;transform:rotate(var(--a)) translateY(-7px) scale(1)}to{opacity:0;transform:rotate(var(--a)) translateY(-24px) scale(.2)}}
+.abtn.speaking{color:#fff;background:rgba(255,255,255,.08)}
 .abtn.speaking .ic{animation:abSpeak 1s ease-in-out infinite}
 @keyframes abSpeak{50%{transform:scale(1.15)}}
-.abtn.ab-src{margin-left:auto;width:auto;gap:9px;padding:0 8px 0 6px;color:#cbd5e1;font-size:14px;font-weight:500}
+.abtn.ab-src{margin-left:auto;width:auto;gap:7px;padding:0 6px 0 4px;color:#bdbdc3;font-size:13px;font-weight:500}
 .ab-fav{display:inline-flex;align-items:center}
-.ab-fav img{width:26px;height:26px;border-radius:50%;background:#fff;padding:3px;border:2px solid #000;margin-left:-9px;object-fit:contain}
+.ab-fav img{width:20px;height:20px;border-radius:50%;background:#fff;padding:2px;border:1.5px solid #0a0a0c;margin-left:-7px;object-fit:contain}
 .ab-fav img:first-child{margin-left:0}
 @media (prefers-reduced-motion:reduce){.ab-in,.ab-in .abtn,.abtn .ic,.burst,.burst i,.burst::before{animation:none!important}}
 /* ===== sources sheet ===== */
@@ -2667,19 +2745,24 @@ document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;
 .src-h img{width:28px;height:28px;border-radius:50%;background:#fff;padding:3px;flex:none}
 .src-t{font-size:18px;font-weight:700;line-height:1.4;word-break:break-word}
 .src-u{margin-top:6px;font-size:12.5px;color:#9aa0a6;word-break:break-all;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
-/* ===== AI question cards ===== */
-.qcard{margin:14px 0 6px;border:1.5px solid rgba(255,255,255,.1);border-radius:28px;padding:20px 20px 22px;background:#07070b}
-.qg+.qg{border-top:1px solid rgba(255,255,255,.08);margin-top:18px;padding-top:18px}
-.qg.miss .qq{color:#FF4D73}
-.qq{font-size:17px;font-weight:600;color:#fff;line-height:1.5;margin-bottom:8px}
-.qo{display:flex;align-items:center;gap:16px;width:100%;padding:10px 0;text-align:left;font-size:16.5px;line-height:1.45;color:#fff}
-.qr{width:26px;height:26px;border-radius:50%;border:2px solid rgba(255,255,255,.3);flex:none;position:relative;transition:background .18s,border-color .18s,transform .18s}
-.qr::after{content:"";position:absolute;inset:7px;border-radius:50%;background:#000;transform:scale(0);transition:transform .18s cubic-bezier(.3,1.6,.5,1)}
-.qo.on .qr{background:#F4F4F5;border-color:#F4F4F5}
+/* web-step favicons in the Steps sheet */
+.tk-favs{display:flex;margin-top:8px}
+.tk-favs:empty{display:none}
+.tk-favs img{width:20px;height:20px;border-radius:50%;background:#fff;padding:2px;margin-left:-6px;border:1.5px solid #1b1b1d;object-fit:contain}
+.tk-favs img:first-child{margin-left:0}
+/* ===== AI question cards (slim) ===== */
+.qcard{margin:12px 0 4px;border:1px solid #26262a;border-radius:20px;padding:12px 16px 14px;background:#000}
+.qg+.qg{border-top:1px solid #1d1d21;margin-top:10px;padding-top:12px}
+.qg.miss .qq{color:#ff6b86}
+.qq{font-size:14.5px;font-weight:400;color:#ececee;line-height:1.5;margin-bottom:2px}
+.qo{display:flex;align-items:center;gap:12px;width:100%;padding:6px 0;text-align:left;font-size:14.5px;line-height:1.4;color:#ececee}
+.qr{width:20px;height:20px;border-radius:50%;border:1.5px solid #3b3b40;flex:none;position:relative;transition:background .18s,border-color .18s,transform .18s}
+.qr::after{content:"";position:absolute;inset:6px;border-radius:50%;background:#000;transform:scale(0);transition:transform .18s cubic-bezier(.3,1.6,.5,1)}
+.qo.on .qr{background:#d9d9dd;border-color:#d9d9dd}
 .qo.on .qr::after{transform:scale(1)}
 .qo:active .qr{transform:scale(.88)}
 .qt{flex:1;min-width:0;word-break:break-word}
-.qbtn{width:100%;height:56px;border-radius:9999px;background:#F4F4F5;color:#000;font-weight:700;font-size:16px;margin-top:20px;transition:transform .12s,opacity .2s}
+.qbtn{width:100%;height:44px;border-radius:9999px;background:#f4f4f5;color:#000;font-weight:500;font-size:14.5px;margin-top:12px;transition:transform .12s,opacity .2s}
 .qbtn:active{transform:scale(.98)}
 .qbtn:disabled{opacity:.45}
 .qcard.done .qo{pointer-events:none;opacity:.8}
@@ -2961,13 +3044,14 @@ async function agentLinkReply(am,text){
  const sig=S.agentAbort.signal,p=S.project;
  am._webSearching=true;updateLive(am,'#agentMsgs');
  let ctx='';
- try{try{const w=await searchWebFull(text+' official website',sig);ctx=w.text;am.sources=w.sources||[];}catch(e){if(e.name==='AbortError')throw e;}}
+ try{try{ctx=await researchWeb(am,[text.slice(0,160)+' official website'],sig,'#agentMsgs',{read:false});}catch(e){if(e.name==='AbortError')throw e;}}
  finally{am._webSearching=false;}
  const hist=p.agent.filter(m=>m!==am&&m.status==='done'&&m.content).slice(0,-1).slice(-6).map(m=>({role:m.role,content:stripFences(m.content)}));
  const u=text+(ctx?'\n\n--- LIVE WEB CONTEXT ---\n'+ctx+'\n--- END LIVE WEB CONTEXT ---':'');
  await providerChat({provider:activeProvider(),messages:[{role:'system',content:AG_SYS+' '+LINKS_RULE},...hist,{role:'user',content:u}],signal:sig,reasoning:'fast',
   onDelta:d=>{am.content+=d;updateLive(am,'#agentMsgs');},
   onReasoning:r=>{if(!am.thinkT0)am.thinkT0=Date.now();am.reasoning=(am.reasoning||'')+r;updateLive(am,'#agentMsgs');}});
+ await typerDrain(am,'#agentMsgs',sig);
  am.status='done';
 }
 function resolvePath(p,tok){const t=normPath(tok),ps=Object.keys(p.files);
@@ -3137,10 +3221,10 @@ async function retryQueue(mid){if(S.agentStreaming)return;const p=S.project,am=p
  const f=am.queue.find(x=>x.status==='failed');if(f)f.status='retrying';
  try{await runQueue(am);}finally{finishAgent(am);}}
 
-async function sendAgent2(){if(S.agentStreaming)return;const p=S.project;if(!p)return;const inp=$('#agentInput'),text=inp.value.trim(),atts=S.agentAttachments.slice();if(!text&&!atts.length)return;if(!activeProvider()){toast('Set up an AI provider first (Menu > Set Up AI).','warn');renderProviders();openScreen('screen-providers');return;}if(!activeProvider().model){toast('No model selected. Use the Model button in the composer.','warn');openModelModal();return;}const errAtt=atts.find(a=>a.path==='build-failed.log'),fromBuild=!!(S._fixPending&&errAtt);S._fixPending=false;p.agent.push({id:uid(),role:'user',content:text||'(selected files)',attachments:atts.map(a=>({name:a.path||a.name,size:a.size,kind:a.kind})),createdAt:Date.now(),status:'done'});S.agentAttachments=[];inp.value='';if(agentDraftKey())localStorage.removeItem(agentDraftKey());autoGrow(inp);renderAgentAtts();const am={id:uid(),role:'assistant',content:'',createdAt:Date.now(),status:'streaming',activity:[],queue:[],task:text||'Work with the attached files.',fromBuild,errText:errAtt?errAtt.content||'':'',extra:atts.filter(a=>a!==errAtt&&typeof a.content==='string').map(a=>({path:a.path||a.name,content:a.content.slice(0,20000)}))};p.agent.push(am);renderThread('#agentMsgs',p.agent);startReply('#agentMsgs',am.id);S.agentStreaming=true;S.agentAbort=new AbortController();updateSendBtn();try{if(isLinkIntent(text)&&!atts.length){try{await agentLinkReply(am,text);}finally{am._webSearching=false;}return;}const evU=agStart(am,'Understanding the request','search');let webCtx='';if(S.webAccess&&!am.fromBuild&&text){am._webSearching=true;updateLive(am,'#agentMsgs');const evW=agStart(am,'Searching the web','globe');try{const w=await searchWebFull(text,S.agentAbort.signal);webCtx=w.text||'';am.sources=w.sources||[];agEnd(am,evW,'done',am.sources.length?'Web search complete — '+am.sources.length+' source(s)':'Web search returned no sources');}catch(e){if(e.name==='AbortError')throw e;agEnd(am,evW,'warn','Web search unavailable');}finally{am._webSearching=false;}}let hits=am.errText?filesInText(p,am.errText,true):[];filesInText(p,text,false).forEach(x=>{if(!hits.includes(x))hits.push(x)});const given=new Set(am.extra.map(a=>a.path));hits=hits.filter(x=>!given.has(x)).slice(0,3);let ctx='',used=0;const read=[];for(const x of hits){const f=p.files[x];if(!f||f.binary)continue;const cc=f.content||'';if(used+cc.length>30000)continue;used+=cc.length;read.push(x);ctx+='\n### FILE: '+x+'\n'+cc+'\n### END FILE\n'}agAct(am,read.length?'Read '+read.join(', ')+' (targeted)':'Planning from project file list',read.length?'file':'info');let up='TASK:\n'+am.task;if(am.errText)up+='\n\nREAL FAILURE LOG:\n'+errSummary(am.errText);am.extra.forEach(a=>{up+='\n\nATTACHED FILE '+a.path+':\n'+a.content});if(webCtx)up+='\n\nLIVE WEB CONTEXT (use only if relevant to the request):\n'+webCtx.slice(0,5000);up+='\n\nPROJECT FILE LIST:\n'+Object.keys(p.files).sort().slice(0,400).join('\n')+'\n\nFILES ALREADY READ:'+(ctx||' none')+'\n\nRECENT PROJECT CHANGES (earlier in this chat): '+(recentChanges(p,am).join(', ')||'none')+'\n\nCONVERSATION RULES: First decide the intent of the LATEST user message, using earlier messages for context (a follow-up such as "make it black" refers to the work already discussed). Intents: greeting, chat, question, project_question, explain, inspect, code_change, bug_fix, build_fix, clarify. For greeting/chat/question/project_question/explain/inspect/clarify, answer naturally in the language the user writes in, put the reply in "answer", keep files [], and NEVER mention build errors, infrastructure or file changes. Use clarify only if a code request is truly ambiguous. For clarify set "questions" to {"groups":[{"q":"question text","options":["choice 1","choice 2"]}],"button":"short action label"} written from the real context in the language of the user (1 to 4 groups, 2 to 6 options each, no numbering); otherwise questions is null. Set "infrastructure" true ONLY when a REAL FAILURE LOG is attached above and shows no project-code error; otherwise it is always false.\n\nReturn ONLY one JSON object: {"intent":"","analysis":{"root_cause":"","failed_task":"","failed_step":"","error_type":"","error_file":"","error_line":null,"relevant_dependency":null,"recommended_fix":""},"infrastructure":false,"summary":"one short line","answer":"reply text when no file change is needed, else empty","questions":null,"files":[{"path":"relative/path","action":"modify|create|delete","reason":"short","refs":[]}]}. For a code change or bug fix list only the files that must change (minimal set)."';const hist=p.agent.filter(m=>m!==am&&m.status==='done'&&m.content).slice(0,-1).slice(-6).map(m=>({role:m.role,content:m.content}));let raw='';const tP=Date.now();await providerChat({provider:activeProvider(),messages:[{role:'system',content:AG_SYS},...hist,{role:'user',content:up}],signal:S.agentAbort.signal,onDelta:d=>{raw+=d},onReasoning:think(am)});let plan;try{plan=JSON.parse((raw.match(/\{[\s\S]*\}/)||[''])[0])}catch(_){plan=null}if(!plan||typeof plan!=='object'){if(!am.fromBuild&&!am.errText&&raw.trim())plan={intent:'chat',answer:raw.trim(),files:[]};else throw new Error('The model did not return a valid plan. Try again.');}const seen=new Set();am.queue=(plan.files||[]).map(f=>({path:normPath(f&&f.path),action:String(f&&f.action||'modify').toLowerCase(),reason:String(f&&f.reason||''),refs:((f&&f.refs)||[]).map(normPath).filter(r=>p.files[r]).slice(0,2)})).filter(f=>f.path&&!isUnsafe(f.path)&&!seen.has(f.path)&&seen.add(f.path)).slice(0,12).map(f=>{if(f.action!=='delete')f.action=p.files[f.path]?'modify':'create';f.status='queued';return f});am.plan=String(plan.summary||'');const an=plan.analysis||{};if(an.root_cause&&(am.fromBuild||am.errText))agAct(am,'Root cause: '+String(an.root_cause).slice(0,300)+(an.error_file?' ('+an.error_file+(an.error_line?':'+an.error_line:'')+')':''),'search');const intent=String(plan.intent||'').toLowerCase().replace(/[^a-z_]/g,''),talk=/^(greeting|chat|question|project_question|explain|inspect|clarify|identity)$/.test(intent);if(talk)am.queue=[];
+async function sendAgent2(){if(S.agentStreaming)return;const p=S.project;if(!p)return;const inp=$('#agentInput'),text=inp.value.trim(),atts=S.agentAttachments.slice();if(!text&&!atts.length)return;if(!activeProvider()){toast('Set up an AI provider first (Menu > Set Up AI).','warn');renderProviders();openScreen('screen-providers');return;}if(!activeProvider().model){toast('No model selected. Use the Model button in the composer.','warn');openModelModal();return;}const errAtt=atts.find(a=>a.path==='build-failed.log'),fromBuild=!!(S._fixPending&&errAtt);S._fixPending=false;p.agent.push({id:uid(),role:'user',content:text||'(selected files)',attachments:atts.map(a=>({name:a.path||a.name,size:a.size,kind:a.kind})),createdAt:Date.now(),status:'done'});S.agentAttachments=[];inp.value='';if(agentDraftKey())localStorage.removeItem(agentDraftKey());autoGrow(inp);renderAgentAtts();const am={id:uid(),role:'assistant',content:'',createdAt:Date.now(),status:'streaming',activity:[],queue:[],task:text||'Work with the attached files.',fromBuild,errText:errAtt?errAtt.content||'':'',extra:atts.filter(a=>a!==errAtt&&typeof a.content==='string').map(a=>({path:a.path||a.name,content:a.content.slice(0,20000)}))};p.agent.push(am);renderThread('#agentMsgs',p.agent);startReply('#agentMsgs',am.id);S.agentStreaming=true;S.agentAbort=new AbortController();updateSendBtn();try{if(isLinkIntent(text)&&!atts.length){try{await agentLinkReply(am,text);}finally{am._webSearching=false;}return;}const evU=agStart(am,'Understanding the request','search');let webCtx='';if(S.webAccess&&!am.fromBuild&&text&&!atts.length){const hd=p.agent.filter(x=>x!==am&&x.status==='done'&&x.content).slice(0,-1).slice(-4);const dec=await decideSearch(text,hd,S.agentAbort.signal,'The user is talking to a coding agent that builds Android WebView apps and websites inside a project.');if(dec.search&&dec.queries.length)webCtx=await researchWeb(am,dec.queries,S.agentAbort.signal,'#agentMsgs');}let hits=am.errText?filesInText(p,am.errText,true):[];filesInText(p,text,false).forEach(x=>{if(!hits.includes(x))hits.push(x)});const given=new Set(am.extra.map(a=>a.path));hits=hits.filter(x=>!given.has(x)).slice(0,3);let ctx='',used=0;const read=[];for(const x of hits){const f=p.files[x];if(!f||f.binary)continue;const cc=f.content||'';if(used+cc.length>30000)continue;used+=cc.length;read.push(x);ctx+='\n### FILE: '+x+'\n'+cc+'\n### END FILE\n'}agAct(am,read.length?'Read '+read.join(', ')+' (targeted)':'Planning from project file list',read.length?'file':'info');let up='TASK:\n'+am.task;if(am.errText)up+='\n\nREAL FAILURE LOG:\n'+errSummary(am.errText);am.extra.forEach(a=>{up+='\n\nATTACHED FILE '+a.path+':\n'+a.content});if(webCtx)up+='\n\nLIVE WEB CONTEXT (fresh research done for this request; use the concrete details in it):\n'+webCtx.slice(0,9000);up+='\n\nPROJECT FILE LIST:\n'+Object.keys(p.files).sort().slice(0,400).join('\n')+'\n\nFILES ALREADY READ:'+(ctx||' none')+'\n\nRECENT PROJECT CHANGES (earlier in this chat): '+(recentChanges(p,am).join(', ')||'none')+'\n\nCONVERSATION RULES: First decide the intent of the LATEST user message, using earlier messages for context (a follow-up such as "make it black" refers to the work already discussed). Intents: greeting, chat, question, project_question, explain, inspect, code_change, bug_fix, build_fix, clarify. For greeting/chat/question/project_question/explain/inspect/clarify, answer naturally in the language the user writes in, put the reply in "answer", keep files [], and NEVER mention build errors, infrastructure or file changes. Use clarify only if a code request is truly ambiguous. For clarify set "questions" to {"groups":[{"q":"question text","options":["choice 1","choice 2"]}],"button":"short action label"} written from the real context in the language of the user (1 to 4 groups, 2 to 6 options each, no numbering); otherwise questions is null. Set "infrastructure" true ONLY when a REAL FAILURE LOG is attached above and shows no project-code error; otherwise it is always false.\n\nReturn ONLY one JSON object: {"intent":"","analysis":{"root_cause":"","failed_task":"","failed_step":"","error_type":"","error_file":"","error_line":null,"relevant_dependency":null,"recommended_fix":""},"infrastructure":false,"summary":"one short line","answer":"reply text when no file change is needed, else empty","questions":null,"files":[{"path":"relative/path","action":"modify|create|delete","reason":"short","refs":[]}]}. For a code change or bug fix list only the files that must change (minimal set)."';const hist=p.agent.filter(m=>m!==am&&m.status==='done'&&m.content).slice(0,-1).slice(-6).map(m=>({role:m.role,content:m.content}));let raw='';const tP=Date.now();await providerChat({provider:activeProvider(),messages:[{role:'system',content:AG_SYS},...hist,{role:'user',content:up}],signal:S.agentAbort.signal,onDelta:d=>{raw+=d},onReasoning:think(am)});let plan;try{plan=JSON.parse((raw.match(/\{[\s\S]*\}/)||[''])[0])}catch(_){plan=null}if(!plan||typeof plan!=='object'){if(!am.fromBuild&&!am.errText&&raw.trim())plan={intent:'chat',answer:raw.trim(),files:[]};else throw new Error('The model did not return a valid plan. Try again.');}const seen=new Set();am.queue=(plan.files||[]).map(f=>({path:normPath(f&&f.path),action:String(f&&f.action||'modify').toLowerCase(),reason:String(f&&f.reason||''),refs:((f&&f.refs)||[]).map(normPath).filter(r=>p.files[r]).slice(0,2)})).filter(f=>f.path&&!isUnsafe(f.path)&&!seen.has(f.path)&&seen.add(f.path)).slice(0,12).map(f=>{if(f.action!=='delete')f.action=p.files[f.path]?'modify':'create';f.status='queued';return f});am.plan=String(plan.summary||'');const an=plan.analysis||{};if(an.root_cause&&(am.fromBuild||am.errText))agAct(am,'Root cause: '+String(an.root_cause).slice(0,300)+(an.error_file?' ('+an.error_file+(an.error_line?':'+an.error_line:'')+')':''),'search');const intent=String(plan.intent||'').toLowerCase().replace(/[^a-z_]/g,''),talk=/^(greeting|chat|question|project_question|explain|inspect|clarify|identity)$/.test(intent);if(talk)am.queue=[];
 if(am.fromBuild&&plan.infrastructure===true&&!am.queue.length){am.content='No project-code error was found in the build log. The failure appears to be infrastructure/build-service related.'+(an.root_cause?'\n\n'+an.root_cause:'')+'\nNo project files were changed.';agEnd(am,evU,'done','Build log analysed \u2014 no project-code error found');am.status='done';return;}
 agEnd(am,evU,'done',intent?'Request understood ('+intent.replace(/_/g,' ')+')':'Request understood',{detail:'Planner responded in '+((Date.now()-tP)/1000).toFixed(1)+'s'});
-if(!am.queue.length){let ans=String(plan.answer||'').trim();if(!ans&&!am.fromBuild&&!(plan.questions&&plan.questions.groups))ans=await agentChatReply(am,hist,text);if(!ans)ans=am.plan||'I could not find a change to make. Could you describe what you want changed?';am.content=ans+qBlock(plan.questions);agAct(am,am.fromBuild?'No file changes were needed':'Replied \u2014 no file operations were needed','info');am.status='done';return;}
+if(!am.queue.length){let ans=String(plan.answer||'').trim();if(!ans&&!am.fromBuild&&!(plan.questions&&plan.questions.groups))ans=await agentChatReply(am,hist,text);if(!ans)ans=am.plan||'I could not find a change to make. Could you describe what you want changed?';am.content=ans+qBlock(plan.questions);agAct(am,am.fromBuild?'No file changes were needed':'Replied \u2014 no file operations were needed','info');await typerDrain(am,'#agentMsgs',S.agentAbort.signal);am.status='done';return;}
 agAct(am,'Preparing implementation plan: '+am.queue.length+' file(s), processed one at a time','tools','done',{detail:am.queue.map(x=>x.action+' '+x.path).join(', ')});p.lastSnapshot={messageId:am.id,files:JSON.parse(JSON.stringify(p.files))};am.ops={results:[],diffs:{}};refreshQueue(am);await runQueue(am)}catch(e){if(e.name==='AbortError'){am.status='stopped';am.stopped=true}else{am.status='error';am.activity.push({icon:'alert',label:String(e.message||e),status:'fail'})}}finally{finishAgent(am)}}
 window.sendAgent=sendAgent2;
 
