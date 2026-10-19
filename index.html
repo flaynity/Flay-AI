@@ -1194,8 +1194,25 @@ const TK_ORB=(()=>{const cols=['#D45BFF','#C455FF','#A860FF','#8C62FF','#7360FF'
 /* Split the model's real reasoning text into steps. Nothing is invented. */
 function thinkSteps(m){
  const raw=thinkStepsRaw(m),w=m.webSteps;
- if(!w||!w.length)return raw;
- return w.map(x=>({title:x.t,text:x.d||'',head:true,part:false,web:true,srcs:x.srcs})).concat(raw);
+ const web=(w&&w.length)?w.map(x=>({title:x.t,text:x.d||'',head:true,part:false,web:true,srcs:x.srcs})):[];
+ const real=web.concat(raw);
+ /* Some providers do not expose private reasoning tokens. Keep Steps useful with
+    truthful request-lifecycle/tool events only; never fabricate model thoughts. */
+ if(!real.length){
+  const steps=[];
+  (m.activity||[]).forEach(x=>{
+   if(!x||!x.label)return;
+   steps.push({title:String(x.label),text:x.path?'File: '+x.path:(x.status==='run'?'In progress':x.status==='fail'?(x.detail||'This action failed'):'Completed'),head:true,part:false,activity:true});
+  });
+  if(m._webSearching)steps.push({title:m._webTitle||'Reading web pages',text:m._webDesc||'Web research is in progress.',head:true,part:false,activity:true});
+  if(m._genCurrent)steps.push({title:'Generating '+m._genCurrent,text:'Creating the requested output.',head:true,part:false,activity:true});
+  if(!steps.length&&m.status==='streaming'){
+   if(m.content)steps.push({title:'Preparing the response',text:'The AI response is arriving.',head:true,part:false,activity:true});
+   else steps.push({title:'Waiting for AI response',text:'The request was sent. This provider does not expose detailed reasoning steps, so private thoughts are not available.',head:true,part:false,activity:true});
+  }
+  return steps;
+ }
+ return real;
 }
 function thinkStepsRaw(m){
  let r=String(m.reasoning||'').replace(/\r/g,'');
