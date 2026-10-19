@@ -1984,6 +1984,16 @@ async function sendChat(){if(S.streaming)return;
  S.pendingAttachments=[];inp.value='';if(draftKey())localStorage.removeItem(draftKey());autoGrow(inp);
  S.chat.updatedAt=Date.now();renderChat();persistChat();
  const am={id:uid(),role:'assistant',content:'',createdAt:Date.now(),status:'streaming',_hadThink:true};
+ /* Show only real request-lifecycle activity while this actual request is running. */
+ const taskText=String(text||'').toLowerCase();
+ let taskLabel='Analyzing request';
+ if(/\\b(build|compile|apk|gradle)\\b/.test(taskText))taskLabel='Preparing build request';
+ else if(/\\b(fix|debug|error|bug|repair)\\b/.test(taskText))taskLabel='Analyzing issue';
+ else if(/\\b(create|make|generate|write|design)\\b/.test(taskText))taskLabel='Preparing creation request';
+ else if(/\\b(prompt|rewrite|improve)\\b/.test(taskText))taskLabel='Analyzing prompt';
+ else if(/\\b(repository|repo|github|code|file|read|review|analyz)\\b/.test(taskText))taskLabel='Reviewing code request';
+ else if(/https?:\\/\\//.test(taskText))taskLabel='Preparing web research';
+ am.activity=[{id:'request-'+am.id,ts:Date.now(),label:taskLabel,status:'run',icon:'tools'}];
  S.chat.messages.push(am);renderThread('#msgs',S.chat.messages);startReply('#msgs',am.id);
  S.streaming=true;S.abort=new AbortController();updateSendBtn();
  try{
@@ -2004,8 +2014,10 @@ async function sendChat(){if(S.streaming)return;
    am._actDirty=true;updateLive(am,'#msgs');},
   onReasoning:r=>{if(!am.thinkT0)am.thinkT0=Date.now();am.reasoning=(am.reasoning||'')+r;updateLive(am,'#msgs');}});
   await typerDrain(am,'#msgs',S.abort&&S.abort.signal);
+  const reqAct=(am.activity||[]).find(x=>x.id==='request-'+am.id);if(reqAct){reqAct.status='done';reqAct.endTs=Date.now();reqAct.detail='Request completed';am._actDirty=true;}
   am.status='done';}
- catch(e){if(e.name==='AbortError'){am.status='stopped';}
+ catch(e){const reqAct=(am.activity||[]).find(x=>x.id==='request-'+am.id);if(reqAct){reqAct.status=e.name==='AbortError'?'fail':'fail';reqAct.endTs=Date.now();reqAct.detail=e.name==='AbortError'?'Request stopped':(e.message||'Request failed');am._actDirty=true;}
+  if(e.name==='AbortError'){am.status='stopped';}
   else{am.status='error';console.error('Flay AI chat request failed:',e);am.content+=(am.content?'\n\n':'')+'**Unable to get a response.**\nPlease try again.';}}
  finally{am._webSearching=false;if(am.thinkT0)am.thinkMs=Date.now()-am.thinkT0;finishGen(am);_abAnim.add(am.id);
   S.streaming=false;S.abort=null;S.chat.updatedAt=Date.now();persistChat();
