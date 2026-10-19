@@ -127,6 +127,10 @@ input,textarea,select{font:inherit;color:inherit}
 .fd-pop button.danger{color:#FF4D73}
 #scrim{position:fixed;inset:0;background:rgba(0,0,0,.42);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);z-index:55}
 
+/* Real agent activity timeline: reveal genuine tool events smoothly without fake/demo rows. */
+.st-line-enter{animation:stActivityReveal .32s cubic-bezier(.2,.8,.2,1) both;animation-delay:var(--activity-delay,0ms)}
+@keyframes stActivityReveal{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+@media(prefers-reduced-motion:reduce){.st-line-enter{animation:none}}
 /* chat messages & thinking cards */
 #chatScroll{flex:1;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding-top:calc(70px + env(safe-area-inset-top))}
 .msgs{max-width:820px;margin:0 auto;padding:14px 16px 30px;display:flex;flex-direction:column;gap:18px}
@@ -1418,7 +1422,7 @@ function activityCard(m){if(!m.activity||!m.activity.length)return '';
    if(x.json){const jo=x._jo!==undefined?x._jo:live;
     rows+='<div class="st-sub" data-sj="'+esc(x.id||'')+'"><span>Locating '+esc(repo?repo.split('/').pop():'GitHub')+' Repository</span>'+icon('chev-d','sm st-sc'+(jo?'':' c'))+'</div><pre class="st-json'+(jo?' on':'')+'">'+esc(JSON.stringify(x.json,null,4))+'</pre>';}}
   const cls='st-line'+(x.status==='run'?' run':x.status==='fail'?' fail':x.status==='warn'?' warn':'');
-  rows+='<div class="'+cls+'">'+esc(x.label)+(x.path?'<span class="st-path">'+esc(x.path)+'</span>':'')+(x.detail&&x.status!=='done'?'<span class="st-det">'+esc(x.detail)+'</span>':'')+'</div>';
+  rows+='<div class="'+cls+' st-line-enter" style="--activity-delay:'+Math.min(a.indexOf(x)*45,450)+'ms">'+esc(x.label)+(x.path?'<span class="st-path">'+esc(x.path)+'</span>':'')+(x.detail&&x.status!=='done'?'<span class="st-det">'+esc(x.detail)+'</span>':'')+'</div>';
  });
  if(ghN&&!live&&ghs.every(x=>x.status!=='run')){const wr=ghs.some(x=>x.write),bad=ghs.some(x=>x.status==='fail');
   if(!bad)rows+='<div class="st-sum">'+(wr?'Updated '+esc(repo||'GitHub')+' repository files':'Analyzed '+esc(repo||'GitHub')+' repository structure, code, and signatures')+'</div><div class="st-okw"><span class="st-ok">'+(wr?'Repository Changes Committed':'Repository Access Verified')+'</span></div>';}
