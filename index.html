@@ -1135,19 +1135,37 @@ async function providerChat(o){const p=o.provider;if(!p)throw new Error('No AI p
  const body={model:o.model||p.model,messages:o.messages,temperature:o.temperature??p.temperature??0.7,max_tokens:o.maxTokens??p.maxTokens??4096,stream:!!(o.stream??p.stream)};
  const rs=o.reasoning||S.settings.reasoning;if(p.supportsReasoning&&rs&&rs!=='off'){body.reasoning_effort={fast:'low',balanced:'medium',deep:'high',extra:'high',max:'high'}[rs]||'medium';}
  let res;try{res=await fetch(chatUrl(p.baseUrl),{method:'POST',headers,body:JSON.stringify(body),signal:o.signal});}
- catch(e){if(e.name==='AbortError')throw e;throw new Error('Network error: '+(e.message||'request failed')+' (CORS, offline, or wrong URL)');}
+ catch(e){if(e.name==='AbortError')throw e;throw new Error('Network error: '+(e.message||'request failed')+' (check internet, CORS, and provider Base URL)');}
  if(!res.ok){let t='';try{t=await res.text()}catch(_){}throw new Error(describeHttp(res.status,t));}
- if(!body.stream||!res.body){const j=await res.json();const m=(j.choices&&j.choices[0]&&j.choices[0].message)||{};const c=m.content||'';
-  if(o.onDelta&&c)o.onDelta(c);if(o.onReasoning&&(m.reasoning_content||m.reasoning))o.onReasoning(m.reasoning_content||m.reasoning);return c;}
- const reader=res.body.getReader(),dec=new TextDecoder();let buf='';
+ o._streamText='';
+ const onDeltaOriginal=o.onDelta;
+ if(onDeltaOriginal)o.onDelta=(chunk)=>{o._streamText=(o._streamText||'')+chunk;onDeltaOriginal(chunk);};
+ const emitJson=(j)=>{const ch=(j&&j.choices&&j.choices[0])||{},m=ch.message||{},d=ch.delta||{};
+  const r=d.reasoning_content||d.reasoning||m.reasoning_content||m.reasoning||'';
+  let c=d.content??m.content??'';
+  if(Array.isArray(c))c=c.map(x=>typeof x==='string'?x:(x&&x.text)||'').join('');
+  if(r&&o.onReasoning)o.onReasoning(typeof r==='string'?r:'');
+  if(c&&o.onDelta)o.onDelta(typeof c==='string'?c:'');
+  return typeof c==='string'?c:'';};
+ if(!body.stream||!res.body){let j;try{j=await res.json();}catch(_){throw new Error('The provider returned an unreadable response. Check the Base URL and selected model.');}
+  const c=emitJson(j);if(!c&&!(j.choices&&j.choices[0]&&(j.choices[0].message||{}).reasoning_content))throw new Error('The provider returned no response text. Check the model name, API key, and provider compatibility.');return c;}
+ const reader=res.body.getReader(),dec=new TextDecoder();let buf='',gotText=false,gotEvent=false;
+ const handleLine=(raw)=>{const line=raw.trim();if(!line||line.startsWith(':')||!line.startsWith('data:'))return false;
+  const data=line.slice(5).trim();if(data==='[DONE]')return true;
+  let j;try{j=JSON.parse(data)}catch(_){return false;}
+  gotEvent=true;const before=o._streamText||'';emitJson(j);const d=(j.choices&&j.choices[0]&&j.choices[0].delta)||{};if(d.content||((j.choices&&j.choices[0]&&j.choices[0].message||{}).content))gotText=true;
+  return false;};
  while(true){const{done,value}=await reader.read();if(done)break;buf+=dec.decode(value,{stream:true});
-  let i;while((i=buf.indexOf('\n'))>=0){const line=buf.slice(0,i).trim();buf=buf.slice(i+1);
-   if(!line.startsWith('data:'))continue;const data=line.slice(5).trim();
-   if(data==='[DONE]')return;
-   let j;try{j=JSON.parse(data)}catch(_){continue}
-   const d=(j.choices&&j.choices[0]&&j.choices[0].delta)||{};const r=d.reasoning_content||d.reasoning||'';const c=d.content||'';
-   if(r&&o.onReasoning)o.onReasoning(r);if(c&&o.onDelta)o.onDelta(c);}}
- return '';}
+  let i;while((i=buf.indexOf('\n'))>=0){const line=buf.slice(0,i);buf=buf.slice(i+1);if(handleLine(line))return o._streamText||'';}}
+ buf+=dec.decode();
+ if(buf.trim()){
+  if(buf.trim().startsWith('{')){let j;try{j=JSON.parse(buf.trim())}catch(_){j=null;}
+   if(j){const c=emitJson(j);if(c)return c;}}
+  else if(handleLine(buf))return o._streamText||'';
+ }
+ if(!gotText&&!gotEvent)throw new Error('The provider stream was empty or used an unsupported format. Disable streaming in Provider settings or check the Base URL.');
+ if(!gotText)throw new Error('The provider finished without response text. Check the selected model and provider API compatibility.');
+ return o._streamText||'';}
 async function fetchModels(p){const h={};if(p.apiKey)h.Authorization='Bearer '+p.apiKey;
  const res=await fetch(modelsUrl(p.baseUrl),{headers:h});if(!res.ok)throw new Error(describeHttp(res.status,''));
  const j=await res.json();return((j.data||j.models||[]).map(m=>m.id||m.name).filter(Boolean));}
