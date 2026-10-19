@@ -1163,7 +1163,17 @@ async function providerChat(o){const p=o.provider;if(!p)throw new Error('No AI p
    if(j){const c=emitJson(j);if(c)return c;}}
   else if(handleLine(buf))return o._streamText||'';
  }
- if(!gotText&&!gotEvent)throw new Error('The provider stream was empty or used an unsupported format. Disable streaming in Provider settings or check the Base URL.');
+ if(!gotText&&!gotEvent){
+  /* Compatibility fallback for providers that ignore stream=true and return JSON,
+     or expose a non-SSE stream. Retry once without streaming before failing. */
+  try{const retryBody={...body,stream:false};
+   const rr=await fetch(chatUrl(p.baseUrl),{method:'POST',headers,body:JSON.stringify(retryBody),signal:o.signal});
+   if(!rr.ok){let t='';try{t=await rr.text()}catch(_){}throw new Error(describeHttp(rr.status,t));}
+   let jj;try{jj=await rr.json()}catch(_){throw new Error('Provider returned neither a valid stream nor JSON response. Check Base URL and model.');}
+   const cc=emitJson(jj);if(cc)return cc;
+   throw new Error('Provider returned no response text. Check API key, model name, and provider compatibility.');
+  }catch(e){if(e&&e.name==='AbortError')throw e;throw new Error('Streaming failed and non-streaming fallback also failed: '+(e&&e.message||'no response'));}
+ }
  if(!gotText)throw new Error('The provider finished without response text. Check the selected model and provider API compatibility.');
  return o._streamText||'';}
 async function fetchModels(p){const h={};if(p.apiKey)h.Authorization='Bearer '+p.apiKey;
