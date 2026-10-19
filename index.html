@@ -586,8 +586,8 @@ section.screen .topbar>button.ibtn[data-back]{width:46px!important;height:46px!i
       
     </button>
     <button data-nav="providers" class="fd-item">
-      <span class="fd-ico"><svg viewBox="0 0 24 24" fill="url(#fdGrad)" stroke="url(#fdGrad)" stroke-width="1.2" stroke-linejoin="round" aria-hidden="true"><path d="M12 2c.6 5.2 4.8 9.4 10 10-5.2.6-9.4 4.8-10 10-.6-5.2-4.8-9.4-10-10 5.2-.6 9.4-4.8 10-10z"/></svg></span>
-      <span class="fd-label">Set Up AI</span>
+      <span class="fd-ico"><svg viewBox="0 0 24 24" fill="none" stroke="url(#fdGrad)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 2v5M15 2v5"/><path d="M6 7h12v4a6 6 0 0 1-12 0z"/><path d="M12 17v5"/></svg></span>
+      <span class="fd-label">Connector</span>
       
     </button>
     <button data-nav="build" class="fd-item">
@@ -635,6 +635,29 @@ section.screen .topbar>button.ibtn[data-back]{width:46px!important;height:46px!i
     <div id="pvList"></div>
     <div class="note"><svg class="ic sm"><use href="#i-key"/></svg><span>API keys are stored strictly in this browser and sent only to your configured provider URL.</span></div>
   </div></div>
+</section>
+
+<!-- CONNECTOR -->
+<section class="screen" id="screen-connector">
+  <header class="topbar cn-top">
+    <button class="ibtn" data-menu aria-label="Menu"><svg class="ic"><use href="#i-menu"/></svg></button>
+    <div class="cn-title">Connector</div>
+    <button class="cn-custom hidden" id="cnCustom" aria-label="Custom Provider"><svg class="ic"><use href="#i-plus"/></svg><span>Custom Provider</span></button>
+  </header>
+  <div class="cn-tabs" role="tablist">
+    <button class="cn-tab active" role="tab" data-cntab="plugin">Plugin</button>
+    <button class="cn-tab" role="tab" data-cntab="provider">Provider</button>
+  </div>
+  <div class="scrollpane" id="cnPanePlugin"><div class="pwrap" id="cnPlugins"></div></div>
+  <div class="scrollpane hidden" id="cnPaneProvider"><div class="pwrap">
+    <div class="cn-search"><svg class="ic"><use href="#i-search"/></svg><input id="cnQuery" class="inp" type="search" placeholder="Search providers" autocomplete="off"></div>
+    <div class="cn-chips" id="cnChips"></div>
+    <div id="cnProviders"></div>
+  </div></div>
+  <div class="cn-wrap" id="cnWrap" aria-hidden="true">
+    <div class="cn-scrim" id="cnScrim"></div>
+    <div class="cn-sheet" id="cnSheet" role="dialog" aria-modal="true"></div>
+  </div>
 </section>
 
 <!-- PROVIDER FORM -->
@@ -1512,7 +1535,7 @@ $('#btnMenu').onclick=openDrawer;scrim.onclick=closeDrawer;
 $$('#drawer nav button').forEach(b=>b.onclick=()=>{const n=b.dataset.nav;closeDrawer();
  if(n==='agents'){openScreen('screen-chat',{reset:true});}
  else if(n==='projects'){renderProjects();openScreen('screen-projects');}
- else if(n==='providers'){renderProviders();openScreen('screen-providers');}
+ else if(n==='providers'){openConnector();}
  else if(n==='build'){S.techSel=null;renderTech();openScreen('screen-tech',{reset:true});}});
 /* drawer: chat names + hold popup (Pin / Rename / Delete) */
 $('#fdExplore').onclick=()=>toast('Plans are coming soon.','info');
@@ -2100,7 +2123,7 @@ $('#pfKeyToggle').onclick=()=>{const k=$('#pfKey');const show=k.type==='password
 function pfRead(){return{name:$('#pfName').value.trim(),baseUrl:$('#pfUrl').value.trim(),apiKey:$('#pfKey').value.trim(),model:$('#pfModel').value.trim(),
  temperature:parseFloat($('#pfTemp').value)||0.7,maxTokens:parseInt($('#pfMax').value)||4096,stream:$('#pfStream').checked,
  supportsReasoning:$('#pfReason').checked,vision:$('#pfVision').checked};}
-function pfValidate(p){if(!p.name)return'Provider name is required.';if(!/^https?:\/\//i.test(p.baseUrl))return'Base URL must start with http:// or https://.';if(!p.model)return'Model is required.';return null;}
+function pfValidate(p){if(!p.name)return'Provider name is required.';{const ue=window.cnCustomUrlError&&cnCustomUrlError(p.baseUrl);if(ue)return ue;}if(!p.model)return'Model is required.';return null;}
 $('#pfSave').onclick=()=>{const p=pfRead();const err=pfValidate(p);
  if(err){const e=$('#pfErr');e.textContent=err;e.classList.remove('hidden');return;}
  if(editingProviderId){const ex=S.settings.providers.find(x=>x.id===editingProviderId);Object.assign(ex,p);}
@@ -3558,8 +3581,314 @@ section.screen .topbar>button.ibtn[data-menu]:active{
 .msg.ai{align-self:stretch}
 </style>
 
-<script src="synora-connector.js"></script>
+</script>
+<style id="connector-css">
+#screen-connector .cn-top{justify-content:space-between}
+#screen-connector .cn-title{position:absolute;left:50%;transform:translateX(-50%);font-weight:800;font-size:18px;pointer-events:none}
+.cn-custom{display:inline-flex;align-items:center;gap:6px;height:40px;padding:0 13px 0 10px;border-radius:9999px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:12.5px;font-weight:700;white-space:nowrap;margin-left:auto}
+.cn-custom .ic{width:16px;height:16px;color:var(--accent)}
+.cn-tabs{display:flex;flex:none;border-bottom:1px solid var(--border);background:var(--bg)}
+.cn-tab{flex:1;position:relative;padding:13px 0;font-size:14.5px;font-weight:700;color:var(--text-muted);background:none;border:0;transition:color .2s}
+.cn-tab.active{color:var(--text)}
+.cn-tab::after{content:"";position:absolute;left:30%;right:30%;bottom:-1px;height:2px;border-radius:2px;background:var(--accent);transform:scaleX(0);transition:transform .25s}
+.cn-tab.active::after{transform:scaleX(1)}
+.cn-search{position:relative}.cn-search .ic{position:absolute;left:14px;top:50%;width:18px;height:18px;transform:translateY(-50%);color:var(--text-muted);pointer-events:none}
+.cn-search .inp{padding-left:42px;height:46px;border-radius:9999px}
+.cn-chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}.cn-chips::-webkit-scrollbar{display:none}
+.cn-chip{flex:none;padding:8px 14px;border-radius:9999px;border:1px solid var(--border);background:var(--surface);color:var(--text2);font-size:12.5px;font-weight:700}
+.cn-chip.on{color:#fff;background:var(--accent-soft);border-color:var(--accent)}
+.cn-sec{display:flex;align-items:center;justify-content:space-between;margin:14px 2px 8px;font-size:12px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--text2)}
+.cn-sec span{font-weight:600;color:var(--text-muted)}
+.cn-card{display:flex;align-items:center;gap:12px;padding:12px;margin-bottom:8px;border-radius:18px;background:var(--surface);border:1px solid var(--border);min-width:0}
+.cn-logo{flex:none;width:44px;height:44px;border-radius:12px;background:var(--surface2);display:grid;place-items:center;overflow:hidden;color:var(--text2)}
+.cn-logo img{width:28px;height:28px;object-fit:contain;border-radius:6px}.cn-logo svg{width:26px;height:26px}
+.cn-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.cn-main b{font-size:15px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cn-main small{font-size:12px;line-height:1.4;color:var(--text2);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.cn-tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:2px}
+.cn-tag{font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:7px;border:1px solid var(--border);color:var(--text2)}
+.cn-tag.t{color:var(--warn);border-color:rgba(245,158,11,.4)}.cn-tag.ok{color:var(--ok);border-color:rgba(16,185,129,.45);background:var(--ok-soft)}.cn-tag.un{color:var(--text-muted)}
+.cn-add{flex:none;width:40px;height:40px;border-radius:13px;border:1px solid var(--border);background:var(--surface2);color:var(--text);display:grid;place-items:center;transition:transform .12s,background .15s}
+.cn-add:active{transform:scale(.92);background:var(--accent-soft)}.cn-add .ic{width:20px;height:20px}
+.cn-empty{padding:34px 10px;text-align:center;color:var(--text2);font-size:13.5px}
+.cn-wrap{position:absolute;inset:0;z-index:60;visibility:hidden;pointer-events:none}
+.cn-wrap.open{visibility:visible;pointer-events:auto}
+.cn-scrim{position:absolute;inset:0;background:rgba(0,0,0,.6);opacity:0;transition:opacity .25s}.cn-wrap.open .cn-scrim{opacity:1}
+.cn-sheet{position:absolute;left:0;right:0;bottom:0;max-height:92%;display:flex;flex-direction:column;background:var(--surface);border-radius:26px 26px 0 0;transform:translateY(100%);transition:transform .3s cubic-bezier(.2,.8,.2,1)}
+.cn-wrap.open .cn-sheet{transform:none}
+.cn-grip{width:40px;height:4px;border-radius:4px;background:var(--text-muted);opacity:.5;margin:9px auto 0;flex:none}
+.cn-sh-top{display:flex;gap:12px;align-items:flex-start;padding:12px 16px 10px;flex:none}
+.cn-sh-top .cn-logo{width:50px;height:50px}.cn-sh-top .cn-main small{-webkit-line-clamp:3}
+.cn-x{flex:none;width:36px;height:36px;border-radius:12px;border:0;background:var(--surface2);color:var(--text2);display:grid;place-items:center}.cn-x .ic{width:18px;height:18px}
+.cn-body{flex:1;overflow-y:auto;overscroll-behavior:contain;padding:4px 16px 8px;display:flex;flex-direction:column;gap:14px}
+.cn-f label{display:block;font-size:13px;font-weight:700;margin-bottom:6px}
+.cn-f .inp{height:48px;border-radius:14px;font-size:16px}.cn-f .inp.bad{border-color:var(--err)}
+.cn-f .keybox{position:relative;display:flex;align-items:center}.cn-f .keybox .inp{padding-right:50px}
+.cn-f .keybox button{position:absolute;right:4px;top:4px;width:40px;height:40px;border:0;background:none;color:var(--text2);display:grid;place-items:center}
+.cn-er{color:var(--err);font-size:12px;margin-top:5px;min-height:0}.cn-er:empty{display:none}
+.cn-caps{display:grid;grid-template-columns:1fr;gap:8px}
+.cn-cap{display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:14px;border:1px solid var(--border);background:var(--surface2);font-size:13.5px;font-weight:600}
+.cn-cap input{width:18px;height:18px;accent-color:var(--accent);flex:none}.cn-cap.dis{opacity:.6}
+.cn-note{font-size:11.5px;line-height:1.5;color:var(--text-muted)}
+.cn-stat{display:flex;gap:8px;align-items:flex-start;padding:11px 12px;border-radius:14px;font-size:13px;line-height:1.45;word-break:break-word}
+.cn-stat.ok{background:var(--ok-soft);color:var(--ok)}.cn-stat.err{background:var(--err-soft);color:var(--err)}.cn-stat.run{background:var(--surface2);color:var(--text2)}
+.cn-foot{display:flex;gap:10px;padding:10px 16px calc(14px + env(safe-area-inset-bottom));flex:none;border-top:1px solid var(--border);background:var(--surface)}
+.cn-go{flex:1;height:52px;border-radius:9999px;border:0;font-size:16px;font-weight:700;color:#fff;background:var(--accent-gradient);display:inline-flex;align-items:center;justify-content:center;gap:10px}
+.cn-go:disabled{opacity:.6}.cn-go:active:not(:disabled){transform:scale(.985)}
+.cn-rm{height:52px;width:52px;flex:none;border-radius:9999px;border:1px solid var(--border);background:var(--surface2);color:var(--err);display:grid;place-items:center}
+.cn-spin{width:18px;height:18px;border-radius:50%;border:2.5px solid rgba(255,255,255,.35);border-top-color:#fff;animation:cnspin .7s linear infinite}
+@keyframes cnspin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.cn-sheet,.cn-scrim{transition:none}.cn-spin{animation-duration:2s}}
+</style>
+<script id="connector-js">
+/* ===== Connector (Plugin + Provider directory). Data-driven; add rows to RAW / pluginDirectory. ===== */
+(function(){
+'use strict';
+const LS='synora.connector.v1';
+const CAPLABEL={chat:'Chat',stream:'Streaming Responses',vision:'Vision / Image Input',tools:'Tool Calling / Function Calling',json:'JSON / Structured Output'};
+const CAPKEY={v:'vision',t:'tools',j:'json'};
+const providerCategories=[{id:'o',label:'Official Providers'},{id:'t',label:'Third-party Providers'},{id:'l',label:'Third-party \u00b7 Local / Self-hosted'}];
+const TYPE_LABEL={o:'Official Provider',t:'Third-party Provider',l:'Third-party \u00b7 Local / Self-hosted'};
+const HINT={openai:'e.g. gpt-4o-mini',anthropic:'Model ID from Anthropic docs',gemini:'e.g. gemini-2.0-flash',deepseek:'e.g. deepseek-chat',grok:'Model ID from xAI console',mistral:'e.g. mistral-small-latest',perplexity:'e.g. sonar',openrouter:'e.g. openai/gpt-4o-mini',groq:'Model ID from Groq console',ollama:'Name of a pulled model, e.g. llama3.2',lmstudio:'Identifier of the loaded model',volcengine:'Your endpoint ID (ep-...)'};
+/* [id, name, logo domain, type(o|t|l), base URL ('' = not verified), description, caps(v=vision,t=tools,j=json), endpoint known (1) / less certain (0)] */
+const RAW=[
+['openai','OpenAI','openai.com','o','https://api.openai.com/v1','GPT models via the official OpenAI API','vtj',1],
+['anthropic','Anthropic','anthropic.com','o','https://api.anthropic.com/v1','Claude models via Anthropic\'s OpenAI-compatible endpoint (beta, may be blocked by browser CORS)','vtj',1],
+['gemini','Gemini','ai.google.dev','o','https://generativelanguage.googleapis.com/v1beta/openai','Google Gemini via its OpenAI-compatible endpoint','vtj',1],
+['deepseek','DeepSeek','deepseek.com','o','https://api.deepseek.com','DeepSeek chat and reasoning models','tj',1],
+['zai','z.ai GLM','z.ai','o','https://api.z.ai/api/paas/v4','Zhipu GLM models (international platform)','vtj',1],
+['grok','Grok','x.ai','o','https://api.x.ai/v1','xAI Grok models','vtj',1],
+['kimi','Kimi','moonshot.ai','o','https://api.moonshot.ai/v1','Moonshot AI Kimi models (international)','vtj',1],
+['qwen','Qwen','alibabacloud.com','o','https://dashscope-intl.aliyuncs.com/compatible-mode/v1','Alibaba Cloud Model Studio, Qwen models (international)','vtj',1],
+['mistral','Mistral','mistral.ai','o','https://api.mistral.ai/v1','Mistral AI models','vtj',1],
+['meta','Meta Llama API','llama.developer.meta.com','o','https://api.llama.com/compat/v1','Meta Llama API, OpenAI-compatible mode','vtj',0],
+['cohere','Cohere','cohere.com','o','https://api.cohere.ai/compatibility/v1','Cohere Command models, OpenAI-compatible mode','tj',1],
+['perplexity','Perplexity','perplexity.ai','o','https://api.perplexity.ai','Perplexity Sonar search-grounded models','',1],
+['minimax','MiniMax','minimax.io','o','https://api.minimax.io/v1','MiniMax models (international)','t',0],
+['stepfun','StepFun','stepfun.com','o','https://api.stepfun.com/v1','StepFun Step models','vt',0],
+['yi','01.AI Yi','lingyiwanwu.com','o','https://api.lingyiwanwu.com/v1','01.AI Yi models','',0],
+['baichuan','Baichuan','baichuan-ai.com','o','https://api.baichuan-ai.com/v1','Baichuan models','',0],
+['volcengine','Volcengine Ark','volcengine.com','o','https://ark.cn-beijing.volces.com/api/v3','ByteDance Doubao models via Ark (use your endpoint ID as model)','vtj',1],
+['hunyuan','Tencent Hunyuan','hunyuan.tencent.com','o','https://api.hunyuan.cloud.tencent.com/v1','Tencent Hunyuan models','t',1],
+['qianfan','Baidu Qianfan','cloud.baidu.com','o','https://qianfan.baidubce.com/v2','Baidu ERNIE models via Qianfan','t',1],
+['upstage','Upstage Solar','upstage.ai','o','https://api.upstage.ai/v1','Upstage Solar models','tj',1],
+['inception','Inception Labs','inceptionlabs.ai','o','https://api.inceptionlabs.ai/v1','Mercury diffusion language models','',0],
+['nous','Nous Research','nousresearch.com','o','https://inference-api.nousresearch.com/v1','Nous Hermes models','',0],
+['zhipu','Zhipu BigModel (China)','bigmodel.cn','o','https://open.bigmodel.cn/api/paas/v4','Zhipu GLM models, mainland China platform','vtj',1],
+['kimicn','Kimi (China)','moonshot.cn','o','https://api.moonshot.cn/v1','Moonshot AI Kimi models, mainland China platform','vtj',1],
+['qwencn','Qwen (China)','aliyun.com','o','https://dashscope.aliyuncs.com/compatible-mode/v1','Alibaba Cloud Qwen models, mainland China region','vtj',1],
+['mimo','Mimo','','o','','Endpoint not verified yet. Use Custom Provider to enter it.','',0],
+['muse','Muse-Spark / Meta','','o','','Endpoint not verified yet. Use Custom Provider to enter it.','',0],
+['tokenharbor','TokenHarbor','','t','','Endpoint not verified yet. Use Custom Provider to enter it.','',0],
+['codecraft','CodeCraft API','','t','','Endpoint not verified yet. Use Custom Provider to enter it.','',0],
+['openrouter','OpenRouter','openrouter.ai','t','https://openrouter.ai/api/v1','One API for many models from different labs','vtj',1],
+['together','Together AI','together.ai','t','https://api.together.xyz/v1','Hosted open-source model inference','vtj',1],
+['fireworks','Fireworks AI','fireworks.ai','t','https://api.fireworks.ai/inference/v1','Fast hosted inference for open models','vtj',1],
+['groq','Groq','groq.com','t','https://api.groq.com/openai/v1','Low-latency hosted inference on Groq hardware','vtj',1],
+['cerebras','Cerebras','cerebras.ai','t','https://api.cerebras.ai/v1','Hosted inference on Cerebras hardware','tj',1],
+['deepinfra','DeepInfra','deepinfra.com','t','https://api.deepinfra.com/v1/openai','Hosted open-source model inference','vtj',1],
+['sambanova','SambaNova','sambanova.ai','t','https://api.sambanova.ai/v1','Hosted inference on SambaNova hardware','vt',1],
+['hyperbolic','Hyperbolic','hyperbolic.xyz','t','https://api.hyperbolic.xyz/v1','Hosted open-source model inference','v',1],
+['nebius','Nebius AI Studio','nebius.com','t','https://api.studio.nebius.com/v1','Hosted open-source model inference','vtj',1],
+['novita','Novita AI','novita.ai','t','https://api.novita.ai/v3/openai','Hosted open-source model inference','vtj',1],
+['siliconflow','SiliconFlow','siliconflow.com','t','https://api.siliconflow.com/v1','Hosted open-source model inference','vtj',1],
+['ghmodels','GitHub Models','github.com','t','https://models.github.ai/inference','Models hosted by GitHub (needs a token with models access)','tj',1],
+['nvidia','NVIDIA NIM','build.nvidia.com','t','https://integrate.api.nvidia.com/v1','NVIDIA-hosted model endpoints','vt',1],
+['hf','Hugging Face','huggingface.co','t','https://router.huggingface.co/v1','Hugging Face Inference Providers router','vtj',1],
+['vercel','Vercel AI Gateway','vercel.com','t','https://ai-gateway.vercel.sh/v1','Unified gateway to many model providers','vtj',1],
+['aimlapi','AI/ML API','aimlapi.com','t','https://api.aimlapi.com/v1','Aggregator for many hosted models','vtj',1],
+['venice','Venice AI','venice.ai','t','https://api.venice.ai/api/v1','Privacy-focused hosted inference','vtj',1],
+['scaleway','Scaleway','scaleway.com','t','https://api.scaleway.ai/v1','EU-hosted generative APIs','vtj',1],
+['baseten','Baseten','baseten.co','t','https://inference.baseten.co/v1','Hosted model APIs','tj',1],
+['lambda','Lambda','lambda.ai','t','https://api.lambda.ai/v1','Hosted inference by Lambda','tj',1],
+['friendli','FriendliAI','friendli.ai','t','https://api.friendli.ai/serverless/v1','Serverless inference endpoints','tj',1],
+['poe','Poe','poe.com','t','https://api.poe.com/v1','Poe API for models on Poe','v',0],
+['requesty','Requesty','requesty.ai','t','https://router.requesty.ai/v1','LLM routing gateway','vtj',0],
+['chutes','Chutes','chutes.ai','t','https://llm.chutes.ai/v1','Decentralized hosted inference','tj',0],
+['parasail','Parasail','parasail.io','t','https://api.parasail.io/v1','Hosted open-source model inference','vt',0],
+['featherless','Featherless','featherless.ai','t','https://api.featherless.ai/v1','Hosted open-source model inference','',0],
+['kluster','kluster.ai','kluster.ai','t','https://api.kluster.ai/v1','Hosted open-source model inference','vtj',0],
+['ollama','Ollama','ollama.com','l','http://localhost:11434/v1','Run models locally with Ollama','vt',1],
+['lmstudio','LM Studio','lmstudio.ai','l','http://localhost:1234/v1','Local server from LM Studio','vtj',1],
+['llamacpp','llama.cpp server','github.com','l','http://localhost:8080/v1','Self-hosted llama.cpp server','',1],
+['vllm','vLLM','vllm.ai','l','http://localhost:8000/v1','Self-hosted vLLM server','tj',1],
+['localai','LocalAI','localai.io','l','http://localhost:8080/v1','Self-hosted LocalAI server','tj',1],
+['jan','Jan','jan.ai','l','http://localhost:1337/v1','Local server from Jan','',1],
+['textgen','Text Generation WebUI','github.com','l','http://127.0.0.1:5000/v1','oobabooga OpenAI-compatible API','',0],
+['koboldcpp','KoboldCpp','github.com','l','http://localhost:5001/v1','Self-hosted KoboldCpp server','',0],
+['sglang','SGLang','sglang.ai','l','http://localhost:30000/v1','Self-hosted SGLang server','tj',0],
+['gpt4all','GPT4All','gpt4all.io','l','http://localhost:4891/v1','Local GPT4All API server','',0]
+];
+const providerDirectory=RAW.map(r=>({id:r[0],name:r[1],domain:r[2],type:r[3],baseUrl:r[4]||null,desc:r[5],
+ caps:['chat','stream'].concat([...r[6]].map(c=>CAPKEY[c])),verified:!!r[7],website:r[2]?'https://'+r[2]:null,
+ protocol:'openai-chat',testStrategy:'POST /chat/completions (1 short message)',hint:HINT[r[0]]||'Model ID from the provider\'s dashboard'}));
+const GH_SVG='<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>';
+const pluginDirectory=[{id:'github',name:'GitHub',desc:'Connect your GitHub account with a personal access token.',logo:GH_SVG}];
 
+const $c=s=>document.querySelector(s);
+let tab='plugin',filter='all',query='',sheetOpen=false,busy=false,current=null;
+const rd=()=>{try{return JSON.parse(localStorage.getItem(LS)||'{}')}catch(e){return{}}};
+const wr=o=>{try{localStorage.setItem(LS,JSON.stringify(o));return true}catch(e){return false}};
+const savedOf=id=>S.settings.providers.find(p=>p.connectorId===id)||null;
+const endpointOf=b=>{b=b.replace(/\/+$/,'');return /\/v\d+(beta|alpha)?$/.test(b)||/\/chat\/completions$/.test(b)?b:b+'/chat/completions';};
+const logoHtml=d=>d.domain?'<img src="https://www.google.com/s2/favicons?domain='+encodeURIComponent(d.domain)+'&sz=64" alt="" loading="lazy" referrerpolicy="no-referrer">':icon('chip');
+const keepScroll=(sel,fn)=>{const el=$c(sel),t=el.scrollTop;fn();el.scrollTop=t;};
+
+/* ---- cards ---- */
+function renderProviderCard(d){
+ const s=savedOf(d.id),un=!d.baseUrl;
+ const st=s?(s.lastTest===true?'<span class="cn-tag ok">Connected</span>':'<span class="cn-tag">Configured</span>'):'';
+ const tags='<span class="cn-tag '+(d.type!=='o'?'t':'')+'">'+TYPE_LABEL[d.type]+'</span>'+(un?'<span class="cn-tag un">Endpoint unverified</span>':(!d.verified?'<span class="cn-tag un">Unverified</span>':''))+st;
+ return '<div class="cn-card" data-pid="'+d.id+'"><span class="cn-logo">'+logoHtml(d)+'</span><div class="cn-main"><b>'+esc(d.name)+'</b><small>'+esc(d.desc)+'</small><div class="cn-tags">'+tags+'</div></div><button class="cn-add" data-add="'+d.id+'" aria-label="'+(s?'Edit ':'Add ')+esc(d.name)+'">'+icon(s?'edit':'plus')+'</button></div>';}
+function renderCustomCard(p){
+ return '<div class="cn-card"><span class="cn-logo">'+icon('sliders')+'</span><div class="cn-main"><b>'+esc(p.name)+'</b><small>'+esc(p.model||'No model set')+'</small><div class="cn-tags"><span class="cn-tag">Custom Provider</span>'+(p.lastTest===true?'<span class="cn-tag ok">Connected</span>':p.lastTest===false?'<span class="cn-tag">Test failed</span>':'<span class="cn-tag un">Not tested</span>')+'</div></div><button class="cn-add" data-custom="'+p.id+'" aria-label="Edit '+esc(p.name)+'">'+icon('edit')+'</button></div>';}
+function renderChips(){const c=[['all','All'],['o','Official'],['t','Third-party'],['l','Local'],['configured','Configured']];
+ $c('#cnChips').innerHTML=c.map(x=>'<button class="cn-chip'+(filter===x[0]?' on':'')+'" data-f="'+x[0]+'">'+x[1]+'</button>').join('');}
+function renderProviderList(){
+ const q=query.trim().toLowerCase(),m=d=>!q||(d.name+' '+d.id+' '+d.desc).toLowerCase().includes(q);
+ const customs=S.settings.providers.filter(p=>!p.connectorId&&(!q||p.name.toLowerCase().includes(q)));
+ let out='';
+ if(filter==='configured'){
+  const items=providerDirectory.filter(d=>savedOf(d.id)&&m(d));
+  if(items.length)out+='<div class="cn-sec"><b>Configured</b><span>'+items.length+'</span></div>'+items.map(renderProviderCard).join('');
+  if(customs.length)out+='<div class="cn-sec"><b>Custom</b><span>'+customs.length+'</span></div>'+customs.map(renderCustomCard).join('');
+ }else{
+  if(filter==='all'&&customs.length)out+='<div class="cn-sec"><b>Custom Providers</b><span>'+customs.length+'</span></div>'+customs.map(renderCustomCard).join('');
+  providerCategories.forEach(c=>{if(filter!=='all'&&filter!==c.id)return;const items=providerDirectory.filter(d=>d.type===c.id&&m(d));
+   if(items.length)out+='<div class="cn-sec"><b>'+c.label+'</b><span>'+items.length+'</span></div>'+items.map(renderProviderCard).join('');});
+ }
+ $c('#cnProviders').innerHTML=out||'<div class="cn-empty">'+(filter==='configured'?'No configured providers yet.':'No providers match your search.')+'</div>';}
+function renderPluginCards(){
+ const g=rd().github;
+ $c('#cnPlugins').innerHTML=pluginDirectory.map(p=>{const on=p.id==='github'&&g&&g.login;
+  return '<div class="cn-card"><span class="cn-logo">'+p.logo+'</span><div class="cn-main"><b>'+esc(p.name)+'</b><small>'+esc(p.desc)+'</small><div class="cn-tags">'+(on?'<span class="cn-tag ok">Connected as @'+esc(g.login)+'</span>':'<span class="cn-tag un">Not connected</span>')+'</div></div><button class="cn-add" data-plugin="'+p.id+'" aria-label="'+(on?'Manage ':'Connect ')+esc(p.name)+'">'+icon(on?'check':'plus')+'</button></div>';}).join('');}
+function renderAll(){renderChips();keepScroll('#cnPaneProvider',renderProviderList);renderPluginCards();}
+
+/* ---- bottom sheet ---- */
+function openSheet(html){const s=$c('#cnSheet');s.innerHTML='<div class="cn-grip"></div>'+html;const w=$c('#cnWrap');w.classList.add('open');w.setAttribute('aria-hidden','false');sheetOpen=true;adjustKb();}
+function closeSheet(){if(busy&&current&&current.kind==='provider')return;const w=$c('#cnWrap');w.classList.remove('open');w.setAttribute('aria-hidden','true');sheetOpen=false;current=null;}
+function adjustKb(){const w=$c('#cnWrap');if(!window.visualViewport){return;}w.style.bottom=sheetOpen?Math.max(0,window.innerHeight-visualViewport.height-visualViewport.offsetTop)+'px':'0px';}
+if(window.visualViewport){visualViewport.addEventListener('resize',adjustKb);visualViewport.addEventListener('scroll',adjustKb);}
+const head=(d,sub)=>'<div class="cn-sh-top"><span class="cn-logo">'+(d.logo||logoHtml(d))+'</span><div class="cn-main"><b>'+esc(d.name)+'</b><small>'+esc(d.desc)+'</small><div class="cn-tags">'+sub+'</div></div><button class="cn-x" data-close aria-label="Close">'+icon('x')+'</button></div>';
+const keyField=(id,label,ph,val)=>'<div class="cn-f"><label for="'+id+'">'+label+'</label><div class="keybox"><input class="inp" id="'+id+'" type="password" placeholder="'+ph+'" autocomplete="off" autocapitalize="off" spellcheck="false" value="'+esc(val||'')+'"><button type="button" data-eye="'+id+'" aria-label="Show or hide">'+icon('eye')+'</button></div><div class="cn-er" id="'+id+'Er"></div></div>';
+function setStat(kind,msg){const el=$c('#cnStat');if(!el)return;el.className='cn-stat '+kind;el.innerHTML=(kind==='run'?'<span class="cn-spin" style="border-color:rgba(148,163,184,.4);border-top-color:var(--text2)"></span>':'')+'<span>'+esc(msg)+'</span>';}
+
+/* ---- providers ---- */
+function openProviderSetup(id){
+ const d=providerDirectory.find(x=>x.id===id);if(!d)return;const s=savedOf(id);current={kind:'provider',id};
+ const caps=s&&s.caps?s.caps:['chat','stream'];
+ const capHtml=d.caps.map(k=>'<label class="cn-cap'+(k==='chat'?' dis':'')+'"><input type="checkbox" data-cap="'+k+'"'+(k==='chat'||caps.includes(k)?' checked':'')+(k==='chat'?' disabled':'')+'><span>'+CAPLABEL[k]+'</span></label>').join('');
+ const local=d.type==='l';
+ openSheet(head(d,'<span class="cn-tag '+(d.type!=='o'?'t':'')+'">'+TYPE_LABEL[d.type]+'</span>'+(d.baseUrl&&!d.verified?'<span class="cn-tag un">Unverified</span>':''))+
+ '<div class="cn-body">'+
+ (d.baseUrl?'':'<div class="cn-stat err">No verified API endpoint is known for this provider, so it cannot be tested. Use Custom Provider and enter the endpoint from its documentation.</div>')+
+ keyField('cnKey',local?'API Key (optional)':'API Key','Paste your API key',s&&s.apiKey)+
+ '<div class="cn-f"><label for="cnModel">Model ID</label><input class="inp" id="cnModel" placeholder="'+esc(d.hint)+'" autocomplete="off" autocapitalize="off" spellcheck="false" value="'+esc(s?s.model:'')+'"><div class="cn-er" id="cnModelEr"></div></div>'+
+ '<div class="cn-f"><label for="cnMax">Max Tokens</label><input class="inp" id="cnMax" type="number" inputmode="numeric" min="1" step="1" value="'+(s&&s.maxTokens?s.maxTokens:4096)+'"><div class="cn-er" id="cnMaxEr"></div></div>'+
+ '<div class="cn-f"><label>Capabilities</label><div class="cn-caps">'+capHtml+'</div></div>'+
+ '<div id="cnStat" class="cn-stat run hidden"></div>'+
+ '<div class="cn-note">The key is kept in this app\'s browser storage on this device (not encrypted) and is sent only to this provider\'s endpoint.'+(local?' Local providers use their default address; use Custom Provider for another host.':'')+'</div></div>'+
+ '<div class="cn-foot">'+(s?'<button class="cn-rm" data-rm="'+id+'" aria-label="Remove configuration">'+icon('trash')+'</button>':'')+'<button class="cn-go" id="cnGo" data-go="'+id+'"'+(d.baseUrl?'':' disabled')+'>Save &amp; Test</button></div>');
+}
+const editProviderConfig=openProviderSetup;
+function readForm(){const caps=['chat'];document.querySelectorAll('#cnSheet [data-cap]:checked').forEach(c=>{if(!caps.includes(c.dataset.cap))caps.push(c.dataset.cap)});
+ return{apiKey:$c('#cnKey').value.trim(),model:$c('#cnModel').value.trim(),maxTokens:Number($c('#cnMax').value),caps};}
+function validateProviderConfig(d,c){const e={};
+ if(!d.baseUrl)e.model='No verified endpoint for this provider.';
+ if(d.type!=='l'&&!c.apiKey)e.key='API key is required.';
+ if(!c.model)e.model='Model ID is required.';
+ if(!Number.isInteger(c.maxTokens)||c.maxTokens<1)e.max='Enter a whole number greater than 0.';
+ else if(c.maxTokens>1000000)e.max='That value is unrealistically large.';
+ return e;}
+function showErrs(e){['key','model','max'].forEach(k=>{const el=$c('#'+({key:'cnKey',model:'cnModel',max:'cnMax'}[k])+'Er'),inp=$c('#'+{key:'cnKey',model:'cnModel',max:'cnMax'}[k]);if(el)el.textContent=e[k]||'';if(inp)inp.classList.toggle('bad',!!e[k]);});}
+const scrub=(t,k)=>{t=String(t||'').replace(/\s+/g,' ').trim();if(k)t=t.split(k).join('***');return t.slice(0,220);};
+async function testProviderConnection(d,c){
+ if(!d.baseUrl)return{ok:false,msg:'No verified API endpoint for this provider.'};
+ const ctl=new AbortController(),to=setTimeout(()=>ctl.abort(),30000);
+ const h={'Content-Type':'application/json'};if(c.apiKey)h.Authorization='Bearer '+c.apiKey;
+ const url=endpointOf(d.baseUrl);
+ const send=async(tokKey)=>{const b={model:c.model,messages:[{role:'user',content:'Reply with OK.'}]};b[tokKey]=Math.min(c.maxTokens,32);
+  return fetch(url,{method:'POST',headers:h,body:JSON.stringify(b),signal:ctl.signal});};
+ try{
+  let res=await send('max_tokens'),txt='';
+  if(!res.ok){txt=await res.text().catch(()=>'');if(res.status===400&&/max_completion_tokens/.test(txt)){res=await send('max_completion_tokens');txt=res.ok?'':await res.text().catch(()=>'');}}
+  if(res.ok){let j=null;try{j=await res.json()}catch(e){}
+   if(j&&Array.isArray(j.choices))return{ok:true};
+   return{ok:false,msg:'The endpoint answered but not in the expected chat-completions format. It may not be OpenAI-compatible.'};}
+  const snip=scrub(txt,c.apiKey),st=res.status,low=txt.toLowerCase();
+  if(st===401||st===403)return{ok:false,msg:'Incorrect API key or no access (HTTP '+st+').'+(snip?' Provider said: '+snip:'')};
+  if(st===402||/insufficient|quota|credit|balance|billing/.test(low))return{ok:false,msg:'Insufficient credits or quota (HTTP '+st+').'+(snip?' Provider said: '+snip:'')};
+  if(st===429)return{ok:false,msg:'Rate limit reached (HTTP 429). Try again shortly.'+(snip?' Provider said: '+snip:'')};
+  if(st===404||/model/.test(low)&&/(not found|does not exist|invalid|unknown)/.test(low))return{ok:false,msg:'Invalid model ID or unsupported endpoint (HTTP '+st+').'+(snip?' Provider said: '+snip:'')};
+  return{ok:false,msg:'Request failed (HTTP '+st+').'+(snip?' Provider said: '+snip:'')};
+ }catch(e){
+  if(e&&e.name==='AbortError')return{ok:false,msg:'Timed out after 30 seconds. The endpoint did not respond.'};
+  return{ok:false,msg:'Network error. The device is offline, or the browser/WebView blocked the request (CORS or cleartext HTTP). A backend proxy would be needed for providers that block browser access.'};
+ }finally{clearTimeout(to);}}
+function saveProviderConfig(d,c){
+ const ex=savedOf(d.id);const base={connectorId:d.id,name:d.name,baseUrl:endpointOf(d.baseUrl),apiKey:c.apiKey,model:c.model,maxTokens:c.maxTokens,
+  stream:c.caps.includes('stream'),vision:c.caps.includes('vision'),supportsReasoning:false,caps:c.caps,lastTest:true};
+ if(ex)Object.assign(ex,base);else{const p=Object.assign({id:uid(),temperature:0.7},base);S.settings.providers.push(p);if(!S.settings.selectedProviderId)S.settings.selectedProviderId=p.id;}
+ saveSettings();if(typeof updateChips==='function')try{updateChips()}catch(e){}}
+async function removeProviderConfig(id){const p=savedOf(id);if(!p)return;
+ if(!(await confirmDlg({title:'Remove configuration?',body:'Deletes the saved key and settings for "'+p.name+'" from this device.',ok:'Remove',danger:true})))return;
+ S.settings.providers=S.settings.providers.filter(x=>x.id!==p.id);if(S.settings.selectedProviderId===p.id)S.settings.selectedProviderId=null;
+ saveSettings();if(typeof updateChips==='function')try{updateChips()}catch(e){}closeSheet();renderAll();toast('Configuration removed.','ok');}
+async function onSaveTest(id){
+ if(busy)return;const d=providerDirectory.find(x=>x.id===id),c=readForm(),e=validateProviderConfig(d,c);showErrs(e);if(Object.keys(e).length)return;
+ busy=true;const go=$c('#cnGo');go.disabled=true;go.innerHTML='<span class="cn-spin"></span>Testing\u2026';setStat('run','Testing connection with a real request\u2026');
+ const r=await testProviderConnection(d,c);busy=false;
+ if(!sheetOpen||!current||current.id!==id){if(r.ok){saveProviderConfig(d,c);renderAll();}return;}
+ go.disabled=false;go.textContent='Save & Test';
+ if(r.ok){saveProviderConfig(d,c);setStat('ok','Connection successful. Provider saved.');renderAll();toast(d.name+' connected.','ok');setTimeout(()=>{if(current&&current.id===id)closeSheet();},900);}
+ else setStat('err',r.msg+(savedOf(id)?' Your previously saved configuration was not changed.':''));}
+
+/* ---- GitHub plugin (personal access token verified against api.github.com; no OAuth backend exists) ---- */
+function openPluginSetup(id){const p=pluginDirectory.find(x=>x.id===id);if(!p)return;current={kind:'plugin',id};const g=rd().github;
+ openSheet(head(p,g&&g.login?'<span class="cn-tag ok">Connected as @'+esc(g.login)+'</span>':'<span class="cn-tag un">Not connected</span>')+
+ '<div class="cn-body">'+(g&&g.login?'<div class="cn-note">Connected with a personal access token. Disconnect to remove it from this device.</div>':
+ keyField('cnGh','Personal access token','github_pat_\u2026 or ghp_\u2026','')+'<div class="cn-note">Create a token in GitHub Settings, Developer settings, Personal access tokens. The token is checked against api.github.com and stored in this app\'s browser storage (not encrypted). A full OAuth sign-in needs a backend with a client secret, which this app does not have.</div>')+
+ '<div id="cnStat" class="cn-stat run hidden"></div></div><div class="cn-foot">'+(g&&g.login?'<button class="cn-go" data-ghoff style="background:var(--surface2);color:var(--err)">Disconnect</button>':'<button class="cn-go" id="cnGo" data-gh>Connect</button>')+'</div>');}
+async function connectGitHub(){if(busy)return;const t=$c('#cnGh').value.trim();const er=$c('#cnGhEr');if(!t){er.textContent='Enter your access token.';return;}er.textContent='';
+ busy=true;const go=$c('#cnGo');go.disabled=true;go.innerHTML='<span class="cn-spin"></span>Verifying\u2026';setStat('run','Verifying token with GitHub\u2026');
+ try{const r=await fetch('https://api.github.com/user',{headers:{Authorization:'Bearer '+t,Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'}});
+  if(r.ok){const j=await r.json();const o=rd();o.github={login:j.login,token:t,at:Date.now()};if(!wr(o))throw new Error('store');busy=false;renderPluginCards();setStat('ok','Connected as @'+j.login+'.');toast('GitHub connected.','ok');setTimeout(()=>{if(current&&current.id==='github')closeSheet();},800);return;}
+  busy=false;go.disabled=false;go.textContent='Connect';
+  setStat('err',r.status===401?'GitHub rejected this token (invalid or expired).':r.status===403?'GitHub refused the request (rate limit or missing permission).':'GitHub returned HTTP '+r.status+'.');
+ }catch(e){busy=false;go.disabled=false;go.textContent='Connect';setStat('err',e&&e.message==='store'?'Could not save the connection on this device.':'Network error while contacting GitHub.');}}
+function disconnectGitHub(){const o=rd();delete o.github;wr(o);renderPluginCards();closeSheet();toast('GitHub disconnected.','ok');}
+
+/* ---- events (bound once) ---- */
+function setTab(t){tab=t;document.querySelectorAll('.cn-tab').forEach(b=>{const a=b.dataset.cntab===t;b.classList.toggle('active',a);b.setAttribute('aria-selected',a);});
+ $c('#cnPanePlugin').classList.toggle('hidden',t!=='plugin');$c('#cnPaneProvider').classList.toggle('hidden',t!=='provider');$c('#cnCustom').classList.toggle('hidden',t!=='provider');}
+const scr=$c('#screen-connector');
+scr.addEventListener('click',e=>{const t=e.target;let b;
+ if((b=t.closest('[data-cntab]')))return setTab(b.dataset.cntab);
+ if((b=t.closest('[data-f]'))){filter=b.dataset.f;renderChips();renderProviderList();return;}
+ if((b=t.closest('[data-add]')))return openProviderSetup(b.dataset.add);
+ if((b=t.closest('[data-custom]'))){const p=S.settings.providers.find(x=>x.id===b.dataset.custom);if(p)openProviderForm(p);return;}
+ if((b=t.closest('[data-plugin]')))return openPluginSetup(b.dataset.plugin);
+ if(t.closest('#cnCustom')){renderProviders();openScreen('screen-providers');return;}
+ if(t.closest('[data-close]')||t.id==='cnScrim')return closeSheet();
+ if((b=t.closest('[data-eye]'))){const i=$c('#'+b.dataset.eye);i.type=i.type==='password'?'text':'password';return;}
+ if((b=t.closest('[data-go]')))return onSaveTest(b.dataset.go);
+ if((b=t.closest('[data-rm]')))return removeProviderConfig(b.dataset.rm);
+ if(t.closest('[data-gh]'))return connectGitHub();
+ if(t.closest('[data-ghoff]'))return disconnectGitHub();});
+let qT;$c('#cnQuery').addEventListener('input',e=>{clearTimeout(qT);qT=setTimeout(()=>{query=e.target.value;renderProviderList();},120);});
+scr.addEventListener('error',e=>{const i=e.target;if(i&&i.tagName==='IMG'&&i.closest('.cn-logo'))i.parentNode.innerHTML=icon('chip');},true);
+scr.addEventListener('focusin',e=>{if(e.target.closest('.cn-sheet')&&/INPUT/.test(e.target.tagName))setTimeout(()=>{try{e.target.scrollIntoView({block:'center',behavior:'smooth'})}catch(_){}},320);});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&sheetOpen)closeSheet();});
+
+/* Custom Provider URL rule used by the existing Set Up AI form (HTTPS, or http only for local/LAN hosts) */
+window.cnCustomUrlError=function(u){let x;try{x=new URL(u)}catch(e){return'Enter a valid Base URL, for example https://host.example.com/v1.';}
+ if(x.protocol==='https:')return null;if(x.protocol!=='http:')return'Base URL must start with https://.';
+ const h=x.hostname;if(h==='localhost'||/^127\./.test(h)||h==='[::1]'||/^10\./.test(h)||/^192\.168\./.test(h)||/^172\.(1[6-9]|2\d|3[01])\./.test(h)||/\.local$/.test(h))return null;
+ return'Base URL must use HTTPS. Plain http:// is allowed only for localhost or local-network addresses.';};
+window.openConnector=function(){renderAll();openScreen('screen-connector');};
+window.connectorDirectory=providerDirectory;
+renderAll();
+})();
 </script>
 </body>
 </html>
