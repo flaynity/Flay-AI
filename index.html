@@ -2482,11 +2482,11 @@ function buildProjectContext(p,request,force=[]){const paths=Object.keys(p.files
  walk(treeRoot,0);
  const words=(request||'').toLowerCase().match(/[a-z0-9_\-\.]+/g)||[];
  const score=path=>{const lp=path.toLowerCase();let s=0;words.forEach(w=>{if(w.length>2&&lp.includes(w))s+=3;});if(/\.(xml|gradle|kt|java)$/.test(lp))s+=1;return s;};
- const budget=48000;let used=0;const included=new Set();
+ const budget=90000;let used=0;const included=new Set();
  const pick=path=>{const f=p.files[path];if(!f||f.binary||included.has(path))return false;const c=f.content||'';
   if(used+c.length+path.length>budget)return false;used+=c.length;included.add(path);return true;};
  force.forEach(pick);
- for(const path of[...paths].sort((a,b)=>score(b)-score(a))){if(included.size>=60)break;pick(path);}
+ for(const path of[...paths].sort((a,b)=>score(b)-score(a))){if(included.size>=120)break;pick(path);}
  let blocks='';
  for(const path of included){blocks+='\n### FILE: '+path+'\n'+(p.files[path].content||'')+'\n### END FILE\n';}
  return{tree,blocks,included,total:paths.length,chars:used};}
@@ -2514,7 +2514,7 @@ function applyOps(p,ops){const snapshot=JSON.parse(JSON.stringify(p.files));cons
 function extractNeeds(content,included,p){const needs=[];const re=/(?:^|\n)NEED:\s*([^\n]+)/g;let m;
  while((m=re.exec(content))){const path=normPath(m[1].trim());if(isUnsafe(path))continue;
   if(p.files[path]&&!p.files[path].binary&&!included.has(path)&&!needs.includes(path))needs.push(path);}
- return needs.slice(0,8);}
+ return needs.slice(0,12);}
 
 async function sendAgent(){if(S.agentStreaming)return;
  const p=S.project;if(!p)return;
@@ -2546,7 +2546,7 @@ async function sendAgent(){if(S.agentStreaming)return;
     onDelta:d=>{am.content+=d;syncGenFiles(am);updateLive(am,'#agentMsgs');},
     onReasoning:r=>{if(!am.thinkT0)am.thinkT0=Date.now();am.reasoning=(am.reasoning||'')+r;updateLive(am,'#agentMsgs');}});
    need=extractNeeds(am.content,buildProjectContext(p,text).included,p);
-  }while(need.length&&round<2);
+  }while(need.length&&round<5);
   const parsed=parseOps(am.content);
   if(parsed.error){am.activity.push({icon:'warn',label:parsed.error,status:'fail'});}
   else if(parsed.ops){
@@ -3838,7 +3838,7 @@ function renderPlugins(){const qq=Q.plugin.trim().toLowerCase();let out='',last=
   out+='<button class="cn-row'+(on?' ok':'')+'" data-plug="'+p.id+'" aria-label="'+(on?'Manage ':'Connect ')+esc(p.name)+'">'+tile(p.ic)+'<span class="cn-rt"><b>'+esc(p.name)+'</b><small>'+esc(p.tag)+'</small></span><span class="cn-plus">'+(on?CHECK:PLUS)+'</span></button>';});
  $c('#cnPlugins').innerHTML=out||'<div class="cn-empty">No plugins match your search.</div>';}
 window.__provFb={};
-function ptile(d){const ic=provIc(d);window.__provFb[d.id]=ic;return '<span class="cn-tile cn-logo"><img src="https://www.google.com/s2/favicons?domain='+encodeURIComponent(d.domain)+'&sz=128" alt="" loading="lazy" referrerpolicy="no-referrer" data-i="'+d.id+'" onload="if(this.naturalWidth&&this.naturalWidth<32)cnLogoFail(this)" onerror="cnLogoFail(this)"></span>';}
+function ptile(d){const ic=provIc(d);window.__provFb[d.id]=ic;const local=!!PROV_IC[d.id];if(local)return '<span class="cn-tile cn-logo" style="background:'+ic.bg+'"><svg viewBox="0 0 48 48" role="img" aria-label="'+esc(d.name)+' logo">'+ic.svg+'</svg></span>';return '<span class="cn-tile cn-logo"><img src="https://www.google.com/s2/favicons?domain='+encodeURIComponent(d.domain)+'&sz=128" alt="'+esc(d.name)+' logo" loading="lazy" referrerpolicy="no-referrer" data-i="'+d.id+'" onload="if(this.naturalWidth&&this.naturalWidth<32)cnLogoFail(this)" onerror="cnLogoFail(this)"></span>';}
 window.cnLogoFail=function(img){const f=window.__provFb[img.dataset.i],sp=img.parentNode;if(!f||!sp)return;sp.className='cn-tile';sp.style.background=f.bg;sp.innerHTML='<svg viewBox="0 0 48 48" aria-hidden="true">'+f.svg+'</svg>';};
 function renderProviders(){const qq=Q.provider.trim().toLowerCase();
  const items=providerDirectory.filter(d=>!qq||(d.name+' '+d.id+' '+d.desc).toLowerCase().includes(qq));
