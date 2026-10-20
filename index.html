@@ -1385,7 +1385,7 @@ function activityCard(m){if(!m.activity||!m.activity.length)return '';
 function genCard(m){
  const gf=m.generatedFiles||[];if(!gf.length||m.ops)return '';
  const rows=gf.map((g,i)=>{const st=g.status||'generating',ex=(g.path.split('.').pop()||'').toLowerCase(),nm=g.path.split('/').pop().replace(/\.[^.]+$/,'')||g.path;
-  const code=st==='generating'?genTail(m,g.path):'';
+  const code='';
   return `<div class="gcard ${st}" data-gen="${i}"><div class="gc-top"><span class="gc-ic">&lt;/&gt;</span><div class="gc-tx"><b>${esc(nm.charAt(0).toUpperCase()+nm.slice(1))}</b><span>Code \u00b7 ${esc(GC_LANG[ex]||ex.toUpperCase()||'Text')}</span></div><span class="gc-st ${st}">${st==='generating'?'<i class="gc-dot"></i>Generating':st==='generated'?'Generated':'Failed'}</span></div>${code?`<pre class="gc-code" data-gcp="${esc(g.path)}">${esc(code.slice(0,30000))}</pre>`:''}</div>`;}).join('');
  return `<div class="card gen gcards" data-gsig="${gf.map(g=>g.status).join('|')}">${rows}${m._genErr?`<div class="generr">${icon('alert','xs')}<span>${esc(m._genErr)}</span></div>`:''}</div>`;}
 const GC_LANG={html:'HTML',js:'JavaScript',kt:'Kotlin',java:'Java',css:'CSS',json:'JSON',xml:'XML',py:'Python',ts:'TypeScript',md:'Markdown',gradle:'Gradle',kts:'Kotlin Script'};
@@ -1862,9 +1862,12 @@ function buildChatMessages(chat){
  const msgs=[{role:'system',content:SYS_CHAT}];
  const hist=chat.messages.filter(m=>m.status!=='streaming').slice(-20);
  let genBlock='';
- hist.filter(m=>m.role==='assistant'&&m.generatedFiles).slice(-2).forEach(m=>{
-  m.generatedFiles.forEach(g=>{if(g.status==='generated'&&typeof g.content==='string'&&g.content)
-   genBlock+=`\n### FILE: ${g.path}\n${g.content.slice(0,30000)}\n### END FILE\n`;});});
+ {const lu=[...hist].reverse().find(x=>x.role==='user'),pl=String(lu&&lu.content||'').toLowerCase(),latest={};
+  chat.messages.forEach(m=>{if(m.role==='assistant'&&m.status!=='streaming'&&m.generatedFiles)m.generatedFiles.forEach(g=>{if(g.status==='generated'){if(g.deleted)delete latest[g.path];else if(typeof g.content==='string'&&g.content)latest[g.path]=g;}});});
+  const sc=g=>{const b=g.path.split('/').pop().toLowerCase();return pl.includes(g.path.toLowerCase())?2:pl.includes(b)?2:0;};
+  const ls=Object.values(latest).sort((x,y)=>sc(y)-sc(x));let left=200000;const om=[];
+  ls.forEach(g=>{const n=g.content.length;if(n<=left||(sc(g)&&n<=400000)){genBlock+=`\n### FILE: ${g.path}\n${g.content}\n### END FILE\n`;left-=n;}else om.push(g.path+' ('+n+' chars)');});
+  if(om.length)genBlock+='\n[Existing files not shown because of size, ask the user or request them by name: '+om.join(', ')+']\n';}
  const _ua=hist.filter(x=>x.role==='user'&&(x.rawAtts||[]).length),lastA=_ua[_ua.length-1],prevA=_ua[_ua.length-2];
  for(const m of hist){
   if(m.role==='user'){let c=m.content||'';if(m.webContext&&m===hist[hist.length-1])c+='\n\n--- LIVE WEB CONTEXT (fresh web research for this message; answer from it with concrete details, do not invent facts that are not in it) ---\n'+m.webContext+'\n--- END LIVE WEB CONTEXT ---';const atts=m.rawAtts||[];
@@ -1877,7 +1880,7 @@ function buildChatMessages(chat){
   }else if(m.role==='assistant'&&m.content){msgs.push({role:'assistant',content:stripFences(m.content)});}}
  if(genBlock){
   for(let i=msgs.length-1;i>=0;i--){if(msgs[i].role==='user'&&typeof msgs[i].content==='string'){
-   msgs[i].content+='\n\n--- GENERATED FILES (verbatim source; if the user asks to see a file code in chat, quote it exactly from here, do not regenerate) ---'+genBlock+'--- END GENERATED FILES ---';break;}}}
+   msgs[i].content+='\n\n--- GENERATED FILES (latest verbatim source of files you already created. If the user asks to update, fix an error or bug, redesign, or add anything, FIRST read the relevant code here, change only what is needed, keep all unrelated code identical, and deliver the COMPLETE corrected file via flayfiles. If the user asks to see a file, quote it exactly from here, do not regenerate) ---'+genBlock+'--- END GENERATED FILES ---';break;}}}
  return msgs;}
 
 /* ---------- send (chat) ---------- */
@@ -1913,7 +1916,7 @@ async function sendChat(){if(S.streaming)return;
   am.status='done';}
  catch(e){if(e.name==='AbortError'){am.status='stopped';}
   else{am.status='error';console.error('Flay AI chat request failed:',e);am.content+=(am.content?'\n\n':'')+'**Unable to get a response.**\nPlease try again.';}}
- finally{am._webSearching=false;if(am.thinkT0)am.thinkMs=Date.now()-am.thinkT0;finishGen(am);_abAnim.add(am.id);
+ finally{am._webSearching=false;if(am.thinkT0)am.thinkMs=Date.now()-am.thinkT0;finishGen(am);setTimeout(()=>autoFix(am),700);_abAnim.add(am.id);
   S.streaming=false;S.abort=null;S.chat.updatedAt=Date.now();persistChat();
   renderThread('#msgs',S.chat.messages);pinScroll(false);updateSendBtn();}}
 
@@ -3579,7 +3582,6 @@ function attTile(a,rm){const nm=a.path||a.name||'file',ext=(nm.split('.').pop()|
 function wkFmt(ms){const s=Math.max(1,Math.round(ms/1000));return s<60?s+'s':Math.floor(s/60)+'m '+(s%60)+'s';}
 function wkItems(m){const a=[],add=t=>{t=String(t||'').replace(/\s+/g,' ').trim();if(t&&!a.includes(t))a.push(t.slice(0,140));};
  (m.reads||[]).forEach(n=>add('Read '+n));(m.webSteps||[]).forEach(w=>add(w.t));
- {const seen=new Set();let k=0;thinkStepsRaw(m).forEach(x=>{const t=String(x.title||'').trim();if(!t||x.part||k>=6)return;const key=t.toLowerCase().split(/\s+/).slice(0,3).join(' ');if(seen.has(key))return;seen.add(key);k++;add(t);});}
  (m.activity||[]).forEach(e=>add(e.label));(m.generatedFiles||[]).forEach(g=>add('Write '+g.path));return a;}
 function wkRow(t){const r=t.match(/^Read (.+?)(?: \(targeted\))?$/),w=t.match(/^(?:Write|Wrote|Writing|Updated|Created|Modified) (\S+)$/),k=r?['read',r[1]]:w?['write',w[1]]:null;
  if(!k)return '<div class="wk-i">'+esc(t)+'</div>';
@@ -3632,5 +3634,24 @@ setInterval(()=>{const m=S.chat&&S.chat.messages.find(x=>x.status==='streaming')
 .gc-code{margin:12px 0 0;max-height:190px;overflow:auto;background:var(--code-bg);border-radius:14px;padding:12px;font:12px/1.55 ui-monospace,Menlo,monospace;color:var(--code-ink);white-space:pre;-webkit-mask-image:linear-gradient(transparent,#000 22px);mask-image:linear-gradient(transparent,#000 22px)}
 .gcard.generating .gc-code::after{content:"";display:inline-block;width:6px;height:13px;background:var(--accent);margin-left:2px;vertical-align:-2px;animation:gcp .8s steps(2) infinite}
 </style>
+
+<script>
+/* ===== automatic code check + repair for generated files (chat) ===== */
+function codeErrors(g){const c=g.content||'',ex=(g.path.split('.').pop()||'').toLowerCase(),er=[];
+ const js=(code,tag)=>{try{new Function(code);}catch(e){er.push(g.path+(tag||'')+': '+e.message);}};
+ if(ex==='js'||ex==='mjs'||ex==='cjs'){if(!/^\s*(import|export)\s/m.test(c))js(c);}
+ else if(ex==='json'){try{JSON.parse(c);}catch(e){er.push(g.path+': '+e.message);}}
+ else if(ex==='html'||ex==='htm'){const re=/<script\b([^>]*)>([\s\S]*?)<\/script>/gi;let m,i=0;while((m=re.exec(c))){i++;if(/\bsrc=/.test(m[1])||/type\s*=\s*["']?(module|application\/|text\/(babel|template))/i.test(m[1])||!m[2].trim()||/^\s*(import|export)\s/m.test(m[2]))continue;js(m[2],' (script '+i+')');}}
+ return er;}
+function autoFix(am){try{
+ if(!S.chat||am._fixed||S.streaming||am.status==='error')return;const ms=S.chat.messages;if(ms[ms.length-1]!==am)return;
+ const er=[];(am.generatedFiles||[]).forEach(g=>{if(g.status==='generated'&&g.content&&!g.deleted)er.push(...codeErrors(g));else if(g.status==='failed')er.push(g.path+': file output was incomplete or invalid');});
+ if(am._genErr)er.push(am._genErr);
+ if(!er.length){S.chat._fixN=0;return;}
+ if((S.chat._fixN||0)>=2){toast('Auto-fix stopped after 2 tries. Tell me what still fails.','warn');return;}
+ am._fixed=true;S.chat._fixN=(S.chat._fixN||0)+1;toast('Found '+er.length+' error(s) in the code, fixing\u2026');
+ const inp=$('#chatInput');if(!inp)return;inp.value='Automatic code check found these errors in the file(s) you just generated. Read the affected code and fix every one of them, keep everything else unchanged, and deliver the complete corrected file(s):\n- '+er.slice(0,12).join('\n- ');sendChat();
+}catch(e){console.warn('autoFix',e);}}
+</script>
 </body>
 </html>
