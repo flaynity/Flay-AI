@@ -1385,7 +1385,7 @@ function activityCard(m){if(!m.activity||!m.activity.length)return '';
 function genCard(m){
  const gf=m.generatedFiles||[];if(!gf.length||m.ops)return '';
  const rows=gf.map((g,i)=>{const st=g.status||'generating',ex=(g.path.split('.').pop()||'').toLowerCase(),nm=g.path.split('/').pop().replace(/\.[^.]+$/,'')||g.path;
-  const code=st==='generating'?genTail(m,g.path):(g.content||'');
+  const code=st==='generating'?genTail(m,g.path):'';
   return `<div class="gcard ${st}" data-gen="${i}"><div class="gc-top"><span class="gc-ic">&lt;/&gt;</span><div class="gc-tx"><b>${esc(nm.charAt(0).toUpperCase()+nm.slice(1))}</b><span>Code \u00b7 ${esc(GC_LANG[ex]||ex.toUpperCase()||'Text')}</span></div><span class="gc-st ${st}">${st==='generating'?'<i class="gc-dot"></i>Generating':st==='generated'?'Generated':'Failed'}</span></div>${code?`<pre class="gc-code" data-gcp="${esc(g.path)}">${esc(code.slice(0,30000))}</pre>`:''}</div>`;}).join('');
  return `<div class="card gen gcards" data-gsig="${gf.map(g=>g.status).join('|')}">${rows}${m._genErr?`<div class="generr">${icon('alert','xs')}<span>${esc(m._genErr)}</span></div>`:''}</div>`;}
 const GC_LANG={html:'HTML',js:'JavaScript',kt:'Kotlin',java:'Java',css:'CSS',json:'JSON',xml:'XML',py:'Python',ts:'TypeScript',md:'Markdown',gradle:'Gradle',kts:'Kotlin Script'};
@@ -3579,6 +3579,7 @@ function attTile(a,rm){const nm=a.path||a.name||'file',ext=(nm.split('.').pop()|
 function wkFmt(ms){const s=Math.max(1,Math.round(ms/1000));return s<60?s+'s':Math.floor(s/60)+'m '+(s%60)+'s';}
 function wkItems(m){const a=[],add=t=>{t=String(t||'').replace(/\s+/g,' ').trim();if(t&&!a.includes(t))a.push(t.slice(0,140));};
  (m.reads||[]).forEach(n=>add('Read '+n));(m.webSteps||[]).forEach(w=>add(w.t));
+ {const seen=new Set();let k=0;thinkStepsRaw(m).forEach(x=>{const t=String(x.title||'').trim();if(!t||x.part||k>=6)return;const key=t.toLowerCase().split(/\s+/).slice(0,3).join(' ');if(seen.has(key))return;seen.add(key);k++;add(t);});}
  (m.activity||[]).forEach(e=>add(e.label));(m.generatedFiles||[]).forEach(g=>add('Write '+g.path));return a;}
 function wkRow(t){const r=t.match(/^Read (.+?)(?: \(targeted\))?$/),w=t.match(/^(?:Write|Wrote|Writing|Updated|Created|Modified) (\S+)$/),k=r?['read',r[1]]:w?['write',w[1]]:null;
  if(!k)return '<div class="wk-i">'+esc(t)+'</div>';
