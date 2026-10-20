@@ -3593,7 +3593,7 @@ section.screen .topbar>button.ibtn[data-menu]:active{
 
 <script>
 /* ===== Working feed, attachment tiles, full file/zip code for the AI ===== */
-const ATT_BUDGET=200000,BIN_RE=/\.(png|jpe?g|gif|webp|ico|bmp|mp[34]|mov|avi|wav|ogg|ttf|otf|woff2?|eot|jar|aar|apk|dex|so|class|keystore|jks|pdf|zip|gz|7z|rar|bin|db|sqlite)$/i;
+const ATT_BUDGET=1000000,BIN_RE=/\.(png|jpe?g|gif|webp|ico|bmp|mp[34]|mov|avi|wav|ogg|ttf|otf|woff2?|eot|jar|aar|apk|dex|so|class|keystore|jks|pdf|zip|gz|7z|rar|bin|db|sqlite)$/i;
 function attBlock(a,prompt,budget){
  if(a.kind==='text'){const c=a.content||'';return '\n\n--- FILE: '+a.name+' ('+fmtBytes(a.size)+(budget&&c.length>budget?', truncated to '+budget+' chars':'')+') ---\n'+(budget?c.slice(0,budget):c.slice(0,400))+'\n--- END FILE ---';}
  let o='\n\n--- ZIP: '+a.name+' ---\n'+(a.tree||'');const fl=a.files||{},names=Object.keys(fl);
