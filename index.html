@@ -1386,7 +1386,7 @@ function genCard(m){
  const gf=m.generatedFiles||[];if(!gf.length||m.ops)return '';
  const rows=gf.map((g,i)=>{const st=g.status||'generating',ex=(g.path.split('.').pop()||'').toLowerCase(),nm=g.path.split('/').pop().replace(/\.[^.]+$/,'')||g.path;
   const code=st==='generating'?genTail(m,g.path):(g.content||'');
-  return `<div class="genrow gcard ${st}" data-gen="${i}"><div class="gc-top"><span class="gc-ic">&lt;/&gt;</span><div class="gc-tx"><b>${esc(nm.charAt(0).toUpperCase()+nm.slice(1))}</b><span>Code \u00b7 ${esc(GC_LANG[ex]||ex.toUpperCase()||'Text')}${st==='generating'?'<i class="gc-dot"></i>':st==='failed'?' \u00b7 Failed':''}</span></div></div>${code?`<pre class="gc-code" data-gcp="${esc(g.path)}">${esc(code.slice(0,30000))}</pre>`:''}</div>`;}).join('');
+  return `<div class="gcard ${st}" data-gen="${i}"><div class="gc-top"><span class="gc-ic">&lt;/&gt;</span><div class="gc-tx"><b>${esc(nm.charAt(0).toUpperCase()+nm.slice(1))}</b><span>Code \u00b7 ${esc(GC_LANG[ex]||ex.toUpperCase()||'Text')}</span></div><span class="gc-st ${st}">${st==='generating'?'<i class="gc-dot"></i>Generating':st==='generated'?'Generated':'Failed'}</span></div>${code?`<pre class="gc-code" data-gcp="${esc(g.path)}">${esc(code.slice(0,30000))}</pre>`:''}</div>`;}).join('');
  return `<div class="card gen gcards" data-gsig="${gf.map(g=>g.status).join('|')}">${rows}${m._genErr?`<div class="generr">${icon('alert','xs')}<span>${esc(m._genErr)}</span></div>`:''}</div>`;}
 const GC_LANG={html:'HTML',js:'JavaScript',kt:'Kotlin',java:'Java',css:'CSS',json:'JSON',xml:'XML',py:'Python',ts:'TypeScript',md:'Markdown',gradle:'Gradle',kts:'Kotlin Script'};
 function genTail(m,path){const c=m.content||'',i=c.indexOf('```flayfiles');if(i<0)return '';const body=c.slice(i);const pi=body.indexOf(JSON.stringify(path).slice(0,-1));if(pi<0)return '';const ci=body.slice(pi).search(/"content"\s*:\s*"/);if(ci<0)return '';let t=body.slice(pi+ci).replace(/^"content"\s*:\s*"/,'');let e=0;while(e<t.length){if(t[e]==='\\')e+=2;else if(t[e]==='"')break;else e++;}t=t.slice(0,e);if(t.endsWith('\\'))t=t.slice(0,-1);try{return JSON.parse('"'+t+'"');}catch(_){return t.replace(/\\n/g,'\n').replace(/\\t/g,'\t').replace(/\\"/g,'"').replace(/\\\\/g,'\\');}}
@@ -3578,7 +3578,7 @@ function attTile(a,rm){const nm=a.path||a.name||'file',ext=(nm.split('.').pop()|
  return '<span class="att-tile'+(img?' img':'')+'" title="'+esc(nm)+'"'+(img?' style="background-image:url(\''+a.dataUrl+'\')"':'')+'>'+(img?'':icon(a.kind==='zip'?'zip':a.kind==='project'?'folder':a.kind==='image'?'image':fileIcon(nm),'sm')+'<b>'+(a.kind==='zip'?'ZIP':esc(ext))+'</b><i>'+esc(nm.split('/').pop())+'</i>')+'<button '+rm+' aria-label="Remove">'+icon('x','xs')+'</button></span>';}
 function wkFmt(ms){const s=Math.max(1,Math.round(ms/1000));return s<60?s+'s':Math.floor(s/60)+'m '+(s%60)+'s';}
 function wkItems(m){const a=[],add=t=>{t=String(t||'').replace(/\s+/g,' ').trim();if(t&&!a.includes(t))a.push(t.slice(0,140));};
- (m.reads||[]).forEach(n=>add('Read '+n));(m.webSteps||[]).forEach(w=>add(w.t));thinkStepsRaw(m).forEach(x=>{if(x.title&&!x.part)add(x.title);});
+ (m.reads||[]).forEach(n=>add('Read '+n));(m.webSteps||[]).forEach(w=>add(w.t));
  (m.activity||[]).forEach(e=>add(e.label));(m.generatedFiles||[]).forEach(g=>add('Write '+g.path));return a;}
 function wkRow(t){const r=t.match(/^Read (.+?)(?: \(targeted\))?$/),w=t.match(/^(?:Write|Wrote|Writing|Updated|Created|Modified) (\S+)$/),k=r?['read',r[1]]:w?['write',w[1]]:null;
  if(!k)return '<div class="wk-i">'+esc(t)+'</div>';
@@ -3615,6 +3615,10 @@ setInterval(()=>{const m=S.chat&&S.chat.messages.find(x=>x.status==='streaming')
 .att-tile button{position:absolute;top:3px;right:3px;width:18px;height:18px;border-radius:50%;background:rgba(0,0,0,.65);color:#fff;display:flex;align-items:center;justify-content:center}
 </style>
 <style id="synora-gcards">
+.gc-st{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text2);flex:none}.gc-st.generated{color:var(--ok)}.gc-st.failed{color:var(--err)}
+.wk-h{font-size:18px!important;font-weight:500}.wk-i{font-size:17px!important}.wk-tool{font-size:17px!important}.wk-json{font-size:14px!important}
+.wk-h .ic{width:18px;height:18px}
+
 .wk-tool{display:flex;align-items:center;gap:8px;color:var(--text);font-size:15px;padding:4px 0}.wk-tool .ic{color:var(--text2)}
 .wk-json{display:none;margin:6px 0 4px;background:#16171d;border-radius:18px;padding:16px 18px;font:13px/1.6 ui-monospace,Menlo,monospace;color:#f5d97a;white-space:pre;overflow:auto}
 .wk-i.open .wk-json{display:block}.wk-i.open .wk-tool .ic:last-child{transform:rotate(180deg)}
