@@ -1908,7 +1908,7 @@ function buildChatMessages(chat){
  {const lu=[...hist].reverse().find(x=>x.role==='user'),pl=String(lu&&lu.content||'').toLowerCase(),latest={};
   chat.messages.forEach(m=>{if(m.role==='assistant'&&m.status!=='streaming'&&m.generatedFiles)m.generatedFiles.forEach(g=>{if(g.status==='generated'){if(g.deleted)delete latest[g.path];else if(typeof g.content==='string'&&g.content)latest[g.path]=g;}});});
   const sc=g=>{const b=g.path.split('/').pop().toLowerCase();return pl.includes(g.path.toLowerCase())?2:pl.includes(b)?2:0;};
-  const ls=Object.values(latest).sort((x,y)=>sc(y)-sc(x));let left=200000;const om=[];
+  const ls=Object.values(latest).sort((x,y)=>sc(y)-sc(x));let left=1000000;const om=[];
   ls.forEach(g=>{const n=g.content.length;if(n<=left||(sc(g)&&n<=400000)){genBlock+=`\n### FILE: ${g.path}\n${g.content}\n### END FILE\n`;left-=n;}else om.push(g.path+' ('+n+' chars)');});
   if(om.length)genBlock+='\n[Existing files not shown because of size, ask the user or request them by name: '+om.join(', ')+']\n';}
  const _ua=hist.filter(x=>x.role==='user'&&(x.rawAtts||[]).length),lastA=_ua[_ua.length-1],prevA=_ua[_ua.length-2];
@@ -3611,7 +3611,7 @@ section.screen .topbar>button.ibtn[data-menu]:active{
 
 <script>
 /* ===== Working feed, attachment tiles, full file/zip code for the AI ===== */
-const ATT_BUDGET=200000,BIN_RE=/\.(png|jpe?g|gif|webp|ico|bmp|mp[34]|mov|avi|wav|ogg|ttf|otf|woff2?|eot|jar|aar|apk|dex|so|class|keystore|jks|pdf|zip|gz|7z|rar|bin|db|sqlite)$/i;
+const ATT_BUDGET=1000000,BIN_RE=/\.(png|jpe?g|gif|webp|ico|bmp|mp[34]|mov|avi|wav|ogg|ttf|otf|woff2?|eot|jar|aar|apk|dex|so|class|keystore|jks|pdf|zip|gz|7z|rar|bin|db|sqlite)$/i;
 function attBlock(a,prompt,budget){
  if(a.kind==='text'){const c=a.content||'';return '\n\n--- FILE: '+a.name+' ('+fmtBytes(a.size)+(budget&&c.length>budget?', truncated to '+budget+' chars':'')+') ---\n'+(budget?c.slice(0,budget):c.slice(0,400))+'\n--- END FILE ---';}
  let o='\n\n--- ZIP: '+a.name+' ---\n'+(a.tree||'');const fl=a.files||{},names=Object.keys(fl);
