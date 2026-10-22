@@ -542,9 +542,22 @@ section.screen .topbar>button.ibtn[data-back]{width:46px!important;height:46px!i
 .wk .wk-ic{width:24px;height:24px;flex:none;color:var(--text2);margin-top:.12em}
 .wk .wk-tool .wk-ic{margin:0}
 .wk .wk-tx{min-width:0;word-break:break-word}
+.wk.live .wk-i:not(.tool) .wk-tx,.wk.live .wk-tool>span{background:linear-gradient(90deg,var(--text2) 30%,var(--text) 50%,var(--text2) 70%);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:wkshine 1.6s linear infinite;animation-delay:calc(var(--i,0)*-.16s)}
+.wk.live .wk-ic{animation:wkicon 1.6s ease-in-out infinite;animation-delay:calc(var(--i,0)*-.16s)}
+@keyframes wkicon{0%,100%{color:var(--text2);opacity:.7;filter:drop-shadow(0 0 0 rgba(167,139,250,0))}50%{color:var(--text);opacity:1;filter:drop-shadow(0 0 6px rgba(167,139,250,.6))}}
+.wk .wk-term{color:inherit;filter:drop-shadow(0 0 4px rgba(124,58,237,.45))}
+.wk.live .wk-term{animation:wkterm 1.6s ease-in-out infinite;animation-delay:calc(var(--i,0)*-.16s)}
+@keyframes wkterm{0%,100%{opacity:.85;filter:drop-shadow(0 0 3px rgba(124,58,237,.4)) brightness(.95)}50%{opacity:1;filter:drop-shadow(0 0 10px rgba(167,139,250,.95)) brightness(1.3)}}
+.cl-row>.ic.wk-term,.cl-box .ic{filter:drop-shadow(0 0 3px rgba(124,58,237,.4))}
+@media (prefers-reduced-motion:reduce){.wk.live .wk-ic,.wk.live .wk-term,.wk.live .wk-i .wk-tx,.wk.live .wk-tool>span{animation:none}}
 </style>
 </head>
 <body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs>
+<linearGradient id="wkTG" x1="0.1" y1="0" x2="0.9" y2="1"><stop offset="0" stop-color="#7C3AED"/><stop offset=".55" stop-color="#4C1D95"/><stop offset="1" stop-color="#1E1B6B"/></linearGradient>
+<linearGradient id="wkTS" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#C4B5FD"/><stop offset="1" stop-color="#6D28D9"/></linearGradient>
+<linearGradient id="wkTH" x1="0.2" y1="0" x2="0.6" y2="0.75"><stop offset="0" stop-color="#fff" stop-opacity=".42"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+</defs></svg>
 <svg style="display:none" xmlns="http://www.w3.org/2000/svg">
 <symbol id="i-menu" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M9 4v16"/></symbol>
 <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
@@ -592,8 +605,8 @@ section.screen .topbar>button.ibtn[data-back]{width:46px!important;height:46px!i
 <symbol id="i-java" viewBox="0 0 24 24"><path d="M18 8h1a4 4 0 0 1 0 8h-1M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4ZM6 1v3M10 1v3M14 1v3"/></symbol>
 <symbol id="i-box" viewBox="0 0 24 24"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5M12 22V12"/></symbol>
 <symbol id="i-back" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></symbol>
-<symbol id="i-wk-grid" viewBox="0 0 24 24"><circle cx="7" cy="7" r="3"/><circle cx="17" cy="7" r="3"/><circle cx="7" cy="17" r="3"/><circle cx="17" cy="17" r="3"/></symbol>
-<symbol id="i-wk-bubble" viewBox="0 0 24 24"><path d="M12 3.5c1.6 0 2.5 1 3.2 1.6 1 .2 2.4.7 3 2 .6 1.3.2 2.5-.1 3.3.9 1 1.4 2.2 1 3.5-.5 1.5-1.8 2.2-2.9 2.3-.6 1.1-1.8 2.3-3.4 2.3-.9 0-1.5-.3-2-.6-.6.4-1.4.6-2.2.6-1.8 0-3-1.2-3.4-2.4-1.3-.2-2.4-1-2.7-2.4-.3-1.4.3-2.6 1.1-3.3-.4-1-.4-2.3.4-3.4.7-.9 1.7-1.3 2.6-1.4C8.5 4.6 10.3 3.5 12 3.5z"/><path d="m8.5 10.5 2.5 2-2.5 2M13 15h3"/></symbol>
+<symbol id="i-wk-grid" viewBox="0 0 24 24"><circle cx="7" cy="7" r="3.3"/><circle cx="17" cy="7" r="3.3"/><circle cx="7" cy="17" r="3.3"/><circle cx="17" cy="17" r="3.3"/></symbol>
+<symbol id="i-wk-bubble" viewBox="0 0 24 24"><path d="M12.00 5.50A3.3 3.3 0 0 1 17.08 7.95A3.3 3.3 0 0 1 18.34 13.45A3.3 3.3 0 0 1 14.82 17.86A3.3 3.3 0 0 1 9.18 17.86A3.3 3.3 0 0 1 5.66 13.45A3.3 3.3 0 0 1 6.92 7.95A3.3 3.3 0 0 1 12.00 5.50Z" fill="url(#wkTG)" stroke="url(#wkTS)" stroke-width="1.1" stroke-linejoin="round"/><path d="M12.00 5.50A3.3 3.3 0 0 1 17.08 7.95A3.3 3.3 0 0 1 18.34 13.45A3.3 3.3 0 0 1 14.82 17.86A3.3 3.3 0 0 1 9.18 17.86A3.3 3.3 0 0 1 5.66 13.45A3.3 3.3 0 0 1 6.92 7.95A3.3 3.3 0 0 1 12.00 5.50Z" fill="url(#wkTH)" stroke="none"/><path d="m9 10.3 2.5 1.9L9 14.1" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M13 14.5h2.7" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"/></symbol>
 <symbol id="i-wk-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></symbol>
 <symbol id="i-wk-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8 12.5 2.8 2.8L16 9.5"/></symbol>
 <symbol id="i-wk-pencil" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13.5 6.5 4 4"/></symbol>
@@ -1380,12 +1393,12 @@ function openThinkSheet(mid){
 }
 function closeThinkSheet(){const el=document.getElementById('tkSheet');if(el){el.classList.remove('show');const l=el.querySelector('.tk-list');if(l){l._follow=false;if(l._raf){cancelAnimationFrame(l._raf);l._raf=0;}}}_tk.mid=null;}
 /* Claude-style Summary sheet: timeline -> tap a step -> Request / Response */
-const _ac={mid:null,kind:null,view:'list',ev:null};
+const _ac={mid:null,kind:null,view:'list',ev:null,d:0,mute:false,ls:null};
 const clEvs=m=>m.activity||[];
 function clItem(x){
  if(x.kind==='say')return '<div class="cl-it say"><div class="cl-bar"><span class="cl-dot"></span><span class="cl-vl"></span></div><div class="cl-body"><div class="cl-sd">'+esc(String(x.text||x.label).replace(/`/g,''))+'</div></div></div>';
  const sub=[x.path,x.status==='fail'?x.detail:''].filter(Boolean).join('\n');
- return '<div class="cl-it tool'+(x.status==='fail'?' bad':'')+(x.status==='run'?' live':'')+'" data-evid="'+x.id+'"><div class="cl-bar"><span class="cl-box">'+icon(x.status==='fail'?'alert':'terminal','sm')+'</span><span class="cl-vl"></span></div><div class="cl-body"><div class="cl-st">'+esc(x.label)+'</div>'+(sub?'<div class="cl-sub">'+esc(sub)+'</div>':'')+'</div></div>';}
+ return '<div class="cl-it tool'+(x.status==='fail'?' bad':'')+(x.status==='run'?' live':'')+'" data-evid="'+x.id+'"><div class="cl-bar"><span class="cl-box">'+icon(x.status==='fail'?'alert':'wk-bubble','sm')+'</span><span class="cl-vl"></span></div><div class="cl-body"><div class="cl-st">'+esc(x.label)+'</div>'+(sub?'<div class="cl-sub">'+esc(sub)+'</div>':'')+'</div></div>';}
 function clDetail(ev){
  const rq=ev.req||ev.path||'',rs=ev.res||ev.detail||'';
  return (rq?'<div class="cl-dh">Request</div><pre class="cl-pre">'+esc(rq)+'</pre>':'')+(rs?'<div class="cl-dh">Response</div><pre class="cl-pre">'+esc(rs)+'</pre>':'')+(!rq&&!rs?'<div class="cl-sd" style="margin-top:18px">No details were stored for this step.</div>':'');}
@@ -1410,7 +1423,13 @@ function renderActSheet(m){
  list.innerHTML=clEvs(m).map(clItem).join('');
  list.scrollTop=(near&&m.status==='streaming')?list.scrollHeight:top;
 }
-function closeActSheet(){const el=document.getElementById('acSheet');if(el)el.classList.remove('show');_ac.mid=null;_ac.kind=null;_ac.view='list';_ac.ev=null;}
+function acPush(){try{history.pushState({acs:1},'');_ac.d++;}catch(e){}}
+function acPopAll(){const d=_ac.d;_ac.d=0;if(d>0){_ac.mute=true;try{history.go(-d);}catch(e){}setTimeout(()=>{_ac.mute=false;},700);}}
+function closeActSheet(fromPop){const el=document.getElementById('acSheet');if(el)el.classList.remove('show');_ac.mid=null;_ac.kind=null;_ac.view='list';_ac.ev=null;_ac.ls=null;if(fromPop)_ac.d=0;else acPopAll();}
+function acShowList(){const m=findThinkMsg(_ac.mid);if(!m)return;_ac.view='list';renderActSheet(m);const l=document.querySelector('#acSheet .cl-list');if(!l)return;
+ requestAnimationFrame(()=>{if(_ac.ls!=null)l.scrollTop=_ac.ls;else if(_ac.ev){const t=l.querySelector('[data-evid="'+_ac.ev+'"]');if(t)l.scrollTop=Math.max(0,t.offsetTop-24);}});}
+function acBack(){if(!_ac.mid)return;if(_ac.kind==='act'&&_ac.view==='detail'){if(_ac.d>=2)history.back();else acShowList();}else closeActSheet();}
+window.addEventListener('popstate',()=>{if(_ac.mute){_ac.mute=false;return;}if(!_ac.mid)return;_ac.d=Math.max(0,_ac.d-1);if(_ac.kind==='act'&&_ac.view==='detail')acShowList();else closeActSheet(true);});
 function openActSheet(mid,kind,evid,n){
  const m=findThinkMsg(mid);if(!m)return;
  let el=document.getElementById('acSheet');
@@ -1420,10 +1439,10 @@ function openActSheet(mid,kind,evid,n){
   document.body.appendChild(el);
   el.addEventListener('click',e=>{
    if(e.target.hasAttribute('data-acc')){closeActSheet();return;}
-   if(e.target.closest('.cl-hb')){const mm=findThinkMsg(_ac.mid);if(_ac.kind==='act'&&_ac.view==='detail'){_ac.view='list';if(mm)renderActSheet(mm);}else closeActSheet();return;}
+   if(e.target.closest('.cl-hb')){acBack();return;}
    const f=e.target.closest('.cl-it.files');if(f){const d=f.querySelector('.cl-diff');if(d)d.classList.toggle('hidden');return;}
    const t=e.target.closest('.cl-it.tool[data-evid]');
-   if(t){const mm=findThinkMsg(_ac.mid);_ac.view='detail';_ac.ev=t.dataset.evid;const dd=el.querySelector('.cl-detail');dd._k=null;if(mm)renderActSheet(mm);dd.scrollTop=0;}
+   if(t){const mm=findThinkMsg(_ac.mid);_ac.ls=el.querySelector('.cl-list').scrollTop;_ac.view='detail';_ac.ev=t.dataset.evid;acPush();const dd=el.querySelector('.cl-detail');dd._k=null;if(mm)renderActSheet(mm);dd.scrollTop=0;}
   });
   const panel=el.querySelector('.cl-panel');let y0=null,dy=0;
   const st=e=>{y0=e.touches[0].clientY;dy=0;panel.classList.add('drag');};
@@ -1432,7 +1451,7 @@ function openActSheet(mid,kind,evid,n){
   [el.querySelector('.cl-grip-wrap'),el.querySelector('.cl-head')].forEach(x=>{x.addEventListener('touchstart',st,{passive:true});x.addEventListener('touchmove',mv,{passive:true});x.addEventListener('touchend',en);x.addEventListener('touchcancel',en);});
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&_ac.mid)closeActSheet();});
  }
- _ac.mid=mid;_ac.kind=kind;_ac.ev=evid||null;_ac.view=(kind==='act'&&evid&&n===1)?'detail':'list';
+ _ac.mid=mid;_ac.kind=kind;_ac.ev=evid||null;_ac.view=(kind==='act'&&evid&&n===1)?'detail':'list';_ac.ls=null;_ac.d=0;acPush();if(_ac.view==='detail')acPush();
  const l=el.querySelector('.cl-list'),d=el.querySelector('.cl-detail');l._k=null;d._k=null;l.innerHTML='';
  el.classList.add('show');renderActSheet(m);
  if(_ac.view==='list'){if(evid){const t=l.querySelector('[data-evid="'+evid+'"]');if(t)l.scrollTop=Math.max(0,t.offsetTop-24);}else if(kind==='act')l.scrollTop=l.scrollHeight;}
@@ -1510,7 +1529,7 @@ function actSt(st){return st==='same'?icon('ok','sm muted'):st==='run'?'<span cl
 function actTime(ts){if(!ts)return '';try{return new Date(ts).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'});}catch(_){return '';}}
 function clRow(g){
  const run=g.find(x=>x.status==='run'),fails=g.some(x=>x.status==='fail'),title=run?run.label:g[0].label;
- return '<div class="cl-row'+(run?' live':'')+(fails?' bad':'')+'" data-clev="'+g[0].id+'" data-cln="'+g.length+'">'+(run?'<span class="cl-dots"><i></i><i></i><i></i></span>':icon(fails?'alert':'terminal','sm'))+'<span class="cl-t">'+esc(title)+'</span>'+(g.length>1?'<span class="cl-n">+'+(g.length-1)+'</span>':'')+icon('chev-r','sm cl-chev')+'</div>';}
+ return '<div class="cl-row'+(run?' live':'')+(fails?' bad':'')+'" data-clev="'+g[0].id+'" data-cln="'+g.length+'">'+(run?'<span class="cl-dots"><i></i><i></i><i></i></span>':icon(fails?'alert':'wk-bubble','sm'))+'<span class="cl-t">'+esc(title)+'</span>'+(g.length>1?'<span class="cl-n">+'+(g.length-1)+'</span>':'')+icon('chev-r','sm cl-chev')+'</div>';}
 function activityCard(m){if(!m.activity||!m.activity.length)return '';
  const out=[];let g=null;const flush=()=>{if(g){out.push(clRow(g));g=null;}};
  m.activity.forEach(x=>{x.new=false;
@@ -3740,10 +3759,10 @@ function wkIc(t,i){const l=String(t).toLowerCase();
  if(/\b(run|build|exec|command|shell|script)/.test(l))return 'wk-bubble';
  if(/\b(read|list|open|analy|inspect|scan|view|load)/.test(l))return 'wk-grid';
  return i%2?'wk-bubble':'wk-grid';}
-function wkRow(t,i){i=i||0;const ic=icon(wkIc(t,i),'wk-ic');
+function wkRow(t,i){i=i||0;const nm=wkIc(t,i),ic=icon(nm,'wk-ic'+(nm==='wk-bubble'?' wk-term':'')),sty=' style="--i:'+Math.min(i,12)+'"';
  const r=t.match(/^Read (.+?)(?: \(targeted\))?$/),w=t.match(/^(?:Write|Wrote|Writing|Updated|Created|Modified) (\S+)$/),k=r?['read',r[1]]:w?['write',w[1]]:null;
- if(!k)return '<div class="wk-i">'+ic+'<span class="wk-tx">'+esc(t)+'</span></div>';
- return '<div class="wk-i tool"><button class="wk-tool" data-wkr>'+ic+'<span>'+esc((k[0]==='read'?'Read ':'Write ')+k[1])+'</span>'+icon('chev-d','xs')+'</button><pre class="wk-json">{\n    "'+k[0]+'": '+esc(JSON.stringify(k[1]))+'\n}</pre></div>';}
+ if(!k)return '<div class="wk-i"'+sty+'>'+ic+'<span class="wk-tx">'+esc(t)+'</span></div>';
+ return '<div class="wk-i tool"'+sty+'><button class="wk-tool" data-wkr>'+ic+'<span>'+esc((k[0]==='read'?'Read ':'Write ')+k[1])+'</span>'+icon('chev-d','xs')+'</button><pre class="wk-json">{\n    "'+k[0]+'": '+esc(JSON.stringify(k[1]))+'\n}</pre></div>';}
 function wkHead(m){const live=m.status==='streaming';let ms;if(live){m._wkT=Date.now()-(m.createdAt||Date.now());ms=m._wkT;}else{if(!m.workMs&&m._wkT)m.workMs=m._wkT;ms=m.workMs||m.thinkMs||0;}
  return live?'Working\u2026':(ms?'Worked for '+wkFmt(ms):'Worked');}
 function wkHtml(m){const it=wkItems(m);if(!it.length)return '';const live=m.status==='streaming';
