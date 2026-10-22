@@ -4317,11 +4317,11 @@ function execTool(run,call){
 /* ---------- protocol (Appendix A) ---------- */
 const MARK=/(^|\n)[ \t`>*\-]*TOOL_CALL:/;
 /* DeepSeek-style DSML tool calls (<｜DSML｜invoke name="..."> ... ) are converted to the same call object */
-const DSML_OPEN=/<\/?\s*[|｜]\s*DSML\s*[|｜]/;
-const DSML_TAIL=/<\/?\s*[|｜]?\s*(?:D(?:S(?:M(?:L)?)?)?)?$/;
-const DSML_INV=/<\s*[|｜]\s*DSML\s*[|｜]\s*invoke\s+name\s*=\s*["']([^"']+)["']\s*>/;
-const DSML_END=/<\/\s*[|｜]\s*DSML\s*[|｜]\s*invoke\s*>/;
-const DSML_PAR=/<\s*[|｜]\s*DSML\s*[|｜]\s*parameter\s+name\s*=\s*["']([^"']+)["']([^>]*)>([\s\S]*?)<\/\s*[|｜]\s*DSML\s*[|｜]\s*parameter\s*>/g;
+const DSML_OPEN=/<\/?\s*[|｜]+\s*DSML\s*[|｜]+/;
+const DSML_TAIL=/<\/?\s*[|｜]*\s*(?:D(?:S(?:M(?:L)?)?)?)?$/;
+const DSML_INV=/<\s*[|｜]+\s*DSML\s*[|｜]+\s*invoke\s+name\s*=\s*["']([^"']+)["']\s*>/;
+const DSML_END=/<\/\s*[|｜]+\s*DSML\s*[|｜]+\s*(?:invoke|calls|function_calls|tool_calls)\s*>/;
+const DSML_PAR=/<\s*[|｜]+\s*DSML\s*[|｜]+\s*parameter\s+name\s*=\s*["']([^"']+)["']([^>]*)>([\s\S]*?)<\/\s*[|｜]+\s*DSML\s*[|｜]+\s*parameter\s*>/g;
 function parseDSML(text,idx){
  const pre=text.slice(0,idx).trim().replace(/^[.\s]+$/,''),rest=text.slice(idx),im=DSML_INV.exec(rest);
  if(!im)return{kind:'partial',pre};
@@ -4330,6 +4330,8 @@ function parseDSML(text,idx){
  const inner=body.slice(0,em.index),args={};let pm;DSML_PAR.lastIndex=0;
  while((pm=DSML_PAR.exec(inner))){let v=pm[3];
   if(!/string\s*=\s*["']true["']/.test(pm[2])){const t=v.trim();try{v=JSON.parse(t);}catch(e){v=t;}}
+  if(/^(args|arguments|parameters|params|input)$/i.test(pm[1])){let o=v;if(typeof o==='string'){try{o=JSON.parse(o.trim());}catch(e){o=null;}}
+   if(o&&typeof o==='object'&&!Array.isArray(o)){Object.assign(args,o);continue;}}
   args[pm[1]]=v;}
  return{kind:'call',pre,call:{tool:im[1].trim(),args}};}
 function parseCall(text){
