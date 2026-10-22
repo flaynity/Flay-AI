@@ -4151,8 +4151,26 @@ function execTool(run,call){
 
 /* ---------- protocol (Appendix A) ---------- */
 const MARK=/(^|\n)[ \t`>*\-]*TOOL_CALL:/;
+/* DeepSeek-style DSML tool calls (<｜DSML｜invoke name="..."> ... ) are converted to the same call object */
+const DSML_OPEN=/<\/?\s*[|｜]\s*DSML\s*[|｜]/;
+const DSML_TAIL=/<\/?\s*[|｜]?\s*(?:D(?:S(?:M(?:L)?)?)?)?$/;
+const DSML_INV=/<\s*[|｜]\s*DSML\s*[|｜]\s*invoke\s+name\s*=\s*["']([^"']+)["']\s*>/;
+const DSML_END=/<\/\s*[|｜]\s*DSML\s*[|｜]\s*invoke\s*>/;
+const DSML_PAR=/<\s*[|｜]\s*DSML\s*[|｜]\s*parameter\s+name\s*=\s*["']([^"']+)["']([^>]*)>([\s\S]*?)<\/\s*[|｜]\s*DSML\s*[|｜]\s*parameter\s*>/g;
+function parseDSML(text,idx){
+ const pre=text.slice(0,idx).trim().replace(/^[.\s]+$/,''),rest=text.slice(idx),im=DSML_INV.exec(rest);
+ if(!im)return{kind:'partial',pre};
+ const body=rest.slice(im.index+im[0].length),em=DSML_END.exec(body);
+ if(!em)return{kind:'partial',pre};
+ const inner=body.slice(0,em.index),args={};let pm;DSML_PAR.lastIndex=0;
+ while((pm=DSML_PAR.exec(inner))){let v=pm[3];
+  if(!/string\s*=\s*["']true["']/.test(pm[2])){const t=v.trim();try{v=JSON.parse(t);}catch(e){v=t;}}
+  args[pm[1]]=v;}
+ return{kind:'call',pre,call:{tool:im[1].trim(),args}};}
 function parseCall(text){
- const m=MARK.exec(text);if(!m)return{kind:'none'};
+ const dm=DSML_OPEN.exec(text),m=MARK.exec(text);
+ if(dm&&(!m||dm.index<m.index))return parseDSML(text,dm.index);
+ if(!m)return{kind:'none'};
  const mi=text.indexOf('TOOL_CALL:',m.index),pre=text.slice(0,m.index).trim(),s=text.indexOf('{',mi+10);
  if(s<0)return{kind:'partial',pre};
  if(text.slice(mi+10,s).replace(/[\s`]/g,'')!=='')return{kind:'bad',pre,error:'TOOL_CALL must be followed by one JSON object.'};
@@ -4167,7 +4185,7 @@ function parseCall(text){
  if(!tool)return{kind:'bad',pre,error:'The TOOL_CALL JSON needs a "tool" field.'};
  return{kind:'call',pre,call:{tool,args}};}
 function visible(buf){
- const m=MARK.exec(buf);let v=m?buf.slice(0,m.index):buf;const mk='TOOL_CALL:';
+ const m=MARK.exec(buf);let v=m?buf.slice(0,m.index):buf;const dm=DSML_OPEN.exec(v);if(dm)v=v.slice(0,dm.index);else v=v.replace(DSML_TAIL,'');const mk='TOOL_CALL:';
  for(let k=Math.min(mk.length-1,v.length);k>=1;k--){if(v.endsWith(mk.slice(0,k))&&(v.length===k||/[\n \t`>*\-]/.test(v[v.length-k-1]))){v=v.slice(0,v.length-k);break;}}
  return v.replace(/\s+$/,'');}
 const fmtCall=(c,shrink)=>{const a=Object.assign({},c.args);if(shrink)Object.keys(a).forEach(k=>{if(typeof a[k]==='string'&&a[k].length>300)a[k]=a[k].slice(0,200)+' ...['+(a[k].length-200)+' chars omitted]';});return 'TOOL_CALL: '+JSON.stringify({tool:c.tool,args:a});};
@@ -4195,7 +4213,7 @@ async function step(o,L){
  am.content='';
  try{await modelCall({messages:build(o.system,L),signal:ctl.signal,
    onDelta:d=>{buf+=d;const v=visible(buf);if(v!==am.content){am.content=v;updateLive(am,sel);}
-    if(!cut&&buf.indexOf('TOOL_CALL:')>=0&&parseCall(buf).kind==='call'){cut=true;ctl.abort();}},
+    if(!cut&&(buf.indexOf('TOOL_CALL:')>=0||DSML_OPEN.test(buf))&&parseCall(buf).kind==='call'){cut=true;ctl.abort();}},
    onReasoning:r=>{if(!am.thinkT0)am.thinkT0=Date.now();am.reasoning=((am.reasoning||'')+r).slice(-20000);updateLive(am,sel);}});}
  catch(e){if(!(e.name==='AbortError'&&cut&&!o.signal.aborted))throw e;}
  finally{o.signal.removeEventListener('abort',onAb);}
@@ -4293,7 +4311,7 @@ function systemPrompt(mode,p){
  const pv=activeProvider(),mt=(pv&&pv.maxTokens)||4096;
  let s=CA_MAIN+'\n\n'+CA_A+'\n\nNote on Appendix B: in this app every call shown there is written as one TOOL_CALL line (Appendix A), and the text after the arrow is the TOOL_RESULT.\n\n'+CA_B;
  s+='\n\n## APP NOTES (this app)\n'+
-  '- Native tool calling is NOT available here: always use the text protocol of Appendix A. Never write TOOL_RESULT yourself.\n'+
+  '- Native tool calling is NOT available here: always use the text protocol of Appendix A. Never write TOOL_RESULT yourself. Never use XML or DSML tags for tool calls; only TOOL_CALL lines.\n'+
   '- Your output limit per message is about '+mt+' tokens (roughly '+Math.floor(mt*3)+' characters). Keep every create_file or edit_file call well below it; for a larger file create a small skeleton first, then add sections with edit_file.\n'+
   '- export(mode, path): the app shows the user download buttons. Call it once, at the end, after verification.\n'+
   '- Plain conversation (greetings, questions, explanations) needs no tools: just answer directly.\n';
