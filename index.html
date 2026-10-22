@@ -478,6 +478,26 @@ section.screen .topbar>button.ibtn[data-back]{width:46px!important;height:46px!i
 .wl-sk i+i{width:45%}
 @media (prefers-reduced-motion:reduce){.tk.live .tk-orb,.tk.live .tk-orb .tk-p,.tk.live .tk-line::after,.tk-dot.live{animation:none}.tk-dw,.tk-d{transition:none}}
 </style>
+<style id="ac-rows">
+.card.act,.card.act2{background:none!important;border:0!important;border-radius:0;overflow:visible;box-shadow:none;margin:2px 0 8px}
+.ac-row{display:flex;gap:14px;align-items:stretch;padding:2px 0;cursor:pointer;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+.ac-row .tk-txt{padding-bottom:8px}
+.ac-row .tk-t{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:3px}
+.ac-row:active .tk-t{color:var(--text)}
+.ac-sub{font-size:14.5px;line-height:1.5;color:var(--text-muted,var(--text2));word-break:break-word}
+.ac-row.bad .ac-sub{color:var(--err)}
+.ac-row.live .tk-orb{opacity:1;animation:tkspinL 2.4s linear infinite,tkglow 5.2s ease-in-out infinite}
+.ac-row.live .tk-orb .tk-p{animation:tkpetal 1.2s ease-in-out infinite}
+.ac-row.live .tk-line::after{opacity:1;animation:tkpulse 1.6s ease-in-out infinite}
+.card.act2 .card-foot{border:0;padding:2px 0 0 42px}
+.tk-dot.fail{background:#FF5D73}.tk-dot.warn{background:#F59E0B}
+.tk-it.has-diff .tk-st{cursor:pointer;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:14.5px}
+.ac-diff{margin:8px 0 0;max-height:46vh;overflow:auto;background:#101116;border-radius:14px;padding:12px 14px;font:12px/1.55 ui-monospace,Menlo,monospace;white-space:pre-wrap;word-break:break-all}
+.ac-diff.hidden{display:none}
+.ac-diff .dl{display:block}
+[data-theme=light] .ac-diff{background:#F1F5F9}
+@media (prefers-reduced-motion:reduce){.ac-row.live .tk-orb,.ac-row.live .tk-orb .tk-p,.ac-row.live .tk-line::after{animation:none}}
+</style>
 </head>
 <body>
 <svg style="display:none" xmlns="http://www.w3.org/2000/svg">
@@ -1307,6 +1327,50 @@ function openThinkSheet(mid){
  const list=el.querySelector('.tk-list');list.scrollTop=0;list._auto=0;list._follow=true;if(m.status==='streaming')tkFollowStart(list);
 }
 function closeThinkSheet(){const el=document.getElementById('tkSheet');if(el){el.classList.remove('show');const l=el.querySelector('.tk-list');if(l){l._follow=false;if(l._raf){cancelAnimationFrame(l._raf);l._raf=0;}}}_tk.mid=null;}
+/* Steps / Files-changed sheet: same look as the Thinking steps sheet */
+const _ac={mid:null,kind:null};
+function acItems(m,kind){
+ if(kind==='files'){const nm={create:'Created',modify:'Modified','delete':'Deleted',folder:'Folder'};
+  return ((m.ops&&m.ops.results)||[]).filter(r=>r.ok).map(r=>{const d=(m.ops.diffs||{})[r.path]||{ops:[],plus:0,minus:0};
+   return{t:r.path,d:(nm[r.action]||r.action)+((d.plus||d.minus)?' \u00b7 +'+d.plus+' \u2212'+d.minus:''),diff:d,state:r.action==='delete'?'fail':'done'};});}
+ return (m.activity||[]).map(x=>({t:x.label,d:[x.path,x.detail].filter(Boolean).join('\n'),state:x.status}));
+}
+function renderActSheet(m){
+ const el=document.getElementById('acSheet');if(!el||!el.classList.contains('show')||_ac.mid!==m.id)return;
+ const list=el.querySelector('.tk-list'),items=acItems(m,_ac.kind);
+ items.forEach((it,i)=>{let n=list.children[i];
+  if(!n){n=document.createElement('div');n.className='tk-it';
+   n.innerHTML='<div class="tk-bar"><span class="tk-dot"></span><span class="tk-vl"></span></div><div class="tk-body"><div class="tk-st"></div><div class="tk-sd"></div></div>';list.appendChild(n);}
+  const st=n.querySelector('.tk-st'),sd=n.querySelector('.tk-sd');
+  if(st.textContent!==it.t)st.textContent=it.t;
+  if(sd.textContent!==it.d)sd.textContent=it.d;sd.hidden=!it.d;
+  const dot=n.querySelector('.tk-dot');dot.classList.toggle('live',it.state==='run');dot.classList.toggle('fail',it.state==='fail');dot.classList.toggle('warn',it.state==='warn');
+  if(it.diff&&!n.querySelector('.ac-diff')){const pre=document.createElement('pre');pre.className='ac-diff hidden';pre.innerHTML=diffHtml(it.diff);n.querySelector('.tk-body').appendChild(pre);n.classList.add('has-diff');}
+ });
+ while(list.children.length>items.length)list.lastChild.remove();
+}
+function closeActSheet(){const el=document.getElementById('acSheet');if(el)el.classList.remove('show');_ac.mid=null;_ac.kind=null;}
+function openActSheet(mid,kind){
+ const m=findThinkMsg(mid);if(!m)return;
+ let el=document.getElementById('acSheet');
+ if(!el){
+  el=document.createElement('div');el.id='acSheet';el.className='tk-sheet';
+  el.innerHTML='<div class="tk-scrim" data-acc="1"></div><div class="tk-panel" role="dialog"><div class="tk-grip-wrap"><div class="tk-grip"></div></div><div class="tk-h"></div><div class="tk-list"></div></div>';
+  document.body.appendChild(el);
+  el.addEventListener('click',e=>{if(e.target.hasAttribute('data-acc')){closeActSheet();return;}
+   const it=e.target.closest('.tk-it.has-diff');if(it){const d=it.querySelector('.ac-diff');if(d)d.classList.toggle('hidden');}});
+  const panel=el.querySelector('.tk-panel');let y0=null,dy=0;
+  const st=e=>{y0=e.touches[0].clientY;dy=0;panel.classList.add('drag');};
+  const mv=e=>{if(y0===null)return;dy=Math.max(0,e.touches[0].clientY-y0);panel.style.transform='translateY('+dy+'px)';};
+  const en=()=>{if(y0===null)return;panel.classList.remove('drag');const close=dy>90;panel.style.transform='';y0=null;if(close)closeActSheet();};
+  [el.querySelector('.tk-grip-wrap'),el.querySelector('.tk-h')].forEach(x=>{x.addEventListener('touchstart',st,{passive:true});x.addEventListener('touchmove',mv,{passive:true});x.addEventListener('touchend',en);x.addEventListener('touchcancel',en);});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&_ac.mid)closeActSheet();});
+ }
+ _ac.mid=mid;_ac.kind=kind;
+ el.querySelector('.tk-h').textContent=kind==='files'?'Files changed':'Steps';
+ const list=el.querySelector('.tk-list');list.innerHTML='';el.classList.add('show');renderActSheet(m);list.scrollTop=kind==='act'?list.scrollHeight:0;
+}
+document.addEventListener('click',e=>{const r=e.target.closest('[data-acsheet]');if(!r)return;const me=r.closest('[data-mid]');if(me)openActSheet(me.dataset.mid,r.dataset.acsheet);});
 function syncThinkHeights(host){try{(host||document).querySelectorAll('.tk').forEach(tk=>fitThinkDesc(tk,false));}catch(_){}}
 /* Text ticker beside the spinner: the window grows smoothly up to 4 lines, then new text glides up. */
 function fitThinkDesc(tk,animH,animS){
@@ -1381,7 +1445,8 @@ function activityCard(m){if(!m.activity||!m.activity.length)return '';
   return '<div class="act-row'+(nw?' new':'')+'">'+(x.icon?icon(x.icon,'sm '+(x.status==='fail'?'st-fail':x.status==='warn'?'st-warn':'muted')):'')+
    '<div class="act-col"><span class="lb">'+esc(x.label)+'</span>'+(x.path?'<span class="act-path">'+esc(x.path)+'</span>':'')+(x.detail?'<span class="act-'+(x.status==='fail'?'err':'det')+'">'+esc(x.detail)+'</span>':'')+'</div>'+
    (x.ts?'<span class="act-t">'+actTime(x.ts)+'</span>':'')+actSt(x.status)+'</div>';}).join('');
- return '<div class="card act'+(open?'':' collapsed')+'"><div class="card-head">'+icon('tools','sm')+'<div class="act-head-txt"><span class="act-title">'+esc(cur.label)+'</span><span class="act-sub">'+sub+'</span></div>'+actSt(cur.status)+icon('chev-d','sm act-chev')+'</div><div class="act-wrap"><div class="act-in">'+rows+'</div></div></div>';}
+ if(typeof _ac!=='undefined'&&_ac.mid===m.id&&_ac.kind==='act')setTimeout(()=>renderActSheet(m),0);
+ return '<div class="card act"><div class="ac-row'+(run?' live':'')+(fails?' bad':'')+'" data-acsheet="act"><div class="tk-rail">'+TK_ORB+'<span class="tk-line"></span></div><div class="tk-txt"><div class="tk-t">'+esc(cur.label)+'</div><div class="ac-sub">'+esc(sub)+'</div></div></div></div>';}
 function genCard(m){
  const gf=m.generatedFiles||[];if(!gf.length||m.ops)return '';
  const rows=gf.map((g,i)=>{const st=g.status||'generating',ex=(g.path.split('.').pop()||'').toLowerCase(),nm=g.path.split('/').pop().replace(/\.[^.]+$/,'')||g.path;
@@ -1393,11 +1458,10 @@ function genTail(m,path){const c=m.content||'',i=c.indexOf('```flayfiles');if(i<
 function readNames(atts,text){const p=String(text||'').toLowerCase(),o=[];(atts||[]).forEach(a=>{if(a.kind==='text')o.push(a.name);else if(a.kind==='zip'){const n=Object.keys(a.files||{}).sort((x,y)=>(p.includes(y.split('/').pop().toLowerCase())?1:0)-(p.includes(x.split('/').pop().toLowerCase())?1:0));o.push(...n.slice(0,12));}});return o;}
 
 function changesCard(m){if(!m.ops)return '';
- const rows=m.ops.results.filter(r=>r.ok).map(r=>{const d=m.ops.diffs[r.path]||{ops:[],plus:0,minus:0};
-  return `<div class="chg-row" data-path="${esc(r.path)}"><span class="chg-badge ${r.action==='folder'?'create':r.action}">${r.action==='create'?'A':r.action==='modify'?'M':r.action==='folder'?'F':'D'}</span><span class="chg-path" title="${esc(r.path)}">${esc(r.path)}</span><span class="chg-count"><span class="p">${d.plus?'+'+d.plus:''}</span> <span class="m">${d.minus?'\u2212'+d.minus:''}</span></span></div><div class="hidden" data-diff="${esc(r.path)}">${diffHtml(d)}</div>`;}).join('');
+ const n=m.ops.results.filter(r=>r.ok).length;
  const canRevert=S.project&&S.project.lastSnapshot&&S.project.lastSnapshot.messageId===m.id;
- return `<div class="card act2"><div class="card-head">${icon('code','sm')}<b>Changes applied to project</b><span class="muted small">${m.ops.results.filter(r=>r.ok).length} file(s)</span></div>${rows}
- ${canRevert?`<div class="card-foot"><button class="btn sm" data-revert="${m.id}">${icon('trash','sm')}Revert changes</button></div>`:''}</div>`;}
+ if(typeof _ac!=='undefined'&&_ac.mid===m.id&&_ac.kind==='files')setTimeout(()=>renderActSheet(m),0);
+ return `<div class="card act2"><div class="ac-row" data-acsheet="files"><div class="tk-rail">${TK_ORB}<span class="tk-line"></span></div><div class="tk-txt"><div class="tk-t">Changes applied to project</div><div class="ac-sub">${n} file(s)</div></div></div>${canRevert?`<div class="card-foot"><button class="btn sm" data-revert="${m.id}">${icon('trash','sm')}Revert changes</button></div>`:''}</div>`;}
 function diffHtml(d){if(!d||!d.ops)return '<div class="muted small" style="padding:8px 12px">No textual diff available.</div>';
  const rows=d.ops.slice(0,800).map(o=>`<span class="dl ${o.t==='+'?'plus':o.t==='-'?'minus':'ctx'}">${o.t===' '?'  ':o.t}${esc(o.s)}</span>`).join('');
  const more=d.ops.length>800?`<div class="muted small" style="padding:6px 12px">... ${d.ops.length-800} more lines</div>`:'';
