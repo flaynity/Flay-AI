@@ -85,6 +85,7 @@ input,textarea,select{font:inherit;color:inherit}
 .fd-logo svg{width:30px;height:30px;display:block;fill:none;stroke:none}
 .fd-title{font-size:23px;font-weight:700;letter-spacing:-.01em;color:#fff;line-height:1}
 .fd-title span{background:linear-gradient(90deg,#C04DFF,#7C3AED);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent}
+.fd-app-name-image{display:block;width:clamp(112px,36vw,156px);height:38px;object-fit:contain;object-position:left center;flex:none}
 .fd-nav{display:flex;flex-direction:column;gap:10px;padding:0 11px;margin-top:12px;flex:none}
 .fd-item{display:flex;align-items:center;width:100%;height:50px;padding:0 16px 0 12px;border-radius:16px;border:1.5px solid transparent;color:#fff;text-align:left;transition:background .18s,transform .12s;-webkit-tap-highlight-color:transparent;outline:none}
 .fd-item:active{transform:scale(.985);background:rgba(255,255,255,.05)}
@@ -657,7 +658,7 @@ section.screen .topbar>button.ibtn[data-back]{width:46px!important;height:46px!i
   <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs><linearGradient id="fdGrad" gradientUnits="userSpaceOnUse" x1="2" y1="2" x2="22" y2="22"><stop offset="0" stop-color="#FF3D8B"/><stop offset="1" stop-color="#9B4DFF"/></linearGradient></defs></svg>
   <div class="fd-head">
     <span class="fd-logo" aria-label="xFlay AI logo"><svg viewBox="0 0 100 100" role="img" aria-hidden="true"><defs><linearGradient id="flayLogoPink" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#FFD0FF"/><stop offset=".48" stop-color="#E000FF"/><stop offset="1" stop-color="#272BFF"/></linearGradient><linearGradient id="flayLogoBlue" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#12F5FF"/><stop offset=".55" stop-color="#087BFF"/><stop offset="1" stop-color="#2515FF"/></linearGradient></defs><path fill="url(#flayLogoPink)" d="M72 8C63 24 27 24 18 42 9 59 30 68 45 78 34 62 22 54 31 43 39 33 64 33 76 23 81 19 77 12 72 8Z"/><path fill="url(#flayLogoBlue)" d="M39 91C47 76 78 75 86 58 93 43 75 31 59 22 72 39 83 46 73 57 64 68 38 68 27 79 22 84 30 89 39 91Z"/><path fill="url(#flayLogoPink)" d="M50 37 55 46 65 50 55 55 50 65 45 55 35 50 45 46Z"/></svg></span>
-    <b class="fd-title">xFlay <span>AI</span></b>
+    <img class="fd-app-name-image" src="assets/app-name.png" alt="xFlay AI" />
   </div>
   <nav class="fd-nav">
     <button data-nav="agents" class="fd-item active">
