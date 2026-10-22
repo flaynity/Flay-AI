@@ -3716,7 +3716,7 @@ function attBlock(a,prompt,budget){
 function attTile(a,rm){const nm=a.path||a.name||'file',ext=(nm.split('.').pop()||'').slice(0,5).toUpperCase(),img=a.kind==='image'&&a.dataUrl;
  return '<span class="att-tile'+(img?' img':'')+'" title="'+esc(nm)+'"'+(img?' style="background-image:url(\''+a.dataUrl+'\')"':'')+'>'+(img?'':icon(a.kind==='zip'?'zip':a.kind==='project'?'folder':a.kind==='image'?'image':fileIcon(nm),'sm')+'<b>'+(a.kind==='zip'?'ZIP':esc(ext))+'</b><i>'+esc(nm.split('/').pop())+'</i>')+'<button '+rm+' aria-label="Remove">'+icon('x','xs')+'</button></span>';}
 function wkFmt(ms){const s=Math.max(1,Math.round(ms/1000));return s<60?s+'s':Math.floor(s/60)+'m '+(s%60)+'s';}
-function wkItems(m){if(m.caAgent)return [];const a=[],add=t=>{t=String(t||'').replace(/\s+/g,' ').trim();if(t&&!a.includes(t))a.push(t.slice(0,140));};
+function wkItems(m){const a=[],add=t=>{t=String(t||'').replace(/\s+/g,' ').trim();if(t&&!a.includes(t))a.push(t.slice(0,140));};
  (m.reads||[]).forEach(n=>add('Read '+n));(m.webSteps||[]).forEach(w=>add(w.t));
  (m.activity||[]).forEach(e=>add(e.label));(m.generatedFiles||[]).forEach(g=>add('Write '+g.path));return a;}
 function wkRow(t){const r=t.match(/^Read (.+?)(?: \(targeted\))?$/),w=t.match(/^(?:Write|Wrote|Writing|Updated|Created|Modified) (\S+)$/),k=r?['read',r[1]]:w?['write',w[1]]:null;
