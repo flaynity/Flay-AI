@@ -2951,10 +2951,11 @@ function mpLocalItems(){const ap=activeProvider(),out=[];
   ms.forEach(m=>out.push({pid:p.id,m,name:m,desc:p.name,logo:mpBrand(m)||mpBrand(p.name)||'chip',on:!!(ap&&p.id===ap.id&&m===p.model)}));});
  return out;}
 function mpRow(it,i){
- const lg=it.logo==='chip'?'<svg class="ic" aria-hidden="true"><use href="#i-chip"/></svg>':`<svg class="mlogo" aria-hidden="true"><use href="#l-${it.logo}"/></svg>`;
- return `<button class="mp-row${it.on?' on':''}" style="--i:${Math.min(i,9)}" role="option" aria-selected="${!!it.on}" ${it.pro?'data-pro="1"':`data-mp="${esc(it.pid)}" data-m="${esc(it.m)}"`}>
-  <span class="mp-body"><span class="mp-name"><span class="mp-brandmark ${esc(it.logo||'chip')}" aria-hidden="true">${lg}</span><b>${esc(it.name)}</b>${it.pro?'<i class="mp-pro">Pro</i>':''}</span><span class="mp-desc">${esc(it.desc)}</span></span>
-  ${it.on?icon('check'):''}</button>`;}
+ const officialLogo={claude:'https://claude.ai/favicon.ico',gemini:'https://gemini.google.com/favicon.ico',deepseek:'https://www.deepseek.com/favicon.ico',meta:'https://about.meta.com/favicon.ico',zai:'https://z.ai/favicon.ico',grok:'https://grok.com/favicon.ico'};
+ const lg=officialLogo[it.logo]?'<img class="mp-official-logo" src="'+officialLogo[it.logo]+'" alt="" aria-hidden="true" loading="eager" referrerpolicy="no-referrer">':it.logo==='chip'?'<svg class="ic" aria-hidden="true"><use href="#i-chip"/></svg>':\`<svg class="mlogo" aria-hidden="true"><use href="#l-\${it.logo}"/></svg>\`;
+ return \`<button class="mp-row\${it.on?' on':''}" style="--i:\${Math.min(i,9)}" role="option" aria-selected="\${!!it.on}" \${it.pro?'data-pro="1"':\`data-mp="\${esc(it.pid)}" data-m="\${esc(it.m)}"\`}>
+  <span class="mp-body"><span class="mp-name"><span class="mp-brandmark \${esc(it.logo||'chip')}" aria-hidden="true">\${lg}</span><b>\${esc(it.name)}</b>\${it.pro?'<i class="mp-pro">Pro</i>':''}</span><span class="mp-desc">\${esc(it.desc)}</span></span>
+  \${it.on?icon('check'):''}</button>\`;}
 function mpLocalHtml(){
  const provs=S.settings.providers;
  if(!provs.length)return `<div class="mp-empty"><span>No local models yet. Connect your own provider to use its models here.</span><button class="mp-chip pri" data-mpsetup="1" style="height:40px;padding:0 20px;font-size:14px">Set up AI</button></div>`;
@@ -4555,14 +4556,8 @@ section.screen .topbar>button.ibtn[data-menu]:active{
 .mp-brandmark{flex:none;width:25px;height:25px;display:inline-flex;align-items:center;justify-content:center;color:var(--text)}
 .mp-brandmark svg{display:block;width:23px;height:23px}
 .mp-brandmark .ic{width:21px;height:21px}
-.mp-brandmark.claude{color:#D97757}
+.mp-official-logo{display:block;width:24px;height:24px;object-fit:contain;flex:none}
 .mp-brandmark.openai{color:var(--text)}
-.mp-brandmark.gemini{color:#4285F4}
-.mp-brandmark.deepseek{color:#287DFA}
-.mp-brandmark.meta{color:#0866FF}
-.mp-brandmark.zai{color:#3478F6}
-.mp-brandmark.grok{color:var(--text)}
-[data-theme=light] .mp-brandmark.openai,[data-theme=light] .mp-brandmark.grok{color:#171717}
 .mp-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
 .mp-name{display:flex;align-items:center;gap:8px;min-width:0}
 .mp-name b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:18px;font-weight:600;color:var(--text)}
