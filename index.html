@@ -2951,11 +2951,10 @@ function mpLocalItems(){const ap=activeProvider(),out=[];
   ms.forEach(m=>out.push({pid:p.id,m,name:m,desc:p.name,logo:mpBrand(m)||mpBrand(p.name)||'chip',on:!!(ap&&p.id===ap.id&&m===p.model)}));});
  return out;}
 function mpRow(it,i){
- const lg=it.logo==='chip'?'<svg class="ic"><use href="#i-chip"/></svg>':`<svg class="mlogo" aria-hidden="true"><use href="#l-${it.logo}"/></svg>`;
- return `<button class="mp-row${it.on?' on':''}" style="--i:${Math.min(i,9)}" role="option" aria-selected="${!!it.on}" ${it.pro?'data-pro="1"':`data-mp="${esc(it.pid)}" data-m="${esc(it.m)}"`}>
-  <span class="mp-ico">${lg}</span>
-  <span class="mp-body"><span class="mp-name"><b>${esc(it.name)}</b>${it.pro?'<i class="mp-pro">Pro</i>':''}</span><span class="mp-desc">${esc(it.desc)}</span></span>
-  ${it.on?icon('check'):''}</button>`;}
+ const lg=it.logo==='chip'?'<svg class="ic" aria-hidden="true"><use href="#i-chip"/></svg>':\`<svg class="mlogo" aria-hidden="true"><use href="#l-\${it.logo}"/></svg>\`;
+ return \`<button class="mp-row\${it.on?' on':''}" style="--i:\${Math.min(i,9)}" role="option" aria-selected="\${!!it.on}" \${it.pro?'data-pro="1"':\`data-mp="\${esc(it.pid)}" data-m="\${esc(it.m)}"\`}>
+  <span class="mp-body"><span class="mp-name"><span class="mp-brandmark \${esc(it.logo||'chip')}" aria-hidden="true">\${lg}</span><b>\${esc(it.name)}</b>\${it.pro?'<i class="mp-pro">Pro</i>':''}</span><span class="mp-desc">\${esc(it.desc)}</span></span>
+  \${it.on?icon('check'):''}</button>\`;}
 function mpLocalHtml(){
  const provs=S.settings.providers;
  if(!provs.length)return `<div class="mp-empty"><span>No local models yet. Connect your own provider to use its models here.</span><button class="mp-chip pri" data-mpsetup="1" style="height:40px;padding:0 20px;font-size:14px">Set up AI</button></div>`;
@@ -4553,10 +4552,17 @@ section.screen .topbar>button.ibtn[data-menu]:active{
 .mp-row.on{background:rgba(255,255,255,.075);border-color:rgba(255,255,255,.13)}
 [data-theme=light] .mp-row.on{background:rgba(15,23,42,.06);border-color:rgba(15,23,42,.12)}
 @keyframes mpRow{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
-.mp-ico{flex:none;width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:1.5px solid rgba(255,255,255,.32);color:var(--text);background:rgba(255,255,255,.02)}
-[data-theme=light] .mp-ico{border-color:rgba(15,23,42,.22);background:rgba(15,23,42,.02)}
-.mp-ico svg{width:26px;height:26px}
-.mp-ico .ic{width:24px;height:24px}
+.mp-brandmark{flex:none;width:25px;height:25px;display:inline-flex;align-items:center;justify-content:center;color:var(--text)}
+.mp-brandmark svg{display:block;width:23px;height:23px}
+.mp-brandmark .ic{width:21px;height:21px}
+.mp-brandmark.claude{color:#D97757}
+.mp-brandmark.openai{color:var(--text)}
+.mp-brandmark.gemini{color:#4285F4}
+.mp-brandmark.deepseek{color:#287DFA}
+.mp-brandmark.meta{color:#0866FF}
+.mp-brandmark.zai{color:#3478F6}
+.mp-brandmark.grok{color:var(--text)}
+[data-theme=light] .mp-brandmark.openai,[data-theme=light] .mp-brandmark.grok{color:#171717}
 .mp-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
 .mp-name{display:flex;align-items:center;gap:8px;min-width:0}
 .mp-name b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:18px;font-weight:600;color:var(--text)}
