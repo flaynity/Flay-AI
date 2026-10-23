@@ -1294,9 +1294,18 @@ var db=null,acked=new Map(),chains=new Map(),loaded={chats:null,projects:null},d
 function base(){return db.ref('users/'+Cloud.uid);}
 function report(e){e=niceError(e);if(Cloud.onError)Cloud.onError(e);else if(root.console)console.error(e);return e;}
 Cloud.init=function(database){db=database;};
+Cloud.offline=false;
 Cloud.load=function(user){
- Cloud.uid=user.uid;acked=new Map();chains=new Map();var b=base();
- return Promise.all(['settings','chats','projects','drafts','profile'].map(function(n){return b.child(n).once('value');})).then(function(s){
+ Cloud.uid=user.uid;acked=new Map();chains=new Map();var b=base(),timedOut=false;
+ var reads=Promise.all(['settings','chats','projects','drafts','profile'].map(function(n){return b.child(n).once('value');}));
+ var timeout=new Promise(function(resolve){setTimeout(function(){timedOut=true;resolve(null);},12000);});
+ return Promise.race([reads.then(function(values){return {values:values};}).catch(function(error){return {error:error};}),timeout.then(function(){return {timeout:true};})]).then(function(result){
+  if(!result||result.timeout||result.error){
+   Cloud.offline=true;Cloud.settings={};loaded.chats=[];loaded.projects=[];drafts={};Cloud.profile=null;
+   if(root.console)root.console.warn('[Flay-AI] Workspace data could not be loaded; opening the app without remote data.',result&&result.error||'Firebase read timed out');
+   return true;
+  }
+  var s=result.values;Cloud.offline=false;
   Cloud.settings=s[0].val()?dec(s[0].val()):{};
   ['chats','projects'].forEach(function(store,i){
    var v=s[i+1].val()||{},list=[];
@@ -1305,7 +1314,7 @@ Cloud.load=function(user){
   drafts={};var dv=s[3].val()||{};Object.keys(dv).forEach(function(k){if(typeof dv[k]==='string')drafts[kD(k)]=dv[k];});
   Cloud.profile=s[4].val()?dec(s[4].val()):null;
   return true;
- }).catch(function(e){throw niceError(e);});
+ });
 };
 Cloud.touchProfile=function(user){
  var d={lastLoginAt:Date.now()};
@@ -3615,6 +3624,7 @@ document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;
  S.chat=S.chats.find(c=>c.id===last)||null;
  if(!S.chat){S.chat={id:uid(),title:'',createdAt:Date.now(),updatedAt:Date.now(),messages:[]};S.chats.unshift(S.chat);}
  renderChat();
+ if(Cloud.offline)toast('Workspace opened, but Firebase data is unavailable. Changes may not sync until the connection is restored.','warn');
  startComposerPlaceholder();
  startAgentPlaceholder();
  setWebAccess(true);
