@@ -2043,7 +2043,7 @@ function closeActSheet(fromPop){const el=document.getElementById('acSheet');if(e
 function acShowList(){const m=findThinkMsg(_ac.mid);if(!m)return;_ac.view='list';renderActSheet(m);const l=document.querySelector('#acSheet .cl-list');if(!l)return;
  requestAnimationFrame(()=>{if(_ac.ls!=null)l.scrollTop=_ac.ls;else if(_ac.ev){const t=l.querySelector('[data-evid="'+_ac.ev+'"]');if(t)l.scrollTop=Math.max(0,t.offsetTop-24);}});}
 function acBack(){if(!_ac.mid)return;if(_ac.kind==='act'&&_ac.view==='detail'){if(_ac.d>=2)history.back();else acShowList();}else closeActSheet();}
-window.addEventListener('popstate',()=>{if(_ac.mute){_ac.mute=false;return;}if(!_ac.mid)return;_ac.d=Math.max(0,_ac.d-1);if(_ac.kind==='act'&&_ac.view==='detail')acShowList();else closeActSheet(true);});
+window.addEventListener('popstate',()=>{if(_ac.mute){_ac.mute=false;window.__flayBackConsumed=true;return;}if(!_ac.mid)return;window.__flayBackConsumed=true;_ac.d=Math.max(0,_ac.d-1);if(_ac.kind==='act'&&_ac.view==='detail')acShowList();else closeActSheet(true);});
 function openActSheet(mid,kind,evid,n){
  const m=findThinkMsg(mid);if(!m)return;
  let el=document.getElementById('acSheet');
@@ -2263,13 +2263,39 @@ function startReply(sel,mid){
  });
 }
 
-/* ---------- navigation ---------- */
-function openScreen(id,opts={}){const cur=$('.screen.active');
- if(opts.reset)S.navStack=[];else if(cur&&cur.id!==id&&cur.id!=='screen-chat')S.navStack.push(cur.id);
- $$('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');closeDrawer();}
-function goBack(){const id=S.navStack.pop()||'screen-chat';$$('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');
- if(id==='screen-project'&&S.project)renderPjAll();}
-$$('[data-back]').forEach(b=>b.onclick=goBack);
+/* ---------- navigation + Android WebView back support ---------- */
+function activateScreen(id){
+ const target=document.getElementById(id)||document.getElementById('screen-chat');
+ $('.screen').forEach(s=>s.classList.remove('active'));
+ if(target)target.classList.add('active');
+ if(target&&target.id==='screen-project'&&S.project)renderPjAll();
+ closeDrawer();
+}
+function openScreen(id,opts={}){
+ const cur=$('.screen.active');
+ if(opts.reset)S.navStack=[];
+ else if(cur&&cur.id!==id&&cur.id!=='screen-chat')S.navStack.push(cur.id);
+ activateScreen(id);
+ try{history.pushState({flayScreen:id},'',location.href);}catch(e){}
+}
+function goBack(fromPop){
+ if(!fromPop&&history.state&&history.state.flayScreen&&history.length>1){try{history.back();return;}catch(e){}}
+ const id=S.navStack.pop()||'screen-chat';
+ activateScreen(id);
+}
+$('[data-back]').forEach(b=>b.onclick=()=>goBack(false));
+/* Android MainActivity implementations that call WebView.goBack() now navigate
+   the in-app screen stack instead of leaving the app or staying on the same page. */
+window.addEventListener('popstate',function(e){
+ if(window.__flayBackConsumed){window.__flayBackConsumed=false;return;}
+ const active=$('.screen.active');
+ if(drawer&&drawer.classList.contains('open')){closeDrawer();try{history.pushState({flayScreen:active&&active.id||'screen-chat'},'',location.href);}catch(err){}return;}
+ if(modalRoot&&modalRoot.classList.contains('show')){closeModal();try{history.pushState({flayScreen:active&&active.id||'screen-chat'},'',location.href);}catch(err){}return;}
+ if(typeof closeChatMenu==='function'&&fdMenuEl){closeChatMenu();try{history.pushState({flayScreen:active&&active.id||'screen-chat'},'',location.href);}catch(err){}return;}
+ const id=S.navStack.pop()||'screen-chat';
+ activateScreen(id);
+});
+
   $$('[data-menu]').forEach(b=>b.onclick=openDrawer);
 
 /* drawer */
