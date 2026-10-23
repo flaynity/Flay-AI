@@ -2266,7 +2266,7 @@ function startReply(sel,mid){
 /* ---------- navigation + Android WebView back support ---------- */
 function activateScreen(id){
  const target=document.getElementById(id)||document.getElementById('screen-chat');
- $('.screen').forEach(s=>s.classList.remove('active'));
+ $$('.screen').forEach(s=>s.classList.remove('active'));
  if(target)target.classList.add('active');
  if(target&&target.id==='screen-project'&&S.project)renderPjAll();
  closeDrawer();
