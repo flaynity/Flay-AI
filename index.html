@@ -1482,7 +1482,24 @@ $('liForgot').addEventListener('click',function(){
  if(!EMAIL.test(em))return note('liErr','Enter your email above, then tap Forgot password.');
  auth.sendPasswordResetEmail(em).then(function(){note('liErr','Password reset link sent to '+em+'.',true);}).catch(function(err){note('liErr',msg(err));});
 });
-/* Native Android Google Sign-In returns the Google ID token through MainActivity. */
+/* Always restore Google buttons when native sign-in succeeds, fails, or returns without a token. */
+var googleSignInRecoveryTimer=null;
+function resetGoogleSignInButtons(){
+ if(googleSignInRecoveryTimer){clearTimeout(googleSignInRecoveryTimer);googleSignInRecoveryTimer=null;}
+ document.querySelectorAll('[data-soc="google"]').forEach(function(btn){btn.classList.remove('busy');btn.disabled=false;});
+}
+function armGoogleSignInRecovery(errId){
+ if(googleSignInRecoveryTimer)clearTimeout(googleSignInRecoveryTimer);
+ googleSignInRecoveryTimer=setTimeout(function(){
+  resetGoogleSignInButtons();
+  note(errId,'Google Sign-In did not finish. Please try again.');
+ },45000);
+}
+document.addEventListener('visibilitychange',function(){
+ if(document.visibilityState==='visible'&&googleSignInRecoveryTimer){
+  setTimeout(function(){if(document.visibilityState==='visible')resetGoogleSignInButtons();},700);
+ }
+});
 window.handleNativeGoogleSignIn=function(idToken){
  var errId=cur==='signup'?'suErr':'liErr';
  try{
@@ -1492,11 +1509,11 @@ window.handleNativeGoogleSignIn=function(idToken){
   persist(rem[cur==='signup'?'signup':'login']).then(function(){
    return auth.signInWithCredential(credential);
   }).catch(function(err){note(errId,msg(err));}).then(function(){
-   document.querySelectorAll('[data-soc="google"]').forEach(function(btn){btn.classList.remove('busy');});
+   resetGoogleSignInButtons();
   });
  }catch(err){
   note(errId,msg(err));
-  document.querySelectorAll('[data-soc="google"]').forEach(function(btn){btn.classList.remove('busy');});
+  resetGoogleSignInButtons();
  }
 };
 document.querySelectorAll('[data-soc]').forEach(function(b){
@@ -1507,8 +1524,9 @@ document.querySelectorAll('[data-soc]').forEach(function(b){
   /* In Sketchware WebView, use the existing native Google Sign-In flow when available. */
   if(kind==='google'&&window.AndroidBridge&&typeof window.AndroidBridge.triggerGoogleSignIn==='function'){
    b.classList.add('busy');
+   armGoogleSignInRecovery(errId);
    try{window.AndroidBridge.triggerGoogleSignIn();}
-   catch(e){b.classList.remove('busy');note(errId,msg(e));}
+   catch(e){resetGoogleSignInButtons();note(errId,msg(e));}
    return;
   }
   try{
@@ -1520,7 +1538,7 @@ document.querySelectorAll('[data-soc]').forEach(function(b){
    var c=(err&&err.code)||'';
    if(/popup-blocked|operation-not-supported/.test(c)&&/^https?:$/.test(location.protocol)){return auth.signInWithRedirect(p);}
    note(errId,msg(err));
-  }).then(function(){b.classList.remove('busy');});
+  }).then(function(){resetGoogleSignInButtons();});
  });
 });
 
