@@ -1642,7 +1642,82 @@ function promptDlg(o){return new Promise(res=>{modal(`<h3>${esc(o.title)}</h3><d
  $('#mC').onclick=()=>{closeModal();res(null)};$('#mO').onclick=ok;
  i.addEventListener('keydown',e=>{if(e.key==='Enter')ok();});});}
 /* ---------- Firebase Realtime Database (users/<uid>/...) ---------- */
-const DB={put:(st,v)=>Cloud.put(st,v),del:(st,id)=>Cloud.del(st,id),all:st=>Cloud.all(st),get:(st,id)=>Cloud.get(st,id)};
+/* ---------- Local-first chat storage ----------
+   1) every chat / project-agent message is written to localStorage immediately (never straight to Firebase)
+   2) records that changed are flagged "dirty"
+   3) when the user leaves the app (hidden / pagehide / sign-out) every dirty record is pushed to Firebase Realtime Database
+   4) if the push could not finish, the dirty flags stay and it is retried on the next launch */
+const LDB=(()=>{
+ const base=()=>'synora:'+(Cloud.uid||'guest')+':',pre=k=>base()+k+':';
+ let dm=null,dmFor=null,warned=0;
+ const dirty=()=>{const b=base();if(dm&&dmFor===b)return dm;dmFor=b;try{dm=JSON.parse(localStorage.getItem(b+'__dirty')||'{}')||{};}catch(e){dm={};}dm.chats=dm.chats||{};dm.agent=dm.agent||{};return dm;};
+ const saveDirty=()=>{try{localStorage.setItem(base()+'__dirty',JSON.stringify(dm));}catch(e){}};
+ const fail=e=>{const n=Date.now();if(n-warned>8000){warned=n;try{toast('Local save failed (device storage may be full): '+String((e&&e.message)||e),'err');}catch(_){}}};
+ const L={
+  set(kind,id,val,quiet){try{localStorage.setItem(pre(kind)+id,JSON.stringify(val));}catch(e){fail(e);return false;}
+   if(!quiet){const d=dirty();if(!d[kind][id]){d[kind][id]=1;saveDirty();}}return true;},
+  get(kind,id){try{const t=localStorage.getItem(pre(kind)+id);return t?JSON.parse(t):undefined;}catch(e){return undefined;}},
+  del(kind,id){try{localStorage.removeItem(pre(kind)+id);}catch(e){}L.clean(kind,id);},
+  clean(kind,id){const d=dirty();if(d[kind][id]){delete d[kind][id];saveDirty();}},
+  mark(kind,id){const d=dirty();if(!d[kind][id]){d[kind][id]=1;saveDirty();}},
+  ids(kind){const p=pre(kind),out=[];try{for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.indexOf(p)===0)out.push(k.slice(p.length));}}catch(e){}return out;},
+  all(kind){const out=[];L.ids(kind).forEach(id=>{const v=L.get(kind,id);if(v&&typeof v==='object')out.push(v);});return out;},
+  dirtyIds(kind){return Object.keys(dirty()[kind]);},
+  hasDirty(){const d=dirty();return Object.keys(d.chats).length+Object.keys(d.agent).length>0;},
+  flag(n){try{return localStorage.getItem(base()+n);}catch(e){return null;}},
+  setFlag(n){try{localStorage.setItem(base()+n,'1');}catch(e){}}
+ };
+ return L;
+})();
+const fbAgentRef=pid=>firebase.database().ref('users/'+Cloud.uid+'/agentChats/'+Cloud._kE(pid));
+const fbTimeout=(p,ms)=>new Promise((res,rej)=>{const t=setTimeout(()=>rej(new Error('timeout')),ms);p.then(v=>{clearTimeout(t);res(v);},e=>{clearTimeout(t);rej(e);});});
+const Sync={busy:null,
+ run(){
+  if(!Cloud.uid||typeof firebase==='undefined')return Promise.resolve();
+  if(Sync.busy)return Sync.busy;
+  const jobs=[];
+  LDB.dirtyIds('chats').forEach(id=>{const rec=LDB.get('chats',id);if(!rec){LDB.clean('chats',id);return;}
+   jobs.push(Cloud.put('chats',rec).then(()=>LDB.clean('chats',id)).catch(()=>{}));});
+  LDB.dirtyIds('agent').forEach(pid=>{const arr=LDB.get('agent',pid);if(!Array.isArray(arr)){LDB.clean('agent',pid);return;}
+   const e=Cloud._enc(arr);
+   jobs.push(fbTimeout(fbAgentRef(pid).set(e===undefined?null:e),25000).then(()=>LDB.clean('agent',pid)).catch(()=>{}));});
+  if(!jobs.length)return Promise.resolve();
+  Sync.busy=Promise.all(jobs).then(()=>{Sync.busy=null;},()=>{Sync.busy=null;});
+  return Sync.busy;},
+ boot(){
+  const pending=LDB.hasDirty();
+  if(!LDB.flag('sync2')){LDB.ids('chats').forEach(id=>LDB.mark('chats',id));LDB.ids('agent').forEach(id=>LDB.mark('agent',id));LDB.setFlag('sync2');}
+  if(pending)setTimeout(()=>{Sync.run();},3000);}
+};
+/* runs on every "user leaves the app" signal the cloud layer already listens to (hidden / pagehide) and on sign-out */
+(()=>{const f=Cloud.flush;Cloud.flush=function(){return Promise.all([f.apply(Cloud,arguments),Sync.run()]);};
+ window.addEventListener('beforeunload',()=>{Sync.run();});})();
+const withLocalAgent=p=>{if(!p)return p;const la=LDB.get('agent',p.id);if(la!==undefined)p.agent=la;else if(!Array.isArray(p.agent))p.agent=[];else if(p.agent.length)LDB.set('agent',p.id,p.agent);return p;};
+const DB={
+ put:(st,v)=>{
+  if(st==='chats'){LDB.set('chats',v.id,v);return Promise.resolve();}
+  if(st==='projects'){const rest=Object.assign({},v);delete rest.agent;LDB.set('agent',v.id,Array.isArray(v.agent)?v.agent:[]);return Cloud.put('projects',rest);}
+  return Cloud.put(st,v);},
+ del:(st,id)=>{
+  if(st==='chats'){LDB.del('chats',id);return Cloud.del('chats',id).catch(()=>{});}
+  if(st==='projects'){LDB.del('agent',id);try{fbAgentRef(id).remove().catch(()=>{});}catch(e){}return Cloud.del('projects',id);}
+  return Cloud.del(st,id);},
+ all:async st=>{
+  if(st==='chats'){
+   const remote=await Cloud.all('chats'),out=LDB.all('chats'),have=new Set(out.map(c=>c.id));
+   for(const c of remote){if(!c||c.id===undefined||have.has(c.id))continue;LDB.set('chats',c.id,c,true);out.push(c);}
+   return out;}
+  const list=await Cloud.all(st);
+  if(st!=='projects')return list;
+  return Promise.all(list.map(async p=>{
+   if(LDB.get('agent',p.id)===undefined&&!(Array.isArray(p.agent)&&p.agent.length)){
+    try{const sn=await fbTimeout(fbAgentRef(p.id).once('value'),8000),v=sn.val();if(v){const a=Cloud._dec(v);if(Array.isArray(a)&&a.length){LDB.set('agent',p.id,a,true);}}}catch(e){}}
+   return withLocalAgent(p);}));},
+ get:async(st,id)=>{
+  if(st==='chats')return LDB.get('chats',id);
+  const r=await Cloud.get(st,id);
+  return st==='projects'?withLocalAgent(r):r;}
+};
 Cloud.onError=(()=>{let t=0;return e=>{const n=Date.now();if(n-t>8000){t=n;toast('Cloud save failed: '+String((e&&e.message)||e),'err');}};})();
 /* ---------- global state ---------- */
 const S={settings:{providers:[],selectedProviderId:null,reasoning:'balanced'},
@@ -1805,14 +1880,15 @@ async function providerChat(o){const p=o.provider;if(!p)throw new Error('No AI p
  if(!res.ok){let t='';try{t=await res.text()}catch(_){}throw new Error(describeHttp(res.status,t));}
  if(!body.stream||!res.body){const j=await res.json();const m=(j.choices&&j.choices[0]&&j.choices[0].message)||{};const c=m.content||'';
   if(o.onDelta&&c)o.onDelta(c);if(o.onReasoning&&(m.reasoning_content||m.reasoning))o.onReasoning(m.reasoning_content||m.reasoning);return c;}
- const reader=res.body.getReader(),dec=new TextDecoder();let buf='';
- while(true){const{done,value}=await reader.read();if(done)break;buf+=dec.decode(value,{stream:true});
-  let i;while((i=buf.indexOf('\n'))>=0){const line=buf.slice(0,i).trim();buf=buf.slice(i+1);
-   if(!line.startsWith('data:'))continue;const data=line.slice(5).trim();
-   if(data==='[DONE]')return;
-   let j;try{j=JSON.parse(data)}catch(_){continue}
-   const d=(j.choices&&j.choices[0]&&j.choices[0].delta)||{};const r=d.reasoning_content||d.reasoning||'';const c=d.content||'';
-   if(r&&o.onReasoning)o.onReasoning(r);if(c&&o.onDelta)o.onDelta(c);}}
+ const reader=res.body.getReader(),dec=new TextDecoder();let buf='';const IDLE=o.idleMs||120000;
+ const rd=()=>new Promise((ok,no)=>{const t=setTimeout(()=>{try{reader.cancel();}catch(_){}no(new Error('Network error: the provider stopped responding for '+Math.round(IDLE/1000)+'s'));},IDLE);reader.read().then(v=>{clearTimeout(t);ok(v);},e=>{clearTimeout(t);no(e);});});
+ const one=line=>{line=line.trim();if(!line.startsWith('data:'))return false;const data=line.slice(5).trim();if(data==='[DONE]')return true;
+  let j;try{j=JSON.parse(data)}catch(_){return false}
+  const d=(j.choices&&j.choices[0]&&j.choices[0].delta)||{};const r=d.reasoning_content||d.reasoning||'';const c=d.content||'';
+  if(r&&o.onReasoning)o.onReasoning(r);if(c&&o.onDelta)o.onDelta(c);return false;};
+ while(true){const{done,value}=await rd();if(done)break;buf+=dec.decode(value,{stream:true});
+  let i;while((i=buf.indexOf('\n'))>=0){const line=buf.slice(0,i);buf=buf.slice(i+1);if(one(line))return '';}}
+ if(buf.trim())one(buf);
  return '';}
 async function fetchModels(p){const h={};if(p.apiKey)h.Authorization='Bearer '+p.apiKey;
  const res=await fetch(modelsUrl(p.baseUrl),{headers:h});if(!res.ok)throw new Error(describeHttp(res.status,''));
@@ -3695,7 +3771,7 @@ document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;
 
 (async function boot(){await XAuth.ready;try{loadSettings();applyTheme();
  try{const[chats,projects]=await Promise.all([DB.all('chats'),DB.all('projects')]);
-  S.chats=chats.sort((a,b)=>b.updatedAt-a.updatedAt);S.projects=projects;}catch(e){}
+  S.chats=chats.sort((a,b)=>b.updatedAt-a.updatedAt);S.projects=projects;Sync.boot();}catch(e){}
  const last=(Cloud.settings||{}).lastChatId||null;
  S.chat=S.chats.find(c=>c.id===last)||null;
  if(!S.chat){S.chat={id:uid(),title:'',createdAt:Date.now(),updatedAt:Date.now(),messages:[]};S.chats.unshift(S.chat);}
