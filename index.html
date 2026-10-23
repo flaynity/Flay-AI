@@ -664,6 +664,58 @@ body.auth-open #toasts{z-index:6000}
 .fd-user{cursor:pointer}
 .fd-usub{overflow:hidden;text-overflow:ellipsis}
 </style>
+<style id="model-picker-css">
+/* top-bar model button (chat and project Agent tab) */
+#screen-chat .ftop>#btnNewChat{margin-left:0!important}
+.mtop{flex:1 1 auto;min-width:0;max-width:min(64vw,300px);margin:0 auto;height:44px;padding:0 16px;display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:9999px;background:var(--surface-glass);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,27,122,.4);box-shadow:0 4px 18px rgba(255,27,122,.16);color:var(--text);font-size:15px;font-weight:600;letter-spacing:.1px;transition:transform .12s,box-shadow .12s}
+.mtop:active{transform:scale(.96)}
+.mtop-t{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mtop-c{flex:none;width:14px;height:14px;color:var(--text2);transform:rotate(180deg)}
+.mtop.empty .mtop-t{color:var(--text2);font-weight:500}
+#pjAgent{position:relative}
+#pjAgent .mtop-float{position:absolute;left:0;right:0;top:calc(env(safe-area-inset-top) + 58px);display:flex;justify-content:center;z-index:999;pointer-events:none;padding:0 16px}
+#pjAgent .mtop-float .mtop{pointer-events:auto;flex:0 1 auto;max-width:min(78vw,320px)}
+#screen-project #pjAgent>.scrollpane{padding-top:112px!important}
+/* bottom sheet */
+.mx-sheet{position:fixed;left:0;right:0;bottom:0;height:min(80dvh,740px);max-height:calc(100dvh - env(safe-area-inset-top) - 24px);display:flex;flex-direction:column;padding:8px 14px calc(14px + env(safe-area-inset-bottom));background:var(--surface);border:1px solid var(--border);border-bottom:0;border-radius:30px 30px 0 0;box-shadow:0 -18px 60px rgba(0,0,0,.6);animation:mxUp .3s cubic-bezier(.2,.9,.25,1);z-index:101}
+:root:not([data-theme=light]) .mx-sheet{background:linear-gradient(180deg,#13141C 0%,#07070C 60%)}
+@keyframes mxUp{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
+.mx-grip{width:40px;height:4px;border-radius:2px;background:rgba(255,255,255,.2);margin:4px auto 12px;flex:none}
+.mx-search{display:flex;align-items:center;gap:10px;height:46px;padding:0 16px;border-radius:9999px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);flex:none;margin-bottom:12px;transition:border-color .15s,box-shadow .15s}
+.mx-search:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.mx-search input{flex:1;min-width:0;border:0;background:transparent;outline:none;font-size:15px;color:var(--text)}
+.mx-search input::placeholder{color:var(--text-muted)}
+.mx-tabs{display:flex;gap:8px;overflow-x:auto;padding:2px 0 12px;flex:none;scrollbar-width:none}
+.mx-tabs::-webkit-scrollbar{display:none}
+.mx-tab{flex:none;height:34px;padding:0 15px;border-radius:9999px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);font-size:13.5px;font-weight:600;transition:background .15s,color .15s}
+.mx-tab.on{background:var(--text);color:var(--bg);border-color:transparent}
+.mx-list{position:relative;flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:0 2px 10px}
+.mx-sec.hidden,.mx-row.hidden{display:none!important}
+.mx-title{display:flex;align-items:center;gap:10px;margin:14px 4px 10px;font-size:11.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--text2)}
+.mx-title::after{content:"";flex:1;height:1px;background:var(--border)}
+.mx-row{display:flex;align-items:center;gap:12px;width:100%;min-height:58px;padding:9px 14px 9px 9px;margin-bottom:8px;border-radius:18px;background:var(--surface2);border:1px solid var(--border);text-align:left;transition:background .15s,transform .1s}
+button.mx-row:not(:disabled):active{transform:scale(.985)}
+.mx-row.lock{cursor:default}
+.mx-row.on{border-color:transparent;background:linear-gradient(var(--surface2),var(--surface2)) padding-box,linear-gradient(90deg,#FF1B7A,#7C3AED) border-box}
+.mx-logo{width:40px;height:40px;border-radius:13px;display:flex;align-items:center;justify-content:center;flex:none;background:var(--bg);border:1px solid var(--border);color:var(--bc,var(--text))}
+.mx-logo svg{width:21px;height:21px}
+.mx-name{flex:1;min-width:0;font-size:15px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mx-pro{flex:none;padding:4px 10px;border-radius:9999px;font-size:10.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#fff;background:var(--accent-gradient);box-shadow:0 2px 12px rgba(255,27,122,.35)}
+.mx-chk{flex:none;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--accent-gradient);color:#fff}
+.mx-prov{margin-bottom:6px}
+.mx-prov-h{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:4px 4px 8px;font-size:13px;font-weight:600;color:var(--text2)}
+.mx-chip{flex:none;height:30px;padding:0 13px;border-radius:9999px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);font-size:12px;font-weight:600}
+.mx-chip.pri{background:var(--accent-gradient);border-color:transparent;color:#fff}
+.mx-add{display:flex;gap:8px;margin:2px 0 8px}
+.mx-inp{flex:1;min-width:0;height:36px;padding:0 14px;border-radius:9999px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:14px;outline:none}
+.mx-inp:focus{border-color:var(--accent)}
+.mx-empty{padding:10px 6px 14px;font-size:13px;color:var(--text2)}
+.mx-sheet.mx-eff-sheet{height:auto}
+.mx-eff-h{display:flex;flex-direction:column;gap:4px;padding:4px 6px 14px}
+.mx-eff-h b{font-size:17px}
+.mx-eff-h span{font-size:13px;color:var(--text2)}
+@media (prefers-reduced-motion:reduce){.mx-sheet{animation:none}}
+</style>
 </head>
 <body>
 <!-- AUTH (Welcome / Login / Sign Up) -->
@@ -840,6 +892,7 @@ body.auth-open #toasts{z-index:6000}
 <div class="screen active" id="screen-chat" style="z-index:10">
   <header class="ftop">
     <button class="fbtn" id="btnMenu" aria-label="Menu"><svg class="ic"><use href="#i-menu"/></svg></button>
+    <button class="mtop empty" id="chatModelTop" aria-label="Select model"><span class="mtop-t">Select model</span><svg class="ic sm mtop-c"><use href="#i-chev-d"/></svg></button>
     <button class="fbtn" id="btnNewChat" aria-label="New chat"><svg class="ic"><use href="#i-newchat"/></svg></button>
   </header>
   <div id="chatScroll"><div class="msgs" id="msgs"></div></div>
@@ -856,7 +909,7 @@ body.auth-open #toasts{z-index:6000}
         <button class="cbtn" id="chipWeb" aria-label="Web"><svg class="ic sm"><use href="#i-globe"/></svg></button>
         <span class="c-sep"></span>
         <div class="cgrow"></div>
-        <button class="mchip" id="chipModel"><svg class="ic"><use href="#i-chip"/></svg><span>Model</span></button>
+        <button class="mchip hidden" id="chipEffort" aria-label="Reasoning effort"><svg class="ic sm"><use href="#i-spark"/></svg><span>Medium</span></button>
         <button class="cbtn send" id="btnSend" aria-label="Send"><svg class="ic"><use href="#i-send"/></svg></button>
       </div>
     </div>
@@ -1052,6 +1105,7 @@ body.auth-open #toasts{z-index:6000}
     <div class="pj-foot"><button class="btn primary big" id="pjOpenComposer"><svg class="ic"><use href="#i-spark"/></svg>Open Composer</button></div>
   </div>
   <div class="pane" id="pjAgent">
+    <div class="mtop-float"><button class="mtop empty" id="pjModelTop" aria-label="Select model"><span class="mtop-t">Select model</span><svg class="ic sm mtop-c"><use href="#i-chev-d"/></svg></button></div>
     <div class="scrollpane" id="agentScroll"><div class="msgs" id="agentMsgs"></div></div>
     <div class="composer">
       <div class="atts hidden" id="agentAtts"></div>
@@ -1065,7 +1119,7 @@ body.auth-open #toasts{z-index:6000}
           <button class="cbtn" id="chipWeb2" aria-label="Web"><svg class="ic sm"><use href="#i-globe"/></svg></button>
           <span class="c-sep"></span>
           <div class="cgrow"></div>
-          <button class="mchip" id="chipModel2"><svg class="ic"><use href="#i-chip"/></svg><span>Model</span></button>
+          <button class="mchip hidden" id="chipEffort2" aria-label="Reasoning effort"><svg class="ic sm"><use href="#i-spark"/></svg><span>Medium</span></button>
           <button class="cbtn send" id="agentSend" aria-label="Send"><svg class="ic"><use href="#i-send"/></svg></button>
         </div>
       </div>
@@ -2343,9 +2397,11 @@ function autoGrow(t){if(!t)return;const cs=getComputedStyle(t);const lh=parseFlo
 function updateSendBtn(){const b=$('#btnSend');
  if(S.streaming){b.innerHTML=icon('stop');}else{b.innerHTML=icon('send');}}
 function shortModel(m){m=m||'';return m.length>16?m.slice(0,15)+'…':m;}
-function updateChips(){const p=activeProvider();
- const ml=(p&&p.model)?shortModel(p.model):'Model';
- ['#chipModel','#chipModel2'].forEach(s=>{const el=$(s);if(el)el.querySelector('span').textContent=ml;});
+function updateChips(){const p=activeProvider(),has=!!(p&&p.model);
+ const EFF={fast:'Low',balanced:'Medium',deep:'High',extra:'Extra',max:'Max'};
+ ['#chatModelTop','#pjModelTop'].forEach(s=>{const el=$(s);if(!el)return;const t=el.querySelector('.mtop-t');if(t)t.textContent=has?p.model:'Select model';el.classList.toggle('empty',!has);});
+ const eff=!!(has&&p.supportsReasoning);
+ ['#chipEffort','#chipEffort2'].forEach(s=>{const el=$(s);if(!el)return;el.classList.toggle('hidden',!eff);const t=el.querySelector('span');if(t)t.textContent=EFF[S.settings.reasoning]||'Medium';});
 }
 function renderAtts(){const host=$('#chatAtts');
  if(!S.pendingAttachments.length){host.classList.add('hidden');host.innerHTML='';return;}
@@ -2764,83 +2820,103 @@ async function readIn(files,target){for(const f of files){
  }catch(err){toast('Could not read '+f.name+': '+err.message,'err');}}
  if(target==='chat')renderAtts();else renderAgentAtts();}
 
-/* ---------- model selector ---------- */
+/* ---------- model selector: top-bar button + bottom sheet ---------- */
 const RLV=[{k:'fast',l:'Low'},{k:'balanced',l:'Medium'},{k:'deep',l:'High'},{k:'extra',l:'Extra'},{k:'max',l:'Max'}];
-const rlIdx=()=>{const i=RLV.findIndex(x=>x.k===S.settings.reasoning);return i<0?0:i;};
-function openModelModal(anchor){
- const provs=S.settings.providers;
- if(!provs.length){toast('Add a provider first (Menu > Set Up AI).','warn');renderProviders();openScreen('screen-providers');return;}
- modalRoot.innerHTML=`<div class="scrim2"></div><div class="ms-sheet" role="dialog" aria-label="Select model">
-  <div class="ms-grip"></div>
-  <div class="ms-eff" id="msEff"><div class="ms-track" id="msTrack" role="slider" tabindex="0" aria-label="Reasoning effort" aria-valuemin="0" aria-valuemax="4">
-   <div class="ms-fill"></div>${[0,1,2,3,4].map(i=>`<i class="ms-dot" data-f="${i/4}" style="--f:${i/4}"></i>`).join('')}<div class="ms-knob"></div></div></div>
-  <p class="ms-note hidden" id="msNote">Reasoning effort is unavailable for this provider. Turn on "Model supports reasoning effort" in its settings.</p>
-  <button class="ms-pill" id="msPill" aria-expanded="false" aria-haspopup="listbox"><span class="ms-m" id="msM"></span><span class="ms-e" id="msE"></span>${icon('chev-d')}</button>
-  <div class="ms-list"><div class="ms-list-in"><div class="ms-scroll" id="msScroll" role="listbox"></div></div></div>
- </div>`;
- modalRoot.classList.add('show');
- _modalCancel=closeModal;
- modalRoot.querySelector('.scrim2').onclick=closeModal;
- const sheet=modalRoot.querySelector('.ms-sheet');
- const placeAboveAnchor=()=>{
-  const a=anchor||$('#chipModel')||$('#chipModel2');
-  if(!a)return;
-  const r=a.getBoundingClientRect(),gap=8,pad=12;
-  const maxH=Math.max(180,r.top-gap-pad);
-  const popupWidth=Math.max(120,Math.min(window.innerWidth-40,240));
-  const popupHeight=120;
-  const centerX=Math.max(popupWidth/2+8,Math.min(window.innerWidth-popupWidth/2-8,r.left+r.width/2-14));
-  sheet.style.left=centerX+'px';
-  sheet.style.bottom='12px';
-  sheet.style.maxHeight=maxH+'px';
-  sheet.style.width=popupWidth+'px';
-  sheet.style.height=Math.min(popupHeight,maxH)+'px';
+const MS_CATALOG=[
+ {id:'claude',name:'Claude',brand:'claude',models:['Claude Opus 5.5','Claude Fable 5.1','Claude Opus 5','Claude Sonnet 5.5','Claude Haiku 5.5']},
+ {id:'openai',name:'OpenAI',brand:'openai',models:['GPT 6 Astra','GPT 6.1 Sol','GPT 6 Sol','GPT 6 Luna','GPT 5.6 Terra']},
+ {id:'gemini',name:'Gemini',brand:'gemini',models:['Gemini 4 Argon','Gemini 3.1 Pro Preview','Gemini 3.8 Flash','Gemini 3.7 Flash','Gemini 3.6 Flash']},
+ {id:'deepseek',name:'DeepSeek',brand:'deepseek',models:['DeepSeek V4.1 Flash 1017','DeepSeek V4.1 Flash','DeepSeek v4 Pro','DeepSeek v4 Flash']},
+ {id:'meta',name:'Meta',brand:'meta',models:['Muse Spark 1.3','Muse Spark 1.2','Muse Spark 1.1','Muse Wonder 1.0']},
+ {id:'zai',name:'Z.ai',brand:'zai',models:['GLM 5.3 Flash','GLM 5.3','GLM 5.2','GLM 5.1']},
+ {id:'grok',name:'Grok',brand:'grok',models:['Grok 4.7','Grok 4.6','Grok 4.5']}
+];
+const MS_POPULAR=[['claude','Claude Opus 5.5'],['openai','GPT 6.1 Sol'],['openai','GPT 6 Luna'],['claude','Claude Haiku 5.5'],['gemini','Gemini 3.1 Pro Preview'],['deepseek','DeepSeek v4 Pro']];
+/* Brand marks: simplified inline SVG stand-ins. Replace any value with the official SVG markup when available. */
+const MS_ICON=(()=>{
+ const petals=[0,60,120,180,240,300].map(a=>'<ellipse transform="rotate('+a+' 12 12)" cx="12" cy="7" rx="3.3" ry="5.1"/>').join('');
+ const sv=(body,solid)=>'<svg viewBox="0 0 24 24" '+(solid?'fill="currentColor"':'fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"')+'>'+body+'</svg>';
+ return {
+  claude:sv('<path d="M3 12h18M12 3v18M5.6 5.6l12.8 12.8M18.4 5.6 5.6 18.4"/>'),
+  openai:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">'+petals+'</svg>',
+  gemini:sv('<path d="M12 1.5C12.9 8.2 15.8 11.1 22.5 12 15.8 12.9 12.9 15.8 12 22.5 11.1 15.8 8.2 12.9 1.5 12 8.2 11.1 11.1 8.2 12 1.5Z"/>',1),
+  deepseek:sv('<path d="M2.5 12.6c.7-3.5 3.3-5.8 7-5.8 2.2 0 3.9.8 5.2 2.1l2.3-1.6-.6 2.6c.7.9 1 2 1 3.1 0 3.2-2.5 5.5-6.2 5.5-3.7 0-7.2-1.9-8.7-5.9z"/>',1),
+  meta:sv('<path d="M12 12c-2-3-4-5-6.5-5C3.4 7 2 9.2 2 12s1.4 5 3.5 5c2.5 0 4.5-2 6.5-5s4-5 6.5-5c2.1 0 3.5 2.2 3.5 5s-1.4 5-3.5 5c-2.5 0-4.5-2-6.5-5z"/>'),
+  zai:sv('<path d="M6 6h12L6 18h12"/>'),
+  grok:sv('<path d="M5 5l14 14M19 5L5 19"/>'),
+  local:sv('<rect x="5" y="5" width="14" height="14" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/>')
  };
- placeAboveAnchor();
- const track=$('#msTrack'),dots=[...track.querySelectorAll('.ms-dot')],scroll=$('#msScroll');
- const reasonOn=()=>{const p=activeProvider();return !!(p&&p.supportsReasoning);};
- let cur=rlIdx(),drag=false;
- function setP(f){track.style.setProperty('--p',f);dots.forEach(d=>d.classList.toggle('on',+d.dataset.f<=f+1e-6));}
- function paintLabel(){
-  const p=activeProvider(),on=reasonOn();
-  $('#msM').textContent=(p&&p.model)?p.model:'Select model';
-  $('#msE').textContent=(p&&p.model&&on)?RLV[cur].l:'';
-  track.setAttribute('aria-valuenow',cur);track.setAttribute('aria-valuetext',RLV[cur].l);
-  $('#msEff').classList.toggle('off',!on);track.setAttribute('aria-disabled',on?'false':'true');
-  $('#msNote').classList.toggle('hidden',on);}
- function commit(i){i=Math.max(0,Math.min(4,i));if(i!==cur){cur=i;S.settings.reasoning=RLV[i].k;if(navigator.vibrate)try{navigator.vibrate(6);}catch(_){}}paintLabel();}
- const R=()=>track.querySelector('.ms-knob').offsetWidth/2;
- function fracOf(e){const r=track.getBoundingClientRect(),k=R();return Math.min(1,Math.max(0,(e.clientX-r.left-k)/Math.max(1,r.width-2*k)));}
- function move(e){const f=fracOf(e);setP(f);commit(Math.round(f*4));}
- function endDrag(){if(!drag)return;drag=false;track.classList.remove('drag');setP(cur/4);saveSettings();}
- track.addEventListener('pointerdown',e=>{if(!reasonOn())return;drag=true;track.classList.add('drag');try{track.setPointerCapture(e.pointerId);}catch(_){}move(e);});
- track.addEventListener('pointermove',e=>{if(drag)move(e);});
- track.addEventListener('pointerup',endDrag);track.addEventListener('pointercancel',endDrag);
- track.addEventListener('keydown',e=>{if(!reasonOn())return;let i=cur;
-  if(e.key==='ArrowRight'||e.key==='ArrowUp')i++;else if(e.key==='ArrowLeft'||e.key==='ArrowDown')i--;else if(e.key==='Home')i=0;else if(e.key==='End')i=4;else return;
-  e.preventDefault();commit(i);setP(cur/4);saveSettings();});
- function toggleList(v){const o=typeof v==='boolean'?v:!sheet.classList.contains('open');sheet.classList.toggle('open',o);$('#msPill').setAttribute('aria-expanded',o);const cap=parseFloat(sheet.style.maxHeight)||340;sheet.style.height=Math.min(o?340:120,cap)+'px';}
- $('#msPill').onclick=()=>toggleList();
- function renderList(){
-  const ap=activeProvider();
-  scroll.innerHTML=provs.map(p=>{const ms=[...(p.model?[p.model]:[]),...(p.models||[]).filter(m=>m!==p.model)];
-   return `<div class="ms-grp"><div class="ms-gh"><span>${esc(p.name)}</span><button class="ms-chipbtn" data-mfetch="${p.id}">Fetch models</button></div>
-   ${ms.length?ms.map(m=>{const on=!!(ap&&p.id===ap.id&&m===p.model);return `<button class="ms-opt ${on?'on':''}" role="option" aria-selected="${on}" data-mp="${p.id}" data-m="${esc(m)}"><span>${esc(m)}</span>${on?icon('check','sm'):''}</button>`;}).join(''):'<div class="ms-empty">No models yet — fetch or add manually.</div>'}
-   <div class="ms-add"><input class="ms-inp" placeholder="Add model manually (id)" data-mmanual="${p.id}" autocapitalize="off" autocomplete="off" spellcheck="false"><button class="ms-chipbtn pri" data-madd="${p.id}">Add</button></div></div>`;}).join('');}
- function pick(p,m){S.settings.selectedProviderId=p.id;p.model=m;saveSettings();updateChips();renderChat();toast('Model: '+p.name+' / '+m,'ok');renderList();paintLabel();toggleList(false);}
- scroll.addEventListener('click',async e=>{
-  const o=e.target.closest('[data-mp]');
-  if(o){const p=S.settings.providers.find(x=>x.id===o.dataset.mp);if(p)pick(p,o.dataset.m);return;}
-  const f=e.target.closest('[data-mfetch]');
-  if(f){const p=S.settings.providers.find(x=>x.id===f.dataset.mfetch);f.textContent='Fetching…';
-   try{p.models=await fetchModels(p);saveSettings();toast(p.models.length+' models discovered for '+p.name+'.','ok');renderList();}
-   catch(err){f.textContent='Fetch models';toast('Model discovery failed: '+err.message,'err');}return;}
-  const a=e.target.closest('[data-madd]');
-  if(a){const p=S.settings.providers.find(x=>x.id===a.dataset.madd);const inp=scroll.querySelector(`[data-mmanual="${p.id}"]`);const v=(inp.value||'').trim();
-   if(!v){toast('Enter a model id.','warn');return;}pick(p,v);}});
- scroll.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.matches('[data-mmanual]')){const b=scroll.querySelector(`[data-madd="${e.target.dataset.mmanual}"]`);if(b)b.click();}});
- setP(cur/4);paintLabel();renderList();}
-$('#chipModel').onclick=()=>openModelModal($('#chipModel'));$('#chipModel2').onclick=()=>openModelModal($('#chipModel2'));
+})();
+const MS_BC={claude:'#D97757',openai:'var(--text)',gemini:'#4C8DFF',deepseek:'#5B7BFF',meta:'#2D8CFF',zai:'#8B9CFF',grok:'var(--text)',local:'var(--cyan)'};
+function mxRow(o){
+ const lock=!!o.locked;
+ const act=lock?'disabled':'data-mx-pick="'+esc(o.pid)+'" data-m="'+esc(o.m)+'"';
+ const tail=lock?'<span class="mx-pro">Pro</span>':(o.on?'<span class="mx-chk">'+icon('check','sm')+'</span>':'');
+ return '<button type="button" class="mx-row'+(lock?' lock':'')+(o.on?' on':'')+'" '+act+' data-s="'+esc((o.name+' '+o.group).toLowerCase())+'" style="--bc:'+(MS_BC[o.brand]||'var(--text2)')+'">'
+  +'<span class="mx-logo">'+(MS_ICON[o.brand]||MS_ICON.local)+'</span><span class="mx-name">'+esc(o.name)+'</span>'+tail+'</button>';
+}
+function mxPick(pid,m){
+ const p=S.settings.providers.find(x=>x.id===pid);if(!p||!m)return;
+ S.settings.selectedProviderId=p.id;p.model=m;saveSettings();closeModal();updateChips();renderChat();
+ toast('Model: '+p.name+' / '+m,'ok');
+}
+function openModelModal(){
+ const provs=S.settings.providers,ap=activeProvider();
+ const TABS=[['popular','Popular']].concat(MS_CATALOG.map(g=>[g.id,g.name])).concat([['local','Local Model']]);
+ const sec=(id,title,body)=>'<section class="mx-sec" id="mxSec-'+id+'" data-sec="'+id+'"><h4 class="mx-title">'+title+'</h4>'+body+'</section>';
+ const popular=sec('popular','Popular',MS_POPULAR.map(([g,m])=>{const c=MS_CATALOG.find(x=>x.id===g);return mxRow({brand:c.brand,name:m,group:c.name,locked:true});}).join(''));
+ const cats=MS_CATALOG.map(g=>sec(g.id,esc(g.name),g.models.map(m=>mxRow({brand:g.brand,name:m,group:g.name,locked:true})).join(''))).join('');
+ const loc=provs.map(p=>{
+  const ms=[...new Set([...(p.model?[p.model]:[]),...(p.models||[])])];
+  return '<div class="mx-prov"><div class="mx-prov-h"><span>'+esc(p.name)+'</span><button type="button" class="mx-chip" data-mx-fetch="'+esc(p.id)+'">Fetch models</button></div>'
+   +(ms.length?ms.map(m=>mxRow({brand:'local',name:m,group:p.name,pid:p.id,m:m,on:!!(ap&&ap.id===p.id&&m===ap.model)})).join(''):'<div class="mx-empty">No models yet. Fetch them or add one below.</div>')
+   +'<div class="mx-add"><input class="mx-inp" data-mx-manual="'+esc(p.id)+'" placeholder="Add model id" autocapitalize="off" autocomplete="off" spellcheck="false"><button type="button" class="mx-chip pri" data-mx-add="'+esc(p.id)+'">Add</button></div></div>';
+ }).join('');
+ const localSec=sec('local','Local Model',provs.length?loc:'<div class="mx-empty">No local models yet. Add a provider in Menu › Set Up AI.</div>');
+ modalRoot.innerHTML='<div class="scrim2"></div><div class="mx-sheet" role="dialog" aria-modal="true" aria-label="Select model">'
+  +'<div class="mx-grip"></div>'
+  +'<label class="mx-search">'+icon('search','sm')+'<input id="mxSearch" type="search" placeholder="Search models" autocomplete="off" spellcheck="false"></label>'
+  +'<nav class="mx-tabs" id="mxTabs">'+TABS.map((t,i)=>'<button type="button" class="mx-tab'+(i===0?' on':'')+'" data-go="'+t[0]+'">'+t[1]+'</button>').join('')+'</nav>'
+  +'<div class="mx-list" id="mxList">'+popular+cats+localSec+'</div></div>';
+ modalRoot.classList.add('show');_modalCancel=closeModal;
+ modalRoot.querySelector('.scrim2').onclick=closeModal;
+ const root=modalRoot.querySelector('.mx-sheet'),list=root.querySelector('#mxList');
+ root.addEventListener('click',async e=>{
+  const go=e.target.closest('[data-go]');
+  if(go){const s=list.querySelector('#mxSec-'+go.dataset.go);if(s)list.scrollTo({top:s.offsetTop-4,behavior:'smooth'});return;}
+  const pk=e.target.closest('[data-mx-pick]');
+  if(pk){mxPick(pk.dataset.mxPick,pk.dataset.m);return;}
+  const f=e.target.closest('[data-mx-fetch]');
+  if(f){const p=S.settings.providers.find(x=>x.id===f.dataset.mxFetch);if(!p)return;f.textContent='Fetching…';
+   try{p.models=await fetchModels(p);saveSettings();toast(p.models.length+' models discovered for '+p.name+'.','ok');}
+   catch(err){toast('Model discovery failed: '+err.message,'err');}
+   const st=list.scrollTop;openModelModal();modalRoot.querySelector('#mxList').scrollTop=st;return;}
+  const a=e.target.closest('[data-mx-add]');
+  if(a){const inp=root.querySelector('[data-mx-manual="'+a.dataset.mxAdd+'"]');const v=((inp&&inp.value)||'').trim();
+   if(!v){toast('Enter a model id.','warn');return;}mxPick(a.dataset.mxAdd,v);}
+ });
+ root.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.matches&&e.target.matches('[data-mx-manual]')){const b=root.querySelector('[data-mx-add="'+e.target.dataset.mxManual+'"]');if(b)b.click();}});
+ root.querySelector('#mxSearch').addEventListener('input',e=>{
+  const q=e.target.value.trim().toLowerCase();
+  root.querySelectorAll('.mx-row').forEach(r=>r.classList.toggle('hidden',!!q&&!r.dataset.s.includes(q)));
+  root.querySelectorAll('.mx-sec').forEach(s=>s.classList.toggle('hidden',!!q&&!s.querySelector('.mx-row:not(.hidden)')));
+ });
+ list.addEventListener('scroll',()=>{let cur='popular';
+  list.querySelectorAll('.mx-sec:not(.hidden)').forEach(s=>{if(s.offsetTop-24<=list.scrollTop)cur=s.dataset.sec;});
+  root.querySelectorAll('.mx-tab').forEach(t=>t.classList.toggle('on',t.dataset.go===cur));},{passive:true});
+}
+function openEffortSheet(){
+ const cur=RLV.findIndex(x=>x.k===S.settings.reasoning);
+ modalRoot.innerHTML='<div class="scrim2"></div><div class="mx-sheet mx-eff-sheet" role="dialog" aria-modal="true" aria-label="Reasoning effort">'
+  +'<div class="mx-grip"></div><div class="mx-eff-h"><b>Reasoning effort</b><span>How long the selected model thinks before it answers</span></div>'
+  +'<div class="mx-eff-list">'+RLV.map((x,i)=>'<button type="button" class="mx-row'+(i===cur?' on':'')+'" data-eff="'+x.k+'"><span class="mx-logo">'+icon('spark','sm')+'</span><span class="mx-name">'+x.l+'</span>'+(i===cur?'<span class="mx-chk">'+icon('check','sm')+'</span>':'')+'</button>').join('')+'</div></div>';
+ modalRoot.classList.add('show');_modalCancel=closeModal;
+ modalRoot.querySelector('.scrim2').onclick=closeModal;
+ modalRoot.querySelector('.mx-eff-list').onclick=e=>{const b=e.target.closest('[data-eff]');if(!b)return;
+  S.settings.reasoning=b.dataset.eff;saveSettings();updateChips();closeModal();};
+}
+$('#chatModelTop').onclick=()=>openModelModal();$('#pjModelTop').onclick=()=>openModelModal();
+$('#chipEffort').onclick=()=>openEffortSheet();$('#chipEffort2').onclick=()=>openEffortSheet();
 
 /* ---------- history ---------- */
 function renderHistory(){const list=$('#hsList');const items=[...S.chats].sort((a,b)=>b.updatedAt-a.updatedAt);
@@ -3043,7 +3119,7 @@ function agentEmpty(){return `<div class="empty" style="padding-top:6vh">
  <div class="qa-grid">${[['Create a login screen with email and password fields'],['Fix the build error'],['Make the home screen dark'],['Add a settings page'],['Analyze the project structure']].map(c=>`<button class="qa" data-aa="${esc(c[0])}">${icon('terminal','sm')}<span>${esc(c[0])}</span></button>`).join('')}</div></div>`;}
 $('#pjClose').onclick=goBack;
 $('#pjTabs').addEventListener('click',e=>{const b=e.target.closest('[data-tab]');if(b)setTab(b.dataset.tab);});
-function setTab(t){$$('#pjTabs button').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));
+function setTab(t){updateChips();$$('#pjTabs button').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));
  $('#pjCode').classList.toggle('on',t==='code');$('#pjAgent').classList.toggle('on',t==='agent');$('#pjBuild').classList.toggle('on',t==='build');
  if(t==='code')renderExplorer();if(t==='agent'){renderThread('#agentMsgs',S.project.agent);if(!S.project.agent.length)$('#agentMsgs').innerHTML=agentEmpty();restoreAgentDraft();}if(t==='build')renderBuildPane();}
 $('#pjOpenComposer').onclick=()=>setTab('agent');
