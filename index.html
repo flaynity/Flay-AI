@@ -664,58 +664,6 @@ body.auth-open #toasts{z-index:6000}
 .fd-user{cursor:pointer}
 .fd-usub{overflow:hidden;text-overflow:ellipsis}
 </style>
-<style id="model-picker-css">
-/* top-bar model button (chat and project Agent tab) */
-#screen-chat .ftop>#btnNewChat{margin-left:0!important}
-.mtop{flex:1 1 auto;min-width:0;max-width:min(64vw,300px);margin:0 auto;height:44px;padding:0 16px;display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:9999px;background:var(--surface-glass);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,27,122,.4);box-shadow:0 4px 18px rgba(255,27,122,.16);color:var(--text);font-size:15px;font-weight:600;letter-spacing:.1px;transition:transform .12s,box-shadow .12s}
-.mtop:active{transform:scale(.96)}
-.mtop-t{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.mtop-c{flex:none;width:14px;height:14px;color:var(--text2);transform:rotate(180deg)}
-.mtop.empty .mtop-t{color:var(--text2);font-weight:500}
-#pjAgent{position:relative}
-#pjAgent .mtop-float{position:absolute;left:0;right:0;top:calc(env(safe-area-inset-top) + 58px);display:flex;justify-content:center;z-index:999;pointer-events:none;padding:0 16px}
-#pjAgent .mtop-float .mtop{pointer-events:auto;flex:0 1 auto;max-width:min(78vw,320px)}
-#screen-project #pjAgent>.scrollpane{padding-top:112px!important}
-/* bottom sheet */
-.mx-sheet{position:fixed;left:0;right:0;bottom:0;height:min(80dvh,740px);max-height:calc(100dvh - env(safe-area-inset-top) - 24px);display:flex;flex-direction:column;padding:8px 14px calc(14px + env(safe-area-inset-bottom));background:var(--surface);border:1px solid var(--border);border-bottom:0;border-radius:30px 30px 0 0;box-shadow:0 -18px 60px rgba(0,0,0,.6);animation:mxUp .3s cubic-bezier(.2,.9,.25,1);z-index:101}
-:root:not([data-theme=light]) .mx-sheet{background:linear-gradient(180deg,#13141C 0%,#07070C 60%)}
-@keyframes mxUp{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
-.mx-grip{width:40px;height:4px;border-radius:2px;background:rgba(255,255,255,.2);margin:4px auto 12px;flex:none}
-.mx-search{display:flex;align-items:center;gap:10px;height:46px;padding:0 16px;border-radius:9999px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);flex:none;margin-bottom:12px;transition:border-color .15s,box-shadow .15s}
-.mx-search:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
-.mx-search input{flex:1;min-width:0;border:0;background:transparent;outline:none;font-size:15px;color:var(--text)}
-.mx-search input::placeholder{color:var(--text-muted)}
-.mx-tabs{display:flex;gap:8px;overflow-x:auto;padding:2px 0 12px;flex:none;scrollbar-width:none}
-.mx-tabs::-webkit-scrollbar{display:none}
-.mx-tab{flex:none;height:34px;padding:0 15px;border-radius:9999px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);font-size:13.5px;font-weight:600;transition:background .15s,color .15s}
-.mx-tab.on{background:var(--text);color:var(--bg);border-color:transparent}
-.mx-list{position:relative;flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:0 2px 10px}
-.mx-sec.hidden,.mx-row.hidden{display:none!important}
-.mx-title{display:flex;align-items:center;gap:10px;margin:14px 4px 10px;font-size:11.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--text2)}
-.mx-title::after{content:"";flex:1;height:1px;background:var(--border)}
-.mx-row{display:flex;align-items:center;gap:12px;width:100%;min-height:58px;padding:9px 14px 9px 9px;margin-bottom:8px;border-radius:18px;background:var(--surface2);border:1px solid var(--border);text-align:left;transition:background .15s,transform .1s}
-button.mx-row:not(:disabled):active{transform:scale(.985)}
-.mx-row.lock{cursor:default}
-.mx-row.on{border-color:transparent;background:linear-gradient(var(--surface2),var(--surface2)) padding-box,linear-gradient(90deg,#FF1B7A,#7C3AED) border-box}
-.mx-logo{width:40px;height:40px;border-radius:13px;display:flex;align-items:center;justify-content:center;flex:none;background:var(--bg);border:1px solid var(--border);color:var(--bc,var(--text))}
-.mx-logo svg{width:21px;height:21px}
-.mx-name{flex:1;min-width:0;font-size:15px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.mx-pro{flex:none;padding:4px 10px;border-radius:9999px;font-size:10.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#fff;background:var(--accent-gradient);box-shadow:0 2px 12px rgba(255,27,122,.35)}
-.mx-chk{flex:none;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--accent-gradient);color:#fff}
-.mx-prov{margin-bottom:6px}
-.mx-prov-h{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:4px 4px 8px;font-size:13px;font-weight:600;color:var(--text2)}
-.mx-chip{flex:none;height:30px;padding:0 13px;border-radius:9999px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);font-size:12px;font-weight:600}
-.mx-chip.pri{background:var(--accent-gradient);border-color:transparent;color:#fff}
-.mx-add{display:flex;gap:8px;margin:2px 0 8px}
-.mx-inp{flex:1;min-width:0;height:36px;padding:0 14px;border-radius:9999px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:14px;outline:none}
-.mx-inp:focus{border-color:var(--accent)}
-.mx-empty{padding:10px 6px 14px;font-size:13px;color:var(--text2)}
-.mx-sheet.mx-eff-sheet{height:auto}
-.mx-eff-h{display:flex;flex-direction:column;gap:4px;padding:4px 6px 14px}
-.mx-eff-h b{font-size:17px}
-.mx-eff-h span{font-size:13px;color:var(--text2)}
-@media (prefers-reduced-motion:reduce){.mx-sheet{animation:none}}
-</style>
 </head>
 <body>
 <!-- AUTH (Welcome / Login / Sign Up) -->
@@ -892,7 +840,7 @@ button.mx-row:not(:disabled):active{transform:scale(.985)}
 <div class="screen active" id="screen-chat" style="z-index:10">
   <header class="ftop">
     <button class="fbtn" id="btnMenu" aria-label="Menu"><svg class="ic"><use href="#i-menu"/></svg></button>
-    <button class="mtop empty" id="chatModelTop" aria-label="Select model"><span class="mtop-t">Select model</span><svg class="ic sm mtop-c"><use href="#i-chev-d"/></svg></button>
+    <button class="mtop" id="topModel" aria-haspopup="dialog" aria-label="Select model"><span>Select model</span><svg class="ic"><use href="#i-chev-d"/></svg></button>
     <button class="fbtn" id="btnNewChat" aria-label="New chat"><svg class="ic"><use href="#i-newchat"/></svg></button>
   </header>
   <div id="chatScroll"><div class="msgs" id="msgs"></div></div>
@@ -909,7 +857,7 @@ button.mx-row:not(:disabled):active{transform:scale(.985)}
         <button class="cbtn" id="chipWeb" aria-label="Web"><svg class="ic sm"><use href="#i-globe"/></svg></button>
         <span class="c-sep"></span>
         <div class="cgrow"></div>
-        <button class="mchip hidden" id="chipEffort" aria-label="Reasoning effort"><svg class="ic sm"><use href="#i-spark"/></svg><span>Medium</span></button>
+        <button class="mchip" id="chipModel" aria-label="Reasoning effort"><svg class="ic"><use href="#i-brain"/></svg><span>Reasoning</span></button>
         <button class="cbtn send" id="btnSend" aria-label="Send"><svg class="ic"><use href="#i-send"/></svg></button>
       </div>
     </div>
@@ -1105,7 +1053,7 @@ button.mx-row:not(:disabled):active{transform:scale(.985)}
     <div class="pj-foot"><button class="btn primary big" id="pjOpenComposer"><svg class="ic"><use href="#i-spark"/></svg>Open Composer</button></div>
   </div>
   <div class="pane" id="pjAgent">
-    <div class="mtop-float"><button class="mtop empty" id="pjModelTop" aria-label="Select model"><span class="mtop-t">Select model</span><svg class="ic sm mtop-c"><use href="#i-chev-d"/></svg></button></div>
+    <button class="mtop mtop-pj" id="topModel2" aria-haspopup="dialog" aria-label="Select model"><span>Select model</span><svg class="ic"><use href="#i-chev-d"/></svg></button>
     <div class="scrollpane" id="agentScroll"><div class="msgs" id="agentMsgs"></div></div>
     <div class="composer">
       <div class="atts hidden" id="agentAtts"></div>
@@ -1119,7 +1067,7 @@ button.mx-row:not(:disabled):active{transform:scale(.985)}
           <button class="cbtn" id="chipWeb2" aria-label="Web"><svg class="ic sm"><use href="#i-globe"/></svg></button>
           <span class="c-sep"></span>
           <div class="cgrow"></div>
-          <button class="mchip hidden" id="chipEffort2" aria-label="Reasoning effort"><svg class="ic sm"><use href="#i-spark"/></svg><span>Medium</span></button>
+          <button class="mchip" id="chipModel2" aria-label="Reasoning effort"><svg class="ic"><use href="#i-brain"/></svg><span>Reasoning</span></button>
           <button class="cbtn send" id="agentSend" aria-label="Send"><svg class="ic"><use href="#i-send"/></svg></button>
         </div>
       </div>
@@ -1230,7 +1178,7 @@ button.mx-row:not(:disabled):active{transform:scale(.985)}
 </div>
 
 <!-- FILE VIEWER -->
-<div class="overlay" id="viewer"></div><div id="modalRoot"></div>
+<div class="overlay" id="viewer"></div><div id="modalRoot"></div><div id="mpRoot"></div><svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><symbol id="l-claude" viewBox="0 0 24 24"><path d="M12 12L12.00 2.60M12 12L15.20 6.46M12 12L19.45 7.70M12 12L18.90 12.00M12 12L20.40 16.85M12 12L15.10 17.37M12 12L12.00 20.90M12 12L8.70 17.72M12 12L3.77 16.75M12 12L5.60 12.00M12 12L4.47 7.65M12 12L8.50 5.94" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/></symbol><symbol id="l-openai" viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M22.2819 9.8211a5.9847 5.9847 0 0 0-.5157-4.9108 6.0462 6.0462 0 0 0-6.5098-2.9A6.0651 6.0651 0 0 0 4.9807 4.1818a5.9847 5.9847 0 0 0-3.9977 2.9 6.0462 6.0462 0 0 0 .7427 7.0966 5.98 5.98 0 0 0 .511 4.9107 6.051 6.051 0 0 0 6.5146 2.9001A5.9847 5.9847 0 0 0 13.2599 24a6.0557 6.0557 0 0 0 5.7718-4.2058 5.9894 5.9894 0 0 0 3.9977-2.9001 6.0557 6.0557 0 0 0-.7475-7.0729zm-9.022 12.6081a4.4755 4.4755 0 0 1-2.8764-1.0408l.1419-.0804 4.7783-2.7582a.7948.7948 0 0 0 .3927-.6813v-6.7369l2.02 1.1686a.071.071 0 0 1 .038.052v5.5826a4.504 4.504 0 0 1-4.4945 4.4944zm-9.6607-4.1254a4.4708 4.4708 0 0 1-.5346-3.0137l.142.0852 4.783 2.7582a.7712.7712 0 0 0 .7806 0l5.8428-3.3685v2.3324a.0804.0804 0 0 1-.0332.0615L9.74 19.9502a4.4992 4.4992 0 0 1-6.1408-1.6464zM2.3408 7.8956a4.485 4.485 0 0 1 2.3655-1.9728V11.6a.7664.7664 0 0 0 .3879.6765l5.8144 3.3543-2.0201 1.1685a.0757.0757 0 0 1-.071 0l-4.8303-2.7865A4.504 4.504 0 0 1 2.3408 7.872zm16.5963 3.8558L13.1038 8.364 15.1192 7.2a.0757.0757 0 0 1 .071 0l4.8303 2.7913a4.4944 4.4944 0 0 1-.6765 8.1042v-5.6772a.79.79 0 0 0-.407-.667zm2.0107-3.0231l-.142-.0852-4.7735-2.7818a.7759.7759 0 0 0-.7854 0L9.409 9.2297V6.8974a.0662.0662 0 0 1 .0284-.0615l4.8303-2.7866a4.4992 4.4992 0 0 1 6.6802 4.66zM8.3065 12.863l-2.02-1.1638a.0804.0804 0 0 1-.038-.0567V6.0742a4.4992 4.4992 0 0 1 7.3757-3.4537l-.142.0805L8.704 5.459a.7948.7948 0 0 0-.3927.6813zm1.0976-2.3654l2.602-1.4998 2.6069 1.4998v2.9994l-2.5974 1.4997-2.6067-1.4997Z"/></symbol><symbol id="l-gemini" viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M12 1.5C12.6 7.6 16.4 11.4 22.5 12 16.4 12.6 12.6 16.4 12 22.5 11.4 16.4 7.6 12.6 1.5 12 7.6 11.4 11.4 7.6 12 1.5Z"/></symbol><symbol id="l-deepseek" viewBox="0 0 24 24"><path fill="currentColor" fill-rule="evenodd" stroke="none" d="M2.4 12.7C2.4 8.9 5.9 6.2 10.4 6.2c3.1 0 5.5 1.2 6.9 3.3l1.9-3.2 1.2 2.7 2.2-1.5-1.6 5.3c-1.3 3.7-5.1 5.8-9.8 5.8-5 0-8.8-2.2-8.8-5.9zM5.6 11.5a1 1 0 1 0 2 0 1 1 0 0 0-2 0z"/></symbol><symbol id="l-meta" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" d="M12 12c-1.7-2.5-3.2-5-5.4-5C4.5 7 3 9.2 3 12s1.5 5 3.6 5c2.2 0 3.7-2.5 5.4-5zm0 0c1.7 2.5 3.2 5 5.4 5 2.1 0 3.6-2.2 3.6-5s-1.5-5-3.6-5c-2.2 0-3.7 2.5-5.4 5z"/></symbol><symbol id="l-zai" viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M4.5 4.5h15v3.2L9.6 16.3h9.9v3.2h-15v-3.2l9.9-8.6H4.5z"/></symbol><symbol id="l-grok" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"><path d="M18.9 10.4A7 7 0 1 1 13.6 5.1"/><path d="M8.2 15.8 19.2 4.8"/></g></symbol></svg>
 <div id="toasts"></div>
 
 <input type="file" id="filePickPhoto" hidden multiple accept="image/*">
@@ -2287,7 +2235,7 @@ function schedulePinScroll(agent){const sc=agent?$('#agentScroll'):$('#chatScrol
 function pinScroll(agent){const sc=agent?$('#agentScroll'):$('#chatScroll');if(sc&&S.pinned)msgFollow(sc);}
 /* After sending: the user's message glides to the top and the reply fills the space below it. */
 const _fill={};
-function tkHeaderBottom(sel,sc){const h=sel==='#msgs'?document.querySelector('#screen-chat .ftop'):document.getElementById('pjTabs');if(!h)return 0;const r=h.getBoundingClientRect();return r.height?r.bottom-sc.getBoundingClientRect().top:0;}
+function tkHeaderBottom(sel,sc){const h=sel==='#msgs'?document.querySelector('#screen-chat .ftop'):document.getElementById('pjTabs');if(!h)return 0;const r=h.getBoundingClientRect();return r.height?r.bottom-sc.getBoundingClientRect().top+(sel==='#msgs'?0:46):0;}
 function tkOffset(sel,sc,host){const cs=getComputedStyle(sc),hs=getComputedStyle(host);const base=(parseFloat(cs.paddingTop)||0)+(parseFloat(hs.paddingTop)||0);return Math.max(base,tkHeaderBottom(sel,sc)+10);}
 function tkPrevUser(el){let u=el.previousElementSibling;while(u&&!u.classList.contains('user'))u=u.previousElementSibling;return u;}
 function applyFill(sel){
@@ -2397,11 +2345,11 @@ function autoGrow(t){if(!t)return;const cs=getComputedStyle(t);const lh=parseFlo
 function updateSendBtn(){const b=$('#btnSend');
  if(S.streaming){b.innerHTML=icon('stop');}else{b.innerHTML=icon('send');}}
 function shortModel(m){m=m||'';return m.length>16?m.slice(0,15)+'…':m;}
-function updateChips(){const p=activeProvider(),has=!!(p&&p.model);
- const EFF={fast:'Low',balanced:'Medium',deep:'High',extra:'Extra',max:'Max'};
- ['#chatModelTop','#pjModelTop'].forEach(s=>{const el=$(s);if(!el)return;const t=el.querySelector('.mtop-t');if(t)t.textContent=has?p.model:'Select model';el.classList.toggle('empty',!has);});
- const eff=!!(has&&p.supportsReasoning);
- ['#chipEffort','#chipEffort2'].forEach(s=>{const el=$(s);if(!el)return;el.classList.toggle('hidden',!eff);const t=el.querySelector('span');if(t)t.textContent=EFF[S.settings.reasoning]||'Medium';});
+function updateChips(){const p=activeProvider();
+ let rl='Reasoning';try{if(p&&p.supportsReasoning)rl=RLV[rlIdx()].l;}catch(_){}
+ ['#chipModel','#chipModel2'].forEach(s=>{const el=$(s);if(el){el.querySelector('span').textContent=rl;el.classList.toggle('dis',!(p&&p.supportsReasoning));}});
+ const nm=(p&&p.model)?p.model:'Select model';
+ ['#topModel','#topModel2'].forEach(s=>{const el=$(s);if(el)el.querySelector('span').textContent=nm;});
 }
 function renderAtts(){const host=$('#chatAtts');
  if(!S.pendingAttachments.length){host.classList.add('hidden');host.innerHTML='';return;}
@@ -2728,7 +2676,7 @@ async function sendChat(){if(S.streaming)return;
  const atts=S.pendingAttachments.slice();
  if(!text&&!atts.length)return;
  if(!activeProvider()){toast('Set up an AI provider first (Menu > Set Up AI).','warn');renderProviders();openScreen('screen-providers');return;}
- if(!activeProvider().model){toast('No model selected. Use the Model button in the composer.','warn');openModelModal();return;}
+ if(!activeProvider().model){toast('No model selected. Tap the model name at the top to choose one.','warn');openModelSheet();return;}
  if(!S.chat)newChat();
  if(!S.chat.title)S.chat.title=(text||atts[0].name||'New chat').slice(0,60);
  S.chat.messages.push({id:uid(),role:'user',content:text||'(attachments)',rawAtts:atts,attachments:atts.map(a=>({name:a.name||a.path,size:a.size,kind:a.kind})),createdAt:Date.now(),status:'done'});
@@ -2820,103 +2768,190 @@ async function readIn(files,target){for(const f of files){
  }catch(err){toast('Could not read '+f.name+': '+err.message,'err');}}
  if(target==='chat')renderAtts();else renderAgentAtts();}
 
-/* ---------- model selector: top-bar button + bottom sheet ---------- */
+/* ---------- model selector ---------- */
 const RLV=[{k:'fast',l:'Low'},{k:'balanced',l:'Medium'},{k:'deep',l:'High'},{k:'extra',l:'Extra'},{k:'max',l:'Max'}];
-const MS_CATALOG=[
- {id:'claude',name:'Claude',brand:'claude',models:['Claude Opus 5.5','Claude Fable 5.1','Claude Opus 5','Claude Sonnet 5.5','Claude Haiku 5.5']},
- {id:'openai',name:'OpenAI',brand:'openai',models:['GPT 6 Astra','GPT 6.1 Sol','GPT 6 Sol','GPT 6 Luna','GPT 5.6 Terra']},
- {id:'gemini',name:'Gemini',brand:'gemini',models:['Gemini 4 Argon','Gemini 3.1 Pro Preview','Gemini 3.8 Flash','Gemini 3.7 Flash','Gemini 3.6 Flash']},
- {id:'deepseek',name:'DeepSeek',brand:'deepseek',models:['DeepSeek V4.1 Flash 1017','DeepSeek V4.1 Flash','DeepSeek v4 Pro','DeepSeek v4 Flash']},
- {id:'meta',name:'Meta',brand:'meta',models:['Muse Spark 1.3','Muse Spark 1.2','Muse Spark 1.1','Muse Wonder 1.0']},
- {id:'zai',name:'Z.ai',brand:'zai',models:['GLM 5.3 Flash','GLM 5.3','GLM 5.2','GLM 5.1']},
- {id:'grok',name:'Grok',brand:'grok',models:['Grok 4.7','Grok 4.6','Grok 4.5']}
-];
-const MS_POPULAR=[['claude','Claude Opus 5.5'],['openai','GPT 6.1 Sol'],['openai','GPT 6 Luna'],['claude','Claude Haiku 5.5'],['gemini','Gemini 3.1 Pro Preview'],['deepseek','DeepSeek v4 Pro']];
-/* Brand marks: simplified inline SVG stand-ins. Replace any value with the official SVG markup when available. */
-const MS_ICON=(()=>{
- const petals=[0,60,120,180,240,300].map(a=>'<ellipse transform="rotate('+a+' 12 12)" cx="12" cy="7" rx="3.3" ry="5.1"/>').join('');
- const sv=(body,solid)=>'<svg viewBox="0 0 24 24" '+(solid?'fill="currentColor"':'fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"')+'>'+body+'</svg>';
- return {
-  claude:sv('<path d="M3 12h18M12 3v18M5.6 5.6l12.8 12.8M18.4 5.6 5.6 18.4"/>'),
-  openai:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">'+petals+'</svg>',
-  gemini:sv('<path d="M12 1.5C12.9 8.2 15.8 11.1 22.5 12 15.8 12.9 12.9 15.8 12 22.5 11.1 15.8 8.2 12.9 1.5 12 8.2 11.1 11.1 8.2 12 1.5Z"/>',1),
-  deepseek:sv('<path d="M2.5 12.6c.7-3.5 3.3-5.8 7-5.8 2.2 0 3.9.8 5.2 2.1l2.3-1.6-.6 2.6c.7.9 1 2 1 3.1 0 3.2-2.5 5.5-6.2 5.5-3.7 0-7.2-1.9-8.7-5.9z"/>',1),
-  meta:sv('<path d="M12 12c-2-3-4-5-6.5-5C3.4 7 2 9.2 2 12s1.4 5 3.5 5c2.5 0 4.5-2 6.5-5s4-5 6.5-5c2.1 0 3.5 2.2 3.5 5s-1.4 5-3.5 5c-2.5 0-4.5-2-6.5-5z"/>'),
-  zai:sv('<path d="M6 6h12L6 18h12"/>'),
-  grok:sv('<path d="M5 5l14 14M19 5L5 19"/>'),
-  local:sv('<rect x="5" y="5" width="14" height="14" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/>')
+const rlIdx=()=>{const i=RLV.findIndex(x=>x.k===S.settings.reasoning);return i<0?0:i;};
+function openModelModal(anchor){
+ modalRoot.innerHTML=`<div class="scrim2"></div><div class="ms-sheet" role="dialog" aria-label="Reasoning effort">
+  <div class="ms-grip"></div>
+  <div class="ms-eff" id="msEff"><div class="ms-track" id="msTrack" role="slider" tabindex="0" aria-label="Reasoning effort" aria-valuemin="0" aria-valuemax="4">
+   <div class="ms-fill"></div>${[0,1,2,3,4].map(i=>`<i class="ms-dot" data-f="${i/4}" style="--f:${i/4}"></i>`).join('')}<div class="ms-knob"></div></div></div>
+  <p class="ms-note hidden" id="msNote">Reasoning effort is unavailable for this provider. Turn on "Model supports reasoning effort" in its settings.</p>
+  <div class="ms-cap"><span>Reasoning effort</span><b id="msE"></b></div>
+ </div>`;
+ modalRoot.classList.add('show');
+ _modalCancel=closeModal;
+ modalRoot.querySelector('.scrim2').onclick=closeModal;
+ const sheet=modalRoot.querySelector('.ms-sheet');
+ const placeAboveAnchor=()=>{
+  const a=anchor||$('#chipModel')||$('#chipModel2');
+  if(!a)return;
+  const r=a.getBoundingClientRect(),gap=8,pad=12;
+  const maxH=Math.max(180,r.top-gap-pad);
+  const popupWidth=Math.max(120,Math.min(window.innerWidth-40,240));
+  const centerX=Math.max(popupWidth/2+8,Math.min(window.innerWidth-popupWidth/2-8,r.left+r.width/2-14));
+  sheet.style.left=centerX+'px';
+  sheet.style.bottom='12px';
+  sheet.style.maxHeight=maxH+'px';
+  sheet.style.width=popupWidth+'px';
+  sheet.style.height='auto';
  };
-})();
-const MS_BC={claude:'#D97757',openai:'var(--text)',gemini:'#4C8DFF',deepseek:'#5B7BFF',meta:'#2D8CFF',zai:'#8B9CFF',grok:'var(--text)',local:'var(--cyan)'};
-function mxRow(o){
- const lock=!!o.locked;
- const act=lock?'disabled':'data-mx-pick="'+esc(o.pid)+'" data-m="'+esc(o.m)+'"';
- const tail=lock?'<span class="mx-pro">Pro</span>':(o.on?'<span class="mx-chk">'+icon('check','sm')+'</span>':'');
- return '<button type="button" class="mx-row'+(lock?' lock':'')+(o.on?' on':'')+'" '+act+' data-s="'+esc((o.name+' '+o.group).toLowerCase())+'" style="--bc:'+(MS_BC[o.brand]||'var(--text2)')+'">'
-  +'<span class="mx-logo">'+(MS_ICON[o.brand]||MS_ICON.local)+'</span><span class="mx-name">'+esc(o.name)+'</span>'+tail+'</button>';
+ placeAboveAnchor();
+ const track=$('#msTrack'),dots=[...track.querySelectorAll('.ms-dot')];
+ const reasonOn=()=>{const p=activeProvider();return !!(p&&p.supportsReasoning);};
+ let cur=rlIdx(),drag=false;
+ function setP(f){track.style.setProperty('--p',f);dots.forEach(d=>d.classList.toggle('on',+d.dataset.f<=f+1e-6));}
+ function paintLabel(){
+  const on=reasonOn();
+  $('#msE').textContent=on?RLV[cur].l:'Unavailable';
+  track.setAttribute('aria-valuenow',cur);track.setAttribute('aria-valuetext',RLV[cur].l);
+  $('#msEff').classList.toggle('off',!on);track.setAttribute('aria-disabled',on?'false':'true');
+  $('#msNote').classList.toggle('hidden',on);updateChips();}
+ function commit(i){i=Math.max(0,Math.min(4,i));if(i!==cur){cur=i;S.settings.reasoning=RLV[i].k;if(navigator.vibrate)try{navigator.vibrate(6);}catch(_){}}paintLabel();}
+ const R=()=>track.querySelector('.ms-knob').offsetWidth/2;
+ function fracOf(e){const r=track.getBoundingClientRect(),k=R();return Math.min(1,Math.max(0,(e.clientX-r.left-k)/Math.max(1,r.width-2*k)));}
+ function move(e){const f=fracOf(e);setP(f);commit(Math.round(f*4));}
+ function endDrag(){if(!drag)return;drag=false;track.classList.remove('drag');setP(cur/4);saveSettings();}
+ track.addEventListener('pointerdown',e=>{if(!reasonOn())return;drag=true;track.classList.add('drag');try{track.setPointerCapture(e.pointerId);}catch(_){}move(e);});
+ track.addEventListener('pointermove',e=>{if(drag)move(e);});
+ track.addEventListener('pointerup',endDrag);track.addEventListener('pointercancel',endDrag);
+ track.addEventListener('keydown',e=>{if(!reasonOn())return;let i=cur;
+  if(e.key==='ArrowRight'||e.key==='ArrowUp')i++;else if(e.key==='ArrowLeft'||e.key==='ArrowDown')i--;else if(e.key==='Home')i=0;else if(e.key==='End')i=4;else return;
+  e.preventDefault();commit(i);setP(cur/4);saveSettings();});
+ setP(cur/4);paintLabel();}
+$('#chipModel').onclick=()=>openModelModal($('#chipModel'));$('#chipModel2').onclick=()=>openModelModal($('#chipModel2'));
+
+/* ---------- model picker bottom sheet (top bar) ---------- */
+const MP_CAT=[
+ {id:'claude',logo:'claude',pre:'Claude ',models:[
+  ['Opus 5.5','Premium model for deep reasoning, coding and long tasks'],
+  ['Fable 5.1','Advanced model for complex reasoning and agent work'],
+  ['Opus 5','Premium model for deep reasoning, writing and analysis'],
+  ['Sonnet 5.5','Fast, capable all-rounder model for everyday work'],
+  ['Haiku 5.5','Fast, lightweight model for high-volume tasks']]},
+ {id:'openai',logo:'openai',pre:'',models:[
+  ['GPT 6 Astra','Flagship model for complex reasoning and coding'],
+  ['GPT 6.1 Sol','High intelligence for coding and professional work'],
+  ['GPT 6 Sol','High intelligence for coding and professional work'],
+  ['GPT 6 Luna','Balanced intelligence for fast, reliable replies'],
+  ['GPT 5.6 Terra','Dependable general-purpose model for daily tasks']]},
+ {id:'gemini',logo:'gemini',pre:'',models:[
+  ['Gemini 4 Argon','Latest-generation model for reasoning and multimodal work'],
+  ['Gemini 3.1 Pro Preview','Preview of a pro model for deep, multimodal tasks'],
+  ['Gemini 3.8 Flash','Fast, efficient model for quick responses'],
+  ['Gemini 3.7 Flash','Fast, efficient model for quick responses'],
+  ['Gemini 3.6 Flash','Fast, efficient model for lightweight tasks']]},
+ {id:'deepseek',logo:'deepseek',pre:'',models:[
+  ['DeepSeek V4.1 Flash 1017','Fast model for coding and everyday reasoning'],
+  ['DeepSeek V4.1 Flash','Fast model for coding and everyday reasoning'],
+  ['DeepSeek v4 Pro','Pro model for deeper reasoning and coding'],
+  ['DeepSeek v4 Flash','Fast, efficient model for quick tasks']]},
+ {id:'meta',logo:'meta',pre:'',models:[
+  ['Muse Spark 1.3','Quick, capable model for chat and creative work'],
+  ['Muse Spark 1.2','Quick, capable model for chat and creative work'],
+  ['Muse Spark 1.1','Quick, capable model for chat and creative work'],
+  ['Muse Wonder 1.0','Imaginative model for creative and open-ended work']]},
+ {id:'zai',logo:'zai',pre:'',models:[
+  ['GLM 5.3 Flash','Fast, efficient model for quick responses'],
+  ['GLM 5.3','Capable model for reasoning, coding and writing'],
+  ['GLM 5.2','Capable model for reasoning, coding and writing'],
+  ['GLM 5.1','Reliable model for coding and writing']]},
+ {id:'grok',logo:'grok',pre:'',models:[
+  ['Grok 4.7','Latest Grok model for reasoning and real-time topics'],
+  ['Grok 4.6','Capable model for reasoning and conversation'],
+  ['Grok 4.5','Capable model for reasoning and conversation']]}
+];
+const MP_TABS=[['popular','Popular'],['openai','OpenAI'],['claude','Claude'],['gemini','Gemini'],['deepseek','DeepSeek'],['meta','Meta'],['zai','Z.ai'],['grok','Grok'],['local','Local Model']];
+const MP_POP=[['openai',1],['claude',0],['claude',1],['gemini',0],['grok',0],['deepseek',0],['zai',1],['meta',0],['claude',3],['openai',0]];
+const MPS={tab:'popular',q:''};
+function mpBrand(s){s=String(s||'').toLowerCase();
+ if(/claude|anthropic/.test(s))return'claude';if(/gpt|openai|chatgpt|\bo[134](-|\b)/.test(s))return'openai';
+ if(/gemini|gemma|google/.test(s))return'gemini';if(/deepseek/.test(s))return'deepseek';
+ if(/llama|meta|muse/.test(s))return'meta';if(/glm|z\.ai|zhipu/.test(s))return'zai';if(/grok|xai/.test(s))return'grok';return null;}
+function mpCatItems(c){return c.models.map(m=>({name:c.pre+m[0],desc:m[1],logo:c.logo,pro:true,brand:c.id}));}
+function mpLocalItems(){const ap=activeProvider(),out=[];
+ S.settings.providers.forEach(p=>{const ms=[...(p.model?[p.model]:[]),...(p.models||[]).filter(m=>m!==p.model)];
+  ms.forEach(m=>out.push({pid:p.id,m,name:m,desc:p.name,logo:mpBrand(m)||mpBrand(p.name)||'chip',on:!!(ap&&p.id===ap.id&&m===p.model)}));});
+ return out;}
+function mpRow(it,i){
+ const lg=it.logo==='chip'?'<svg class="ic"><use href="#i-chip"/></svg>':`<svg class="mlogo" aria-hidden="true"><use href="#l-${it.logo}"/></svg>`;
+ return `<button class="mp-row${it.on?' on':''}" style="--i:${Math.min(i,9)}" role="option" aria-selected="${!!it.on}" ${it.pro?'data-pro="1"':`data-mp="${esc(it.pid)}" data-m="${esc(it.m)}"`}>
+  <span class="mp-ico">${lg}</span>
+  <span class="mp-body"><span class="mp-name"><b>${esc(it.name)}</b>${it.pro?'<i class="mp-pro">Pro</i>':''}</span><span class="mp-desc">${esc(it.desc)}</span></span>
+  ${it.on?icon('check'):''}</button>`;}
+function mpLocalHtml(){
+ const provs=S.settings.providers;
+ if(!provs.length)return `<div class="mp-empty"><span>No local models yet. Connect your own provider to use its models here.</span><button class="mp-chip pri" data-mpsetup="1" style="height:40px;padding:0 20px;font-size:14px">Set up AI</button></div>`;
+ const ap=activeProvider();let n=0;
+ return provs.map(p=>{const ms=[...(p.model?[p.model]:[]),...(p.models||[]).filter(m=>m!==p.model)];
+  return `<div class="mp-grp"><div class="mp-gh"><span>${esc(p.name)}</span><button class="mp-chip" data-mfetch="${esc(p.id)}">Fetch models</button></div>
+  ${ms.length?ms.map(m=>mpRow({pid:p.id,m,name:m,desc:p.name,logo:mpBrand(m)||mpBrand(p.name)||'chip',on:!!(ap&&p.id===ap.id&&m===p.model)},n++)).join(''):'<div class="mp-empty-s">No models yet — fetch or add one below.</div>'}
+  <div class="mp-add"><input class="mp-inp" placeholder="Add model manually (id)" data-mmanual="${esc(p.id)}" autocapitalize="off" autocomplete="off" spellcheck="false"><button class="mp-chip pri" data-madd="${esc(p.id)}">Add</button></div></div>`;}).join('');}
+function mpRender(){
+ const list=$('#mpList'),tabs=$('#mpTabs');if(!list)return;
+ const q=MPS.q.trim().toLowerCase();
+ tabs.classList.toggle('dim',!!q);
+ tabs.innerHTML=MP_TABS.map(t=>`<button class="mp-tab${t[0]===MPS.tab?' on':''}" role="tab" aria-selected="${t[0]===MPS.tab}" data-tab="${t[0]}">${esc(t[1])}</button>`).join('');
+ let html='';
+ if(q){
+  const all=[...mpLocalItems(),...MP_CAT.flatMap(mpCatItems)].filter(x=>(x.name+' '+x.desc+' '+(x.brand||'')).toLowerCase().includes(q));
+  html=all.length?all.map(mpRow).join(''):'<div class="mp-empty"><span>No models found.</span></div>';
+ }else if(MPS.tab==='popular'){
+  const act=mpLocalItems().filter(x=>x.on);
+  const pop=MP_POP.map(([id,k])=>mpCatItems(MP_CAT.find(c=>c.id===id))[k]);
+  html=[...act,...pop].map(mpRow).join('');
+ }else if(MPS.tab==='local'){html=mpLocalHtml();
+ }else{html=mpCatItems(MP_CAT.find(c=>c.id===MPS.tab)).map(mpRow).join('');}
+ list.innerHTML=html;
 }
-function mxPick(pid,m){
- const p=S.settings.providers.find(x=>x.id===pid);if(!p||!m)return;
- S.settings.selectedProviderId=p.id;p.model=m;saveSettings();closeModal();updateChips();renderChat();
- toast('Model: '+p.name+' / '+m,'ok');
+let _mpEsc=null;
+function openModelSheet(){
+ const root=$('#mpRoot');if(!root)return;
+ MPS.tab='popular';MPS.q='';
+ root.innerHTML=`<div class="mp-scrim"></div><div class="mp-sheet" role="dialog" aria-modal="true" aria-label="Select model">
+  <div class="mp-top" id="mpTop"><div class="mp-grip"></div></div>
+  <label class="mp-search">${icon('search')}<input id="mpQ" type="text" placeholder="Search" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search"></label>
+  <div class="mp-tabs" id="mpTabs" role="tablist"></div>
+  <div class="mp-list" id="mpList" role="listbox"></div></div>`;
+ root.classList.add('show');
+ requestAnimationFrame(()=>requestAnimationFrame(()=>root.classList.add('in')));
+ mpRender();
+ const sheet=root.querySelector('.mp-sheet'),list=$('#mpList'),tabs=$('#mpTabs');
+ root.querySelector('.mp-scrim').onclick=closeModelSheet;
+ $('#mpQ').addEventListener('input',e=>{MPS.q=e.target.value;mpRender();list.scrollTop=0;});
+ tabs.addEventListener('click',e=>{const b=e.target.closest('[data-tab]');if(!b)return;
+  MPS.tab=b.dataset.tab;MPS.q='';$('#mpQ').value='';mpRender();list.scrollTop=0;
+  const t=tabs.querySelector('.mp-tab.on');if(t)tabs.scrollTo({left:t.offsetLeft-(tabs.clientWidth-t.offsetWidth)/2,behavior:'smooth'});});
+ /* swipe down to close */
+ const top=$('#mpTop');let sy=0,dy=0,dr=false,st=0;
+ top.addEventListener('pointerdown',e=>{dr=true;sy=e.clientY;dy=0;st=performance.now();sheet.classList.add('drag');try{top.setPointerCapture(e.pointerId);}catch(_){}});
+ top.addEventListener('pointermove',e=>{if(!dr)return;dy=Math.max(0,e.clientY-sy);sheet.style.transform=`translateY(${dy}px)`;});
+ const endD=()=>{if(!dr)return;dr=false;sheet.classList.remove('drag');const v=dy/Math.max(1,performance.now()-st);
+  if(dy>110||v>.6){closeModelSheet();}else{sheet.style.transform='';}};
+ top.addEventListener('pointerup',endD);top.addEventListener('pointercancel',endD);
+ list.addEventListener('click',async e=>{
+  if(e.target.closest('[data-mpsetup]')){closeModelSheet();renderProviders();openScreen('screen-providers');return;}
+  if(e.target.closest('[data-pro]')){toast('This is a Pro model and can’t be selected yet.','info');return;}
+  const o=e.target.closest('[data-mp]');
+  if(o){const p=S.settings.providers.find(x=>x.id===o.dataset.mp);if(p){S.settings.selectedProviderId=p.id;p.model=o.dataset.m;saveSettings();updateChips();renderChat();toast('Model: '+p.name+' / '+p.model,'ok');closeModelSheet();}return;}
+  const f=e.target.closest('[data-mfetch]');
+  if(f){const p=S.settings.providers.find(x=>x.id===f.dataset.mfetch);if(!p)return;f.textContent='Fetching…';
+   try{p.models=await fetchModels(p);saveSettings();toast(p.models.length+' models discovered for '+p.name+'.','ok');mpRender();}
+   catch(err){f.textContent='Fetch models';toast('Model discovery failed: '+err.message,'err');}return;}
+  const a=e.target.closest('[data-madd]');
+  if(a){const p=S.settings.providers.find(x=>x.id===a.dataset.madd);if(!p)return;const inp=list.querySelector(`[data-mmanual="${p.id}"]`);const v=(inp&&inp.value||'').trim();
+   if(!v){toast('Enter a model id.','warn');return;}
+   S.settings.selectedProviderId=p.id;p.model=v;saveSettings();updateChips();renderChat();toast('Model: '+p.name+' / '+v,'ok');closeModelSheet();}});
+ list.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.matches('[data-mmanual]')){const b=list.querySelector(`[data-madd="${e.target.dataset.mmanual}"]`);if(b)b.click();}});
+ _mpEsc=e=>{if(e.key==='Escape')closeModelSheet();};document.addEventListener('keydown',_mpEsc);
 }
-function openModelModal(){
- const provs=S.settings.providers,ap=activeProvider();
- const TABS=[['popular','Popular']].concat(MS_CATALOG.map(g=>[g.id,g.name])).concat([['local','Local Model']]);
- const sec=(id,title,body)=>'<section class="mx-sec" id="mxSec-'+id+'" data-sec="'+id+'"><h4 class="mx-title">'+title+'</h4>'+body+'</section>';
- const popular=sec('popular','Popular',MS_POPULAR.map(([g,m])=>{const c=MS_CATALOG.find(x=>x.id===g);return mxRow({brand:c.brand,name:m,group:c.name,locked:true});}).join(''));
- const cats=MS_CATALOG.map(g=>sec(g.id,esc(g.name),g.models.map(m=>mxRow({brand:g.brand,name:m,group:g.name,locked:true})).join(''))).join('');
- const loc=provs.map(p=>{
-  const ms=[...new Set([...(p.model?[p.model]:[]),...(p.models||[])])];
-  return '<div class="mx-prov"><div class="mx-prov-h"><span>'+esc(p.name)+'</span><button type="button" class="mx-chip" data-mx-fetch="'+esc(p.id)+'">Fetch models</button></div>'
-   +(ms.length?ms.map(m=>mxRow({brand:'local',name:m,group:p.name,pid:p.id,m:m,on:!!(ap&&ap.id===p.id&&m===ap.model)})).join(''):'<div class="mx-empty">No models yet. Fetch them or add one below.</div>')
-   +'<div class="mx-add"><input class="mx-inp" data-mx-manual="'+esc(p.id)+'" placeholder="Add model id" autocapitalize="off" autocomplete="off" spellcheck="false"><button type="button" class="mx-chip pri" data-mx-add="'+esc(p.id)+'">Add</button></div></div>';
- }).join('');
- const localSec=sec('local','Local Model',provs.length?loc:'<div class="mx-empty">No local models yet. Add a provider in Menu › Set Up AI.</div>');
- modalRoot.innerHTML='<div class="scrim2"></div><div class="mx-sheet" role="dialog" aria-modal="true" aria-label="Select model">'
-  +'<div class="mx-grip"></div>'
-  +'<label class="mx-search">'+icon('search','sm')+'<input id="mxSearch" type="search" placeholder="Search models" autocomplete="off" spellcheck="false"></label>'
-  +'<nav class="mx-tabs" id="mxTabs">'+TABS.map((t,i)=>'<button type="button" class="mx-tab'+(i===0?' on':'')+'" data-go="'+t[0]+'">'+t[1]+'</button>').join('')+'</nav>'
-  +'<div class="mx-list" id="mxList">'+popular+cats+localSec+'</div></div>';
- modalRoot.classList.add('show');_modalCancel=closeModal;
- modalRoot.querySelector('.scrim2').onclick=closeModal;
- const root=modalRoot.querySelector('.mx-sheet'),list=root.querySelector('#mxList');
- root.addEventListener('click',async e=>{
-  const go=e.target.closest('[data-go]');
-  if(go){const s=list.querySelector('#mxSec-'+go.dataset.go);if(s)list.scrollTo({top:s.offsetTop-4,behavior:'smooth'});return;}
-  const pk=e.target.closest('[data-mx-pick]');
-  if(pk){mxPick(pk.dataset.mxPick,pk.dataset.m);return;}
-  const f=e.target.closest('[data-mx-fetch]');
-  if(f){const p=S.settings.providers.find(x=>x.id===f.dataset.mxFetch);if(!p)return;f.textContent='Fetching…';
-   try{p.models=await fetchModels(p);saveSettings();toast(p.models.length+' models discovered for '+p.name+'.','ok');}
-   catch(err){toast('Model discovery failed: '+err.message,'err');}
-   const st=list.scrollTop;openModelModal();modalRoot.querySelector('#mxList').scrollTop=st;return;}
-  const a=e.target.closest('[data-mx-add]');
-  if(a){const inp=root.querySelector('[data-mx-manual="'+a.dataset.mxAdd+'"]');const v=((inp&&inp.value)||'').trim();
-   if(!v){toast('Enter a model id.','warn');return;}mxPick(a.dataset.mxAdd,v);}
- });
- root.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.matches&&e.target.matches('[data-mx-manual]')){const b=root.querySelector('[data-mx-add="'+e.target.dataset.mxManual+'"]');if(b)b.click();}});
- root.querySelector('#mxSearch').addEventListener('input',e=>{
-  const q=e.target.value.trim().toLowerCase();
-  root.querySelectorAll('.mx-row').forEach(r=>r.classList.toggle('hidden',!!q&&!r.dataset.s.includes(q)));
-  root.querySelectorAll('.mx-sec').forEach(s=>s.classList.toggle('hidden',!!q&&!s.querySelector('.mx-row:not(.hidden)')));
- });
- list.addEventListener('scroll',()=>{let cur='popular';
-  list.querySelectorAll('.mx-sec:not(.hidden)').forEach(s=>{if(s.offsetTop-24<=list.scrollTop)cur=s.dataset.sec;});
-  root.querySelectorAll('.mx-tab').forEach(t=>t.classList.toggle('on',t.dataset.go===cur));},{passive:true});
+function closeModelSheet(){
+ const root=$('#mpRoot');if(!root||!root.classList.contains('show'))return;
+ root.classList.remove('in');const sh=root.querySelector('.mp-sheet');if(sh){sh.classList.remove('drag');sh.style.transform='';}
+ if(_mpEsc){document.removeEventListener('keydown',_mpEsc);_mpEsc=null;}
+ setTimeout(()=>{if(!root.classList.contains('in')){root.classList.remove('show');root.innerHTML='';}},320);
 }
-function openEffortSheet(){
- const cur=RLV.findIndex(x=>x.k===S.settings.reasoning);
- modalRoot.innerHTML='<div class="scrim2"></div><div class="mx-sheet mx-eff-sheet" role="dialog" aria-modal="true" aria-label="Reasoning effort">'
-  +'<div class="mx-grip"></div><div class="mx-eff-h"><b>Reasoning effort</b><span>How long the selected model thinks before it answers</span></div>'
-  +'<div class="mx-eff-list">'+RLV.map((x,i)=>'<button type="button" class="mx-row'+(i===cur?' on':'')+'" data-eff="'+x.k+'"><span class="mx-logo">'+icon('spark','sm')+'</span><span class="mx-name">'+x.l+'</span>'+(i===cur?'<span class="mx-chk">'+icon('check','sm')+'</span>':'')+'</button>').join('')+'</div></div>';
- modalRoot.classList.add('show');_modalCancel=closeModal;
- modalRoot.querySelector('.scrim2').onclick=closeModal;
- modalRoot.querySelector('.mx-eff-list').onclick=e=>{const b=e.target.closest('[data-eff]');if(!b)return;
-  S.settings.reasoning=b.dataset.eff;saveSettings();updateChips();closeModal();};
-}
-$('#chatModelTop').onclick=()=>openModelModal();$('#pjModelTop').onclick=()=>openModelModal();
-$('#chipEffort').onclick=()=>openEffortSheet();$('#chipEffort2').onclick=()=>openEffortSheet();
+$('#topModel').onclick=openModelSheet;$('#topModel2').onclick=openModelSheet;
 
 /* ---------- history ---------- */
 function renderHistory(){const list=$('#hsList');const items=[...S.chats].sort((a,b)=>b.updatedAt-a.updatedAt);
@@ -3119,7 +3154,7 @@ function agentEmpty(){return `<div class="empty" style="padding-top:6vh">
  <div class="qa-grid">${[['Create a login screen with email and password fields'],['Fix the build error'],['Make the home screen dark'],['Add a settings page'],['Analyze the project structure']].map(c=>`<button class="qa" data-aa="${esc(c[0])}">${icon('terminal','sm')}<span>${esc(c[0])}</span></button>`).join('')}</div></div>`;}
 $('#pjClose').onclick=goBack;
 $('#pjTabs').addEventListener('click',e=>{const b=e.target.closest('[data-tab]');if(b)setTab(b.dataset.tab);});
-function setTab(t){updateChips();$$('#pjTabs button').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));
+function setTab(t){$$('#pjTabs button').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));
  $('#pjCode').classList.toggle('on',t==='code');$('#pjAgent').classList.toggle('on',t==='agent');$('#pjBuild').classList.toggle('on',t==='build');
  if(t==='code')renderExplorer();if(t==='agent'){renderThread('#agentMsgs',S.project.agent);if(!S.project.agent.length)$('#agentMsgs').innerHTML=agentEmpty();restoreAgentDraft();}if(t==='build')renderBuildPane();}
 $('#pjOpenComposer').onclick=()=>setTab('agent');
@@ -3334,7 +3369,7 @@ async function sendAgent(){if(S.agentStreaming)return;
  const inp=$('#agentInput');const text=inp.value.trim();const atts=S.agentAttachments.slice();
  if(!text&&!atts.length)return;
  if(!activeProvider()){toast('Set up an AI provider first (Menu > Set Up AI).','warn');renderProviders();openScreen('screen-providers');return;}
- if(!activeProvider().model){toast('No model selected. Use the Model button in the composer.','warn');openModelModal();return;}
+ if(!activeProvider().model){toast('No model selected. Tap the model name at the top to choose one.','warn');openModelSheet();return;}
  p.agent.push({id:uid(),role:'user',content:text||'(selected files)',attachments:atts.map(a=>({name:a.path||a.name,size:a.size,kind:a.kind})),createdAt:Date.now(),status:'done'});
  S.agentAttachments=[];inp.value='';if(agentDraftKey())Cloud.draft.del(agentDraftKey());autoGrow(inp);
  const am={id:uid(),role:'assistant',content:'',createdAt:Date.now(),status:'streaming',activity:[]};
@@ -4245,7 +4280,7 @@ async function retryQueue(mid){if(S.agentStreaming)return;const p=S.project,am=p
  const f=am.queue.find(x=>x.status==='failed');if(f)f.status='retrying';
  try{await runQueue(am);}finally{finishAgent(am);}}
 
-async function sendAgent2(){if(S.agentStreaming)return;const p=S.project;if(!p)return;const inp=$('#agentInput'),text=inp.value.trim(),atts=S.agentAttachments.slice();if(!text&&!atts.length)return;if(!activeProvider()){toast('Set up an AI provider first (Menu > Set Up AI).','warn');renderProviders();openScreen('screen-providers');return;}if(!activeProvider().model){toast('No model selected. Use the Model button in the composer.','warn');openModelModal();return;}const errAtt=atts.find(a=>a.path==='build-failed.log'),fromBuild=!!(S._fixPending&&errAtt);S._fixPending=false;p.agent.push({id:uid(),role:'user',content:text||'(selected files)',attachments:atts.map(a=>({name:a.path||a.name,size:a.size,kind:a.kind})),createdAt:Date.now(),status:'done'});S.agentAttachments=[];inp.value='';if(agentDraftKey())Cloud.draft.del(agentDraftKey());autoGrow(inp);renderAgentAtts();const am={id:uid(),role:'assistant',content:'',createdAt:Date.now(),status:'streaming',activity:[],queue:[],task:text||'Work with the attached files.',reads:atts.filter(a=>a.kind!=='image').map(a=>a.path||a.name),fromBuild,errText:errAtt?errAtt.content||'':'',extra:atts.filter(a=>a!==errAtt&&typeof a.content==='string').map(a=>({path:a.path||a.name,content:a.content.slice(0,ATT_BUDGET)}))};p.agent.push(am);renderThread('#agentMsgs',p.agent);startReply('#agentMsgs',am.id);S.agentStreaming=true;S.agentAbort=new AbortController();updateSendBtn();try{if(isLinkIntent(text)&&!atts.length){try{await agentLinkReply(am,text);}finally{am._webSearching=false;}return;}const evU=agStart(am,'Understanding the request','search');let webCtx='';if(S.webAccess&&!am.fromBuild&&text&&!atts.length){const hd=p.agent.filter(x=>x!==am&&x.status==='done'&&x.content).slice(0,-1).slice(-4);const dec=await decideSearch(text,hd,S.agentAbort.signal,'The user is talking to a coding agent that builds Android WebView apps and websites inside a project.');if(dec.search&&dec.queries.length)webCtx=await researchWeb(am,dec.queries,S.agentAbort.signal,'#agentMsgs');}let hits=am.errText?filesInText(p,am.errText,true):[];filesInText(p,text,false).forEach(x=>{if(!hits.includes(x))hits.push(x)});const given=new Set(am.extra.map(a=>a.path));hits=hits.filter(x=>!given.has(x)).slice(0,3);let ctx='',used=0;const read=[];for(const x of hits){const f=p.files[x];if(!f||f.binary)continue;const cc=f.content||'';if(used+cc.length>30000)continue;used+=cc.length;read.push(x);ctx+='\n### FILE: '+x+'\n'+cc+'\n### END FILE\n'}agAct(am,read.length?'Read '+read.join(', ')+' (targeted)':'Planning from project file list',read.length?'file':'info');let up='TASK:\n'+am.task;if(am.errText)up+='\n\nREAL FAILURE LOG:\n'+errSummary(am.errText);am.extra.forEach(a=>{up+='\n\nATTACHED FILE '+a.path+':\n'+a.content});if(webCtx)up+='\n\nLIVE WEB CONTEXT (fresh research done for this request; use the concrete details in it):\n'+webCtx.slice(0,9000);up+='\n\nPROJECT FILE LIST:\n'+Object.keys(p.files).sort().slice(0,400).join('\n')+'\n\nFILES ALREADY READ:'+(ctx||' none')+'\n\nRECENT PROJECT CHANGES (earlier in this chat): '+(recentChanges(p,am).join(', ')||'none')+'\n\nCONVERSATION RULES: First decide the intent of the LATEST user message, using earlier messages for context (a follow-up such as "make it black" refers to the work already discussed). Intents: greeting, chat, question, project_question, explain, inspect, code_change, bug_fix, build_fix, clarify. For greeting/chat/question/project_question/explain/inspect/clarify, answer naturally in the language the user writes in, put the reply in "answer", keep files [], and NEVER mention build errors, infrastructure or file changes. Use clarify only if a code request is truly ambiguous. For clarify set "questions" to {"groups":[{"q":"question text","options":["choice 1","choice 2"]}],"button":"short action label"} written from the real context in the language of the user (1 to 4 groups, 2 to 6 options each, no numbering); otherwise questions is null. Set "infrastructure" true ONLY when a REAL FAILURE LOG is attached above and shows no project-code error; otherwise it is always false.\n\nReturn ONLY one JSON object: {"intent":"","analysis":{"root_cause":"","failed_task":"","failed_step":"","error_type":"","error_file":"","error_line":null,"relevant_dependency":null,"recommended_fix":""},"infrastructure":false,"summary":"one short line","answer":"reply text when no file change is needed, else empty","questions":null,"files":[{"path":"relative/path","action":"modify|create|delete","reason":"short","refs":[]}]}. For a code change or bug fix list only the files that must change (minimal set)."';const hist=p.agent.filter(m=>m!==am&&m.status==='done'&&m.content).slice(0,-1).slice(-6).map(m=>({role:m.role,content:m.content}));let raw='';const tP=Date.now();await providerChat({provider:activeProvider(),messages:[{role:'system',content:AG_SYS},...hist,{role:'user',content:up}],signal:S.agentAbort.signal,reasoning:'fast',onDelta:d=>{raw+=d;const pa=partialAnswer(raw);if(pa&&pa!==am.content){am.content=pa;updateLive(am,'#agentMsgs');}},onReasoning:think(am)});let plan;try{plan=JSON.parse((raw.match(/\{[\s\S]*\}/)||[''])[0])}catch(_){plan=null}if(!plan||typeof plan!=='object'){if(!am.fromBuild&&!am.errText&&raw.trim())plan={intent:'chat',answer:raw.trim(),files:[]};else throw new Error('The model did not return a valid plan. Try again.');}const seen=new Set();am.queue=(plan.files||[]).map(f=>({path:normPath(f&&f.path),action:String(f&&f.action||'modify').toLowerCase(),reason:String(f&&f.reason||''),refs:((f&&f.refs)||[]).map(normPath).filter(r=>p.files[r]).slice(0,2)})).filter(f=>f.path&&!isUnsafe(f.path)&&!seen.has(f.path)&&seen.add(f.path)).slice(0,12).map(f=>{if(f.action!=='delete')f.action=p.files[f.path]?'modify':'create';f.status='queued';return f});am.plan=String(plan.summary||'');const an=plan.analysis||{};if(an.root_cause&&(am.fromBuild||am.errText))agAct(am,'Root cause: '+String(an.root_cause).slice(0,300)+(an.error_file?' ('+an.error_file+(an.error_line?':'+an.error_line:'')+')':''),'search');const intent=String(plan.intent||'').toLowerCase().replace(/[^a-z_]/g,''),talk=/^(greeting|chat|question|project_question|explain|inspect|clarify|identity)$/.test(intent);if(talk)am.queue=[];
+async function sendAgent2(){if(S.agentStreaming)return;const p=S.project;if(!p)return;const inp=$('#agentInput'),text=inp.value.trim(),atts=S.agentAttachments.slice();if(!text&&!atts.length)return;if(!activeProvider()){toast('Set up an AI provider first (Menu > Set Up AI).','warn');renderProviders();openScreen('screen-providers');return;}if(!activeProvider().model){toast('No model selected. Tap the model name at the top to choose one.','warn');openModelSheet();return;}const errAtt=atts.find(a=>a.path==='build-failed.log'),fromBuild=!!(S._fixPending&&errAtt);S._fixPending=false;p.agent.push({id:uid(),role:'user',content:text||'(selected files)',attachments:atts.map(a=>({name:a.path||a.name,size:a.size,kind:a.kind})),createdAt:Date.now(),status:'done'});S.agentAttachments=[];inp.value='';if(agentDraftKey())Cloud.draft.del(agentDraftKey());autoGrow(inp);renderAgentAtts();const am={id:uid(),role:'assistant',content:'',createdAt:Date.now(),status:'streaming',activity:[],queue:[],task:text||'Work with the attached files.',reads:atts.filter(a=>a.kind!=='image').map(a=>a.path||a.name),fromBuild,errText:errAtt?errAtt.content||'':'',extra:atts.filter(a=>a!==errAtt&&typeof a.content==='string').map(a=>({path:a.path||a.name,content:a.content.slice(0,ATT_BUDGET)}))};p.agent.push(am);renderThread('#agentMsgs',p.agent);startReply('#agentMsgs',am.id);S.agentStreaming=true;S.agentAbort=new AbortController();updateSendBtn();try{if(isLinkIntent(text)&&!atts.length){try{await agentLinkReply(am,text);}finally{am._webSearching=false;}return;}const evU=agStart(am,'Understanding the request','search');let webCtx='';if(S.webAccess&&!am.fromBuild&&text&&!atts.length){const hd=p.agent.filter(x=>x!==am&&x.status==='done'&&x.content).slice(0,-1).slice(-4);const dec=await decideSearch(text,hd,S.agentAbort.signal,'The user is talking to a coding agent that builds Android WebView apps and websites inside a project.');if(dec.search&&dec.queries.length)webCtx=await researchWeb(am,dec.queries,S.agentAbort.signal,'#agentMsgs');}let hits=am.errText?filesInText(p,am.errText,true):[];filesInText(p,text,false).forEach(x=>{if(!hits.includes(x))hits.push(x)});const given=new Set(am.extra.map(a=>a.path));hits=hits.filter(x=>!given.has(x)).slice(0,3);let ctx='',used=0;const read=[];for(const x of hits){const f=p.files[x];if(!f||f.binary)continue;const cc=f.content||'';if(used+cc.length>30000)continue;used+=cc.length;read.push(x);ctx+='\n### FILE: '+x+'\n'+cc+'\n### END FILE\n'}agAct(am,read.length?'Read '+read.join(', ')+' (targeted)':'Planning from project file list',read.length?'file':'info');let up='TASK:\n'+am.task;if(am.errText)up+='\n\nREAL FAILURE LOG:\n'+errSummary(am.errText);am.extra.forEach(a=>{up+='\n\nATTACHED FILE '+a.path+':\n'+a.content});if(webCtx)up+='\n\nLIVE WEB CONTEXT (fresh research done for this request; use the concrete details in it):\n'+webCtx.slice(0,9000);up+='\n\nPROJECT FILE LIST:\n'+Object.keys(p.files).sort().slice(0,400).join('\n')+'\n\nFILES ALREADY READ:'+(ctx||' none')+'\n\nRECENT PROJECT CHANGES (earlier in this chat): '+(recentChanges(p,am).join(', ')||'none')+'\n\nCONVERSATION RULES: First decide the intent of the LATEST user message, using earlier messages for context (a follow-up such as "make it black" refers to the work already discussed). Intents: greeting, chat, question, project_question, explain, inspect, code_change, bug_fix, build_fix, clarify. For greeting/chat/question/project_question/explain/inspect/clarify, answer naturally in the language the user writes in, put the reply in "answer", keep files [], and NEVER mention build errors, infrastructure or file changes. Use clarify only if a code request is truly ambiguous. For clarify set "questions" to {"groups":[{"q":"question text","options":["choice 1","choice 2"]}],"button":"short action label"} written from the real context in the language of the user (1 to 4 groups, 2 to 6 options each, no numbering); otherwise questions is null. Set "infrastructure" true ONLY when a REAL FAILURE LOG is attached above and shows no project-code error; otherwise it is always false.\n\nReturn ONLY one JSON object: {"intent":"","analysis":{"root_cause":"","failed_task":"","failed_step":"","error_type":"","error_file":"","error_line":null,"relevant_dependency":null,"recommended_fix":""},"infrastructure":false,"summary":"one short line","answer":"reply text when no file change is needed, else empty","questions":null,"files":[{"path":"relative/path","action":"modify|create|delete","reason":"short","refs":[]}]}. For a code change or bug fix list only the files that must change (minimal set)."';const hist=p.agent.filter(m=>m!==am&&m.status==='done'&&m.content).slice(0,-1).slice(-6).map(m=>({role:m.role,content:m.content}));let raw='';const tP=Date.now();await providerChat({provider:activeProvider(),messages:[{role:'system',content:AG_SYS},...hist,{role:'user',content:up}],signal:S.agentAbort.signal,reasoning:'fast',onDelta:d=>{raw+=d;const pa=partialAnswer(raw);if(pa&&pa!==am.content){am.content=pa;updateLive(am,'#agentMsgs');}},onReasoning:think(am)});let plan;try{plan=JSON.parse((raw.match(/\{[\s\S]*\}/)||[''])[0])}catch(_){plan=null}if(!plan||typeof plan!=='object'){if(!am.fromBuild&&!am.errText&&raw.trim())plan={intent:'chat',answer:raw.trim(),files:[]};else throw new Error('The model did not return a valid plan. Try again.');}const seen=new Set();am.queue=(plan.files||[]).map(f=>({path:normPath(f&&f.path),action:String(f&&f.action||'modify').toLowerCase(),reason:String(f&&f.reason||''),refs:((f&&f.refs)||[]).map(normPath).filter(r=>p.files[r]).slice(0,2)})).filter(f=>f.path&&!isUnsafe(f.path)&&!seen.has(f.path)&&seen.add(f.path)).slice(0,12).map(f=>{if(f.action!=='delete')f.action=p.files[f.path]?'modify':'create';f.status='queued';return f});am.plan=String(plan.summary||'');const an=plan.analysis||{};if(an.root_cause&&(am.fromBuild||am.errText))agAct(am,'Root cause: '+String(an.root_cause).slice(0,300)+(an.error_file?' ('+an.error_file+(an.error_line?':'+an.error_line:'')+')':''),'search');const intent=String(plan.intent||'').toLowerCase().replace(/[^a-z_]/g,''),talk=/^(greeting|chat|question|project_question|explain|inspect|clarify|identity)$/.test(intent);if(talk)am.queue=[];
 if(am.fromBuild&&plan.infrastructure===true&&!am.queue.length){am.content='No project-code error was found in the build log. The failure appears to be infrastructure/build-service related.'+(an.root_cause?'\n\n'+an.root_cause:'')+'\nNo project files were changed.';agEnd(am,evU,'done','Build log analysed \u2014 no project-code error found');am.status='done';return;}
 agEnd(am,evU,'done',intent?'Request understood ('+intent.replace(/_/g,' ')+')':'Request understood',{detail:'Planner responded in '+((Date.now()-tP)/1000).toFixed(1)+'s'});
 if(!am.queue.length){let ans=String(plan.answer||'').trim();if(!ans&&!am.fromBuild&&!(plan.questions&&plan.questions.groups))ans=await agentChatReply(am,hist,text);if(!ans)ans=am.plan||'I could not find a change to make. Could you describe what you want changed?';am.content=ans+qBlock(plan.questions);agAct(am,am.fromBuild?'No file changes were needed':'Replied \u2014 no file operations were needed','info');await typerDrain(am,'#agentMsgs',S.agentAbort.signal);am.status='done';return;}
@@ -4393,6 +4428,76 @@ section.screen .topbar>button.ibtn[data-menu]:active{
 .ms-chipbtn{flex:none;height:30px;padding:0 13px;border-radius:9999px;background:rgba(255,255,255,.07);color:#C9CAD1;font-size:12px;font-weight:600}
 .ms-chipbtn.pri{height:29px;padding:0 10px;background:linear-gradient(180deg,#1F9DFF,#0888FF);color:#fff;font-size:14px}
 @media (prefers-reduced-motion:reduce){.ms-sheet{animation:none}.ms-fill,.ms-knob,.ms-list,.ms-list-in,.ms-pill .ic{transition:none!important}}
+
+/* ===== Top-bar model button (Chat + Project Agent) ===== */
+.mtop{display:inline-flex;align-items:center;justify-content:center;gap:6px;flex:0 1 auto;min-width:0;height:44px;padding:0 12px;border-radius:14px;font-size:18px;font-weight:700;letter-spacing:-.01em;color:var(--text);background:transparent;transition:background .15s,transform .12s}
+.mtop span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mtop .ic{width:17px;height:17px;stroke-width:2.6;color:var(--text2);transform:rotate(180deg)}
+.mtop:active{transform:scale(.97);background:rgba(255,255,255,.07)}
+[data-theme=light] .mtop:active{background:rgba(15,23,42,.07)}
+#screen-chat .ftop>#topModel{margin:0 auto}
+#screen-chat .ftop>#btnNewChat{margin-left:0!important}
+#pjAgent{position:relative}
+.mtop-pj{position:absolute;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top) + 60px);z-index:6;height:36px;max-width:calc(100% - 44px);padding:0 14px;font-size:15px;border-radius:9999px;background:rgba(14,14,19,.6);border:1px solid rgba(255,255,255,.10);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.mtop-pj:active{transform:translateX(-50%) scale(.97)}
+[data-theme=light] .mtop-pj{background:rgba(255,255,255,.75);border-color:rgba(15,23,42,.10)}
+#screen-project #pjAgent>.scrollpane{padding-top:130px!important}
+#toasts{z-index:2100!important}
+.ms-cap{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:2px 12px 5px;font-size:12.5px;font-weight:600;color:#8A8C96}
+.ms-cap b{color:#F4F4F7;font-weight:600}
+
+/* ===== Model picker bottom sheet ===== */
+#mpRoot{position:fixed;inset:0;z-index:2000;display:none}
+#mpRoot.show{display:block}
+.mp-scrim{position:absolute;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);opacity:0;transition:opacity .28s}
+#mpRoot.in .mp-scrim{opacity:1}
+.mp-sheet{position:absolute;left:0;right:0;bottom:0;height:72dvh;max-height:calc(100dvh - 56px - env(safe-area-inset-top));display:flex;flex-direction:column;background:var(--bg);border:1.5px solid var(--border);border-bottom:0;border-radius:30px 30px 0 0;box-shadow:0 -18px 60px rgba(0,0,0,.55);transform:translateY(100%);transition:transform .34s cubic-bezier(.2,.9,.25,1);overflow:hidden}
+:root:not([data-theme=light]) .mp-sheet{border-color:rgba(255,255,255,.17)}
+#mpRoot.in .mp-sheet{transform:none}
+.mp-sheet.drag{transition:none}
+.mp-top{flex:none;padding:10px 0 14px;touch-action:none;cursor:grab}
+.mp-grip{width:46px;height:4.5px;border-radius:3px;margin:0 auto;background:var(--text-muted);opacity:.7}
+.mp-search{flex:none;display:flex;align-items:center;gap:12px;height:54px;margin:0 16px;padding:0 20px;border-radius:9999px;border:1.5px solid var(--border);color:var(--text2);transition:border-color .15s,box-shadow .15s}
+:root:not([data-theme=light]) .mp-search{border-color:rgba(255,255,255,.28)}
+.mp-search:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.mp-search .ic{width:23px;height:23px;color:var(--text)}
+.mp-search input{flex:1;min-width:0;height:100%;background:transparent;border:0;outline:0;font-size:17px;color:var(--text)}
+.mp-search input::placeholder{color:var(--text2)}
+.mp-tabs{flex:none;display:flex;gap:4px;overflow-x:auto;padding:16px 16px 8px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.mp-tabs::-webkit-scrollbar{display:none}
+.mp-tab{flex:none;height:42px;padding:0 20px;border-radius:9999px;font-size:16px;font-weight:600;color:var(--text);white-space:nowrap;transition:background .2s,color .2s,transform .12s}
+.mp-tab:active{transform:scale(.96)}
+.mp-tab.on{background:var(--text);color:var(--bg)}
+.mp-tabs.dim .mp-tab.on{background:transparent;color:var(--text)}
+.mp-list{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:6px 12px calc(18px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:2px}
+.mp-row{display:flex;align-items:center;gap:16px;width:100%;padding:13px 14px;border-radius:20px;border:1px solid transparent;text-align:left;flex:none;animation:mpRow .32s cubic-bezier(.2,.9,.3,1) both;animation-delay:calc(var(--i,0)*28ms);transition:background .15s,transform .12s}
+.mp-row:active{transform:scale(.985);background:rgba(255,255,255,.05)}
+[data-theme=light] .mp-row:active{background:rgba(15,23,42,.05)}
+.mp-row.on{background:rgba(255,255,255,.075);border-color:rgba(255,255,255,.13)}
+[data-theme=light] .mp-row.on{background:rgba(15,23,42,.06);border-color:rgba(15,23,42,.12)}
+@keyframes mpRow{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.mp-ico{flex:none;width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:1.5px solid rgba(255,255,255,.32);color:var(--text);background:rgba(255,255,255,.02)}
+[data-theme=light] .mp-ico{border-color:rgba(15,23,42,.22);background:rgba(15,23,42,.02)}
+.mp-ico svg{width:26px;height:26px}
+.mp-ico .ic{width:24px;height:24px}
+.mp-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.mp-name{display:flex;align-items:center;gap:8px;min-width:0}
+.mp-name b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:18px;font-weight:600;color:var(--text)}
+.mp-pro{flex:none;font-style:normal;font-size:11px;font-weight:800;letter-spacing:.03em;line-height:1;padding:4px 8px;border-radius:9999px;color:#fff;background:linear-gradient(90deg,#FF2A6D,#B01CB0);box-shadow:0 2px 10px rgba(255,27,122,.3)}
+.mp-desc{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:15px;color:var(--text2)}
+.mp-row>.ic{flex:none;width:24px;height:24px;stroke-width:2.4;color:var(--text)}
+.mp-gh{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px 6px;font-size:13px;font-weight:700;letter-spacing:.02em;color:var(--text2)}
+.mp-gh span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mp-chip{flex:none;height:32px;padding:0 14px;border-radius:9999px;font-size:12.5px;font-weight:600;color:var(--text);background:rgba(255,255,255,.08)}
+[data-theme=light] .mp-chip{background:rgba(15,23,42,.07)}
+.mp-chip.pri{background:var(--accent-gradient);color:#fff}
+.mp-add{display:flex;gap:8px;padding:6px 14px 10px}
+.mp-inp{flex:1;min-width:0;height:40px;padding:0 16px;border-radius:9999px;background:transparent;border:1.5px solid var(--border);color:var(--text);font-size:14.5px;outline:0}
+:root:not([data-theme=light]) .mp-inp{border-color:rgba(255,255,255,.2)}
+.mp-inp:focus{border-color:var(--accent)}
+.mp-empty{margin:auto;padding:30px 24px;text-align:center;color:var(--text2);font-size:15px;line-height:1.55;display:flex;flex-direction:column;align-items:center;gap:14px}
+.mp-empty-s{padding:2px 16px 8px;font-size:13.5px;color:var(--text2)}
+@media (prefers-reduced-motion:reduce){.mp-sheet,.mp-scrim,.mp-row{transition:none!important;animation:none!important}}
 </style>
 
 <style id="synora-agent-upgrade">
@@ -5203,7 +5308,7 @@ function projectHistory(p,am,extra,imgs){
 /* ---------- chat integration (priority 1) ---------- */
 function providerOk(){
  if(!activeProvider()){toast('Set up an AI provider first (Menu > Set Up AI).','warn');renderProviders();openScreen('screen-providers');return false;}
- if(!activeProvider().model){toast('No model selected. Use the Model button in the composer.','warn');openModelModal();return false;}
+ if(!activeProvider().model){toast('No model selected. Tap the model name at the top to choose one.','warn');openModelSheet();return false;}
  return true;}
 window.sendChat=async function(){
  if(S.streaming)return;
