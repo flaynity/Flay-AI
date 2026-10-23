@@ -1793,6 +1793,7 @@ function cbHtml(b,msg){
   +'<div class="cb-body"><pre><code>'+hlCode(b.c,lang)+'</code>'+(live?'<span class="caret"></span>':'')+'</pre></div></div>';}
 function md(src,msg){
  const blocks=[];src=String(src??'');const pCards=[];
+ src=src.replace(/(```|~~~)(?:prompt|json|text|txt)?[ \t]*\n?(\s*\[\s*\{[\s\S]*?)(\1|$)/g,(m,f,body,cl)=>(/"url"\s*:/.test(body)&&/"name"\s*:/.test(body))?'```weblinks\n'+body.replace(/\s+$/,'')+(cl?'\n```':''):m);
  src=src.replace(/(```|~~~)prompt[ \t]*\n?([\s\S]*?)(\1|$)/g,(m,f,t,cl)=>{pCards.push({text:t.replace(/\n$/,''),open:!cl});return '\u0004'+(pCards.length-1)+'\u0004';});
 src=src.replace(/```flayfiles\n?([\s\S]*?)```/g,'@@(FILE_OUTPUT)@@');
  src=src.replace(/```flayfiles\n?[\s\S]*$/,'@@(FILE_OUTPUT_LIVE)@@');
@@ -5188,7 +5189,7 @@ function execTool(run,call){
  catch(e){return E('Tool crashed: '+(e&&e.message||e));}}
 
 /* ---------- protocol (Appendix A) ---------- */
-const MARK=/(^|\n)[ \t`>*\-]*TOOL_CALL:/;
+const MARK=/(^|\n)[ \t`>*\-]*<?\s*TOOL_CALL\s*[:>]/;
 /* DeepSeek-style DSML tool calls (<｜DSML｜invoke name="..."> ... ) are converted to the same call object */
 const DSML_OPEN=/<\/?\s*[|｜]+\s*DSML\s*[|｜]+/;
 const DSML_TAIL=/<\/?\s*[|｜]*\s*(?:D(?:S(?:M(?:L)?)?)?)?$/;
@@ -5211,9 +5212,9 @@ function parseCall(text){
  const dm=DSML_OPEN.exec(text),m=MARK.exec(text);
  if(dm&&(!m||dm.index<m.index))return parseDSML(text,dm.index);
  if(!m)return{kind:'none'};
- const mi=text.indexOf('TOOL_CALL:',m.index),pre=text.slice(0,m.index).trim(),s=text.indexOf('{',mi+10);
+ const mi=text.indexOf('TOOL_CALL',m.index),pre=text.slice(0,m.index).trim(),s=text.indexOf('{',mi+9);
  if(s<0)return{kind:'partial',pre};
- if(text.slice(mi+10,s).replace(/[\s`]/g,'')!=='')return{kind:'bad',pre,error:'TOOL_CALL must be followed by one JSON object.'};
+ if(text.slice(mi+9,s).replace(/[\s`:>]/g,'')!=='')return{kind:'bad',pre,error:'TOOL_CALL must be followed by one JSON object.'};
  let depth=0,str=false,esc=false,e=-1;
  for(let i=s;i<text.length;i++){const c=text[i];
   if(str){if(esc)esc=false;else if(c==='\\')esc=true;else if(c==='"')str=false;continue;}
@@ -5225,8 +5226,7 @@ function parseCall(text){
  if(!tool)return{kind:'bad',pre,error:'The TOOL_CALL JSON needs a "tool" field.'};
  return{kind:'call',pre,call:{tool,args}};}
 function visible(buf){
- const m=MARK.exec(buf);let v=m?buf.slice(0,m.index):buf;const dm=DSML_OPEN.exec(v);if(dm)v=v.slice(0,dm.index);else v=v.replace(DSML_TAIL,'');const mk='TOOL_CALL:';
- for(let k=Math.min(mk.length-1,v.length);k>=1;k--){if(v.endsWith(mk.slice(0,k))&&(v.length===k||/[\n \t`>*\-]/.test(v[v.length-k-1]))){v=v.slice(0,v.length-k);break;}}
+ const m=MARK.exec(buf);let v=m?buf.slice(0,m.index):buf;const dm=DSML_OPEN.exec(v);if(dm)v=v.slice(0,dm.index);else v=v.replace(DSML_TAIL,'');for(const mk of ['TOOL_CALL:','<TOOL_CALL>']){for(let k=Math.min(mk.length-1,v.length);k>=1;k--){if(v.endsWith(mk.slice(0,k))&&(v.length===k||/[\n \t`>*\-]/.test(v[v.length-k-1]))){v=v.slice(0,v.length-k);break;}}}
  return v.replace(/\s+$/,'');}
 const fmtCall=(c,shrink)=>{const a=Object.assign({},c.args);if(shrink)Object.keys(a).forEach(k=>{if(typeof a[k]==='string'&&a[k].length>300)a[k]=a[k].slice(0,200)+' ...['+(a[k].length-200)+' chars omitted]';});return 'TOOL_CALL: '+JSON.stringify({tool:c.tool,args:a});};
 function build(system,L){
@@ -5253,7 +5253,7 @@ async function step(o,L){
  am.content='';
  try{await modelCall({messages:build(o.system,L),signal:ctl.signal,
    onDelta:d=>{buf+=d;const v=visible(buf);if(v!==am.content){am.content=v;updateLive(am,sel);}
-    if(!cut&&(buf.indexOf('TOOL_CALL:')>=0||DSML_OPEN.test(buf))&&parseCall(buf).kind==='call'){cut=true;ctl.abort();}},
+    if(!cut&&(buf.indexOf('TOOL_CALL')>=0||DSML_OPEN.test(buf))&&parseCall(buf).kind==='call'){cut=true;ctl.abort();}},
    onReasoning:r=>{if(!am.thinkT0)am.thinkT0=Date.now();am.reasoning=((am.reasoning||'')+r).slice(-20000);updateLive(am,sel);}});}
  catch(e){if(!(e.name==='AbortError'&&cut&&!o.signal.aborted))throw e;}
  finally{o.signal.removeEventListener('abort',onAb);}
