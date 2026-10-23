@@ -1543,38 +1543,16 @@ document.querySelectorAll('[data-soc]').forEach(function(b){
 });
 
 /* ---- session ---- */
-var workspaceReadyReleased=false;
-function releaseWorkspaceReady(user){
- if(workspaceReadyReleased)return;
- workspaceReadyReleased=true;
- resolveReady(user);
-}
 function onState(user){
  if(!user){XAuth.user=null;loadingFor=null;hideBoot();go('welcome');return;}
  if(loadingFor===user.uid)return;
- loadingFor=user.uid;XAuth.user=user;showBoot('Loading your workspace\\u2026');
- /*
-  * Authentication must not be blocked indefinitely by slow Firebase reads.
-  * Start the workspace after at most one second; if the read finishes later,
-  * refresh cached data without replacing the current chat.
-  */
- var loadTimer=setTimeout(function(){
-  if(loadingFor!==user.uid||workspaceReadyReleased)return;
-  console.warn('Workspace data is still loading; opening the workspace while Firebase continues in the background.');
-  releaseWorkspaceReady(user);
- },1000);
+ loadingFor=user.uid;XAuth.user=user;showBoot('Loading your workspace\u2026');
  Cloud.load(user).then(function(){
-  clearTimeout(loadTimer);
-  Cloud.touchProfile(user).catch(function(e){console.warn('Profile sync failed:',e);});
-  if(workspaceReadyReleased){
-   window.dispatchEvent(new CustomEvent('workspace-data-ready',{detail:{uid:user.uid}}));
-  }else releaseWorkspaceReady(user);
+  Cloud.touchProfile(user).catch(function(){});
+  resolveReady(user);
  }).catch(function(e){
-  clearTimeout(loadTimer);
-  console.error('Workspace data load failed:',e);
-  if(workspaceReadyReleased){
-   window.dispatchEvent(new CustomEvent('workspace-data-error',{detail:{uid:user.uid,message:String(e&&e.message||e)}}));
-  }else releaseWorkspaceReady(user);
+  loadingFor=null;
+  bootFail(String(e&&e.message||e),function(){onState(user);});
  });
 }
 XAuth.reveal=function(){
@@ -2065,7 +2043,7 @@ function closeActSheet(fromPop){const el=document.getElementById('acSheet');if(e
 function acShowList(){const m=findThinkMsg(_ac.mid);if(!m)return;_ac.view='list';renderActSheet(m);const l=document.querySelector('#acSheet .cl-list');if(!l)return;
  requestAnimationFrame(()=>{if(_ac.ls!=null)l.scrollTop=_ac.ls;else if(_ac.ev){const t=l.querySelector('[data-evid="'+_ac.ev+'"]');if(t)l.scrollTop=Math.max(0,t.offsetTop-24);}});}
 function acBack(){if(!_ac.mid)return;if(_ac.kind==='act'&&_ac.view==='detail'){if(_ac.d>=2)history.back();else acShowList();}else closeActSheet();}
-window.addEventListener('popstate',()=>{if(_ac.mute){_ac.mute=false;_ac._handledPop=true;return;}if(!_ac.mid)return;_ac._handledPop=true;_ac.d=Math.max(0,_ac.d-1);if(_ac.kind==='act'&&_ac.view==='detail')acShowList();else closeActSheet(true);});
+window.addEventListener('popstate',()=>{if(_ac.mute){_ac.mute=false;return;}if(!_ac.mid)return;_ac.d=Math.max(0,_ac.d-1);if(_ac.kind==='act'&&_ac.view==='detail')acShowList();else closeActSheet(true);});
 function openActSheet(mid,kind,evid,n){
  const m=findThinkMsg(mid);if(!m)return;
  let el=document.getElementById('acSheet');
@@ -2285,53 +2263,14 @@ function startReply(sel,mid){
  });
 }
 
-/* ---------- navigation + Android WebView hardware Back ---------- */
-let _flayBackDepth=0;
-function _flayActiveScreen(){const s=$('.screen.active');return s&&s.id||'screen-chat';}
-function _flaySetScreen(id){const target=document.getElementById(id);if(!target||!target.classList.contains('screen'))return false;
- $('.screen').forEach(s=>s.classList.remove('active'));target.classList.add('active');
- if(id==='screen-project'&&S.project)renderPjAll();return true;}
-try{history.replaceState({flayNav:1,screen:_flayActiveScreen(),stack:[]},'');}catch(e){}
-function openScreen(id,opts={}){
- const cur=$('.screen.active');
- if(opts.reset)S.navStack=[];
- else if(cur&&cur.id!==id&&cur.id!=='screen-chat')S.navStack.push(cur.id);
- if(cur&&cur.id!==id){
-  try{history.pushState({flayNav:1,screen:id,stack:S.navStack.slice()},'');_flayBackDepth++;}catch(e){}
- }
- _flaySetScreen(id);closeDrawer();
-}
-function goBack(){
- const id=S.navStack.pop()||'screen-chat';
- _flaySetScreen(id);
-}
-function requestAppBack(){
- const sheet=document.getElementById('acSheet');
- if(sheet&&sheet.classList.contains('show')){if(typeof acBack==='function')acBack();return;}
- const otherSheet=document.querySelector('.tk-sheet.show');
- if(otherSheet){otherSheet.classList.remove('show');return;}
- const drawerEl=document.getElementById('drawer');
- if(drawerEl&&drawerEl.classList.contains('open')){closeDrawer();return;}
- const modalEl=document.getElementById('modalRoot');
- if(modalEl&&modalEl.classList.contains('show')){if(typeof closeModal==='function')closeModal();return;}
- if(_flayBackDepth>0){try{history.back();return;}catch(e){}}
- goBack();
-}
-$('[data-back]').forEach(b=>b.onclick=requestAppBack);
-$('[data-menu]').forEach(b=>b.onclick=openDrawer);
-window.addEventListener('popstate',function(e){
- if(_ac&&_ac._handledPop){_ac._handledPop=false;return;}
- if(_ac&&_ac.mute)return;
- const st=e.state;
- if(st&&st.flayNav){
-  _flayBackDepth=Math.max(0,_flayBackDepth-1);
-  if(Array.isArray(st.stack))S.navStack=st.stack.slice();
-  else if(S.navStack.length)S.navStack.pop();
-  _flaySetScreen(st.screen||'screen-chat');
-  return;
- }
- if(_flayBackDepth>0){_flayBackDepth=Math.max(0,_flayBackDepth-1);goBack();}
-});
+/* ---------- navigation ---------- */
+function openScreen(id,opts={}){const cur=$('.screen.active');
+ if(opts.reset)S.navStack=[];else if(cur&&cur.id!==id&&cur.id!=='screen-chat')S.navStack.push(cur.id);
+ $$('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');closeDrawer();}
+function goBack(){const id=S.navStack.pop()||'screen-chat';$$('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');
+ if(id==='screen-project'&&S.project)renderPjAll();}
+$$('[data-back]').forEach(b=>b.onclick=goBack);
+  $$('[data-menu]').forEach(b=>b.onclick=openDrawer);
 
 /* drawer */
 const drawer=$('#drawer'),scrim=$('#scrim');
@@ -3656,25 +3595,6 @@ document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;
  attachTermScroll('#btLog');
  attachTermScroll('#vtLog');
  if(typeof JSZip==='undefined')toast('JSZip could not load (offline?). ZIP import/export is unavailable.','warn');}finally{try{fillUserBlock();}catch(_){}XAuth.reveal();}})();
-
-// Refresh data if Firebase finishes loading after the one-second startup fallback.
-// Keep the current chat selection intact while updating the lists.
-window.addEventListener('workspace-data-ready',async function(){
- try{
-  const [chats,projects]=await Promise.all([DB.all('chats'),DB.all('projects')]);
-  S.chats=chats.sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
-  S.projects=projects;
-  try{renderChat();}catch(e){}
-  try{renderProjects();}catch(e){}
- }catch(e){console.warn('Late workspace refresh failed:',e);}
-});
-window.addEventListener('workspace-data-error',function(e){
- const d=e&&e.detail||{};
- if(d.uid&&XAuth.user&&d.uid!==XAuth.user.uid)return;
- console.warn('Workspace data is unavailable:',d.message||'Unknown error');
- if(typeof toast==='function')toast('Signed in, but workspace data could not load. Check your connection and Firebase database rules.','warn');
-});
-
 </script>
 
 <style id="synora-actions">
