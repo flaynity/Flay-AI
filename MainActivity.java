@@ -1,49 +1,36 @@
-package com.flay.ai;
+package com.xflay.ai;
 
 import android.annotation.TargetApi;
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.app.DownloadManager;
-import android.app.NotificationChannel;
-import android.app.NotificationManager;
-import android.app.PendingIntent;
 import android.content.ActivityNotFoundException;
-import android.content.BroadcastReceiver;
 import android.content.ClipData;
 import android.content.Context;
-import android.content.DialogInterface;
-import android.content.Intent; 
-import android.content.IntentFilter;
+import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.res.Configuration;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.media.MediaScannerConnection;
 import android.net.ConnectivityManager;
 import android.net.Network;
+import android.net.NetworkCapabilities;
 import android.net.NetworkInfo;
-import android.net.Uri; 
+import android.net.Uri;
 import android.net.http.SslError;
 import android.os.Build;
-import android.os.Bundle; 
-import android.os.Environment;
+import android.os.Bundle;
 import android.os.Handler;
-import android.provider.MediaStore;
-import android.content.ContentValues;
-import android.util.Base64;
 import android.os.Looper;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowInsets;
 import android.view.WindowInsetsController;
 import android.view.WindowManager;
-import android.webkit.DownloadListener;
 import android.webkit.CookieManager;
 import android.webkit.GeolocationPermissions;
 import android.webkit.JavascriptInterface;
 import android.webkit.JsResult;
 import android.webkit.PermissionRequest;
 import android.webkit.SslErrorHandler;
-import android.webkit.URLUtil;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
@@ -52,18 +39,7 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.Toast;
-import androidx.core.app.NotificationCompat;
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.util.HashMap;
 
-// Google Sign-In SDK
 import com.google.android.gms.auth.api.signin.GoogleSignIn;
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
 import com.google.android.gms.auth.api.signin.GoogleSignInClient;
@@ -71,14 +47,37 @@ import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
 import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.tasks.Task;
 
+import com.google.firebase.FirebaseApp;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
+
+import org.json.JSONObject;
+
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.util.ArrayList;
+
 public class MainActivity extends Activity {
 
-    private static final String WEBSITE_URL  = "https://devnity-ai.vercel.app";
+    private static final String APP_CONFIG_DB_PATH = "appConfig";
     private static final String OFFLINE_URL = "file:///android_asset/offline.html";
-    
+    private static final String PREF_NAME = "FlaynityAppPref";
+    private static final String KEY_CACHED_URL = "cached_website_url";
+    private static final String KEY_CACHED_SECRET = "cached_secret_key";
+    private static final String KEY_NOTIFICATION_REQUESTED = "notification_permission_requested";
+
+    private String websiteUrl = null; 
+    private String secretKey = null;
+    private String baseUserAgent = null;
+
     private static final int RC_SIGN_IN = 9001;
     private GoogleSignInClient mGoogleSignInClient;
-    private static final String WEB_CLIENT_ID = "507666637583-fmkj60q6eir319nf87acqdgbruie9503.apps.googleusercontent.com";
+    private static final String WEB_CLIENT_ID = "745781159590-e7olpsn0moluuttp1rlcdlluf3mdvuon.apps.googleusercontent.com";
 
     private WebView webview1;
     private boolean isError = false; 
@@ -91,14 +90,9 @@ public class MainActivity extends Activity {
     private Handler handler = new Handler(Looper.getMainLooper());
     private boolean hasWebBackStack = false;
 
-    private static final String ACTION_CANCEL_DOWNLOAD = "com.devnix.ai.CANCEL_DOWNLOAD";
-    private static final String DOWNLOAD_FOLDER = "Flay AI";
-    private HashMap<Integer, DownloadTask> activeDownloads = new HashMap<>();
-    private int notificationIdCounter = 1000;
-    private BroadcastReceiver cancelReceiver;
-
     public class WebAppInterface {
         Context mContext;
+
         WebAppInterface(Context c) {
             mContext = c;
         }
@@ -129,9 +123,8 @@ public class MainActivity extends Activity {
 
         @JavascriptInterface
         public void showRewardedVideoAd() {
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
+            runOnUiThread(() -> {
+                if (webview1 != null) {
                     webview1.evaluateJavascript("javascript:onAdRewardEarned();", null);
                 }
             });
@@ -139,9 +132,8 @@ public class MainActivity extends Activity {
 
         @JavascriptInterface
         public void showDownloadRewardedAd() {
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
+            runOnUiThread(() -> {
+                if (webview1 != null) {
                     webview1.evaluateJavascript("javascript:onDownloadAdRewardEarned();", null);
                 }
             });
@@ -149,346 +141,12 @@ public class MainActivity extends Activity {
 
         @JavascriptInterface
         public void retryConnection() {
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    MainActivity.this.retryConnection();
-                }
-            });
+            runOnUiThread(() -> MainActivity.this.retryConnection());
         }
 
         @JavascriptInterface
-        public void downloadBase64(final String dataUrl, final String fileName, final String mimeType) {
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    Uri savedUri = null;
-                    try {
-                        if (dataUrl == null || dataUrl.trim().isEmpty()) {
-                            throw new Exception("Download data is empty.");
-                        }
-
-                        String raw = dataUrl.trim();
-                        int comma = raw.indexOf(',');
-                        String encoded = comma >= 0 ? raw.substring(comma + 1) : raw;
-
-                        if (encoded.isEmpty()) {
-                            throw new Exception("Download data is empty.");
-                        }
-
-                        encoded = encoded.replaceAll("\\s+", "");
-                        byte[] bytes = Base64.decode(encoded, Base64.DEFAULT);
-
-                        if (bytes == null || bytes.length == 0) {
-                            throw new Exception("Downloaded file is empty.");
-                        }
-
-                        String name = fileName == null ? "download" : fileName.trim();
-                        if (name.isEmpty()) name = "download";
-
-                        String mime = mimeType == null || mimeType.trim().isEmpty()
-                            ? "application/octet-stream" : mimeType.trim();
-
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                            ContentValues values = new ContentValues();
-                            values.put(MediaStore.Downloads.DISPLAY_NAME, name);
-                            values.put(MediaStore.Downloads.MIME_TYPE, mime);
-                            values.put(MediaStore.Downloads.RELATIVE_PATH,
-                                Environment.DIRECTORY_DOWNLOADS + "/" + DOWNLOAD_FOLDER);
-                            values.put(MediaStore.Downloads.IS_PENDING, 1);
-
-                            savedUri = getContentResolver().insert(
-                                MediaStore.Downloads.EXTERNAL_CONTENT_URI, values
-                            );
-
-                            if (savedUri == null) {
-                                throw new Exception("Could not create file in Downloads/Flay AI.");
-                            }
-
-                            try (OutputStream out = getContentResolver().openOutputStream(savedUri)) {
-                                if (out == null) {
-                                    throw new Exception("Could not open file for writing.");
-                                }
-                                out.write(bytes);
-                                out.flush();
-                            }
-
-                            ContentValues done = new ContentValues();
-                            done.put(MediaStore.Downloads.IS_PENDING, 0);
-                            getContentResolver().update(savedUri, done, null, null);
-                        } else {
-                            File dir = new File(
-                                Environment.getExternalStoragePublicDirectory(
-                                    Environment.DIRECTORY_DOWNLOADS
-                                ),
-                                DOWNLOAD_FOLDER
-                            );
-
-                            if (!dir.exists() && !dir.mkdirs()) {
-                                throw new Exception("Could not create Downloads/Flay AI folder.");
-                            }
-
-                            File outFile = new File(dir, name);
-                            try (OutputStream out = new FileOutputStream(outFile)) {
-                                out.write(bytes);
-                                out.flush();
-                            }
-
-                            savedUri = Uri.fromFile(outFile);
-
-                            android.media.MediaScannerConnection.scanFile(
-                                MainActivity.this,
-                                new String[] { outFile.getAbsolutePath() },
-                                new String[] { mime },
-                                null
-                            );
-                        }
-
-                        android.util.Log.d(
-                            "FLAY_DOWNLOAD",
-                            "Saved: Downloads/" + DOWNLOAD_FOLDER + "/" + name +
-                            " size=" + bytes.length
-                        );
-
-                        Toast.makeText(
-                            mContext,
-                            "Download completed\nDownloads/Flay AI/" + name,
-                            Toast.LENGTH_LONG
-                        ).show();
-
-                    } catch (IllegalArgumentException e) {
-                        if (savedUri != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                            try { getContentResolver().delete(savedUri, null, null); } catch (Exception ignored) {}
-                        }
-                        android.util.Log.e("FLAY_DOWNLOAD", "Invalid Base64 download data", e);
-                        Toast.makeText(
-                            mContext,
-                            "Download failed: invalid file data",
-                            Toast.LENGTH_LONG
-                        ).show();
-                    } catch (Exception e) {
-                        if (savedUri != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                            try { getContentResolver().delete(savedUri, null, null); } catch (Exception ignored) {}
-                        }
-                        android.util.Log.e("FLAY_DOWNLOAD", "Base64 download failed", e);
-                        Toast.makeText(
-                            mContext,
-                            "Download failed: " + String.valueOf(e.getMessage()),
-                            Toast.LENGTH_LONG
-                        ).show();
-                    }
-                }
-            });
-        }
-
-        @JavascriptInterface
-        public void downloadApk(final String fileUrl, final String fileName) {
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    startApkDownload(fileUrl, fileName);
-                }
-            });
-        }
-
-        @JavascriptInterface
-        public void downloadVideo(final String fileUrl, final String fileName, final String posterUrl) {
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        int notifId = notificationIdCounter++;
-                        DownloadTask task = new DownloadTask(notifId, fileUrl, fileName, posterUrl);
-                        activeDownloads.put(notifId, task);
-                        new Thread(task).start();
-                        Toast.makeText(mContext, "Download Started...", Toast.LENGTH_SHORT).show();
-                    } catch (Exception e) {
-                        Toast.makeText(mContext, "Download failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
-                    }
-                }
-            });
-        }
-    }
-
-    private class DownloadTask implements Runnable {
-        private final int notificationId;
-        private final String urlStr;
-        private final String fileName;
-        private final String posterUrl;
-        private boolean isCancelled = false;
-        private HttpURLConnection connection = null;
-
-        public DownloadTask(int notificationId, String urlStr, String fileName, String posterUrl) {
-            this.notificationId = notificationId;
-            this.urlStr = urlStr;
-            this.fileName = fileName;
-            this.posterUrl = posterUrl;
-        }
-
-        public void cancel() {
-            isCancelled = true;
-            if (connection != null) {
-                try { connection.disconnect(); } catch (Exception ignored) {}
-            }
-        }
-
-        private boolean isValidR2Url(String url) {
-            if (url == null || url.isEmpty()) return false;
-            return url.startsWith("https://") && (url.contains(".r2.dev") || url.contains(".r2.cloudflarestorage.com") || url.contains("r2"));
-        }
-
-        @Override
-        public void run() {
-            Thread.currentThread().setPriority(Thread.MAX_PRIORITY);
-
-            Bitmap largeIcon = null;
-            if (posterUrl != null && !posterUrl.isEmpty()) {
-                try {
-                    URL url = new URL(posterUrl);
-                    largeIcon = BitmapFactory.decodeStream(url.openConnection().getInputStream());
-                } catch (Exception ignored) {}
-            }
-
-            String channelId = "flaynity_download_channel";
-            NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-            
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                NotificationChannel channel = new NotificationChannel(channelId, "Downloads", NotificationManager.IMPORTANCE_LOW);
-                nm.createNotificationChannel(channel);
-            }
-
-            Intent cancelIntent = new Intent(ACTION_CANCEL_DOWNLOAD);
-            cancelIntent.putExtra("notif_id", notificationId);
-            PendingIntent cancelPendingIntent;
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                cancelPendingIntent = PendingIntent.getBroadcast(MainActivity.this, notificationId, cancelIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-            } else {
-                cancelPendingIntent = PendingIntent.getBroadcast(MainActivity.this, notificationId, cancelIntent, PendingIntent.FLAG_UPDATE_CURRENT);
-            }
-
-            NotificationCompat.Builder builder = new NotificationCompat.Builder(MainActivity.this, channelId)
-                .setContentTitle(fileName.replace(".mp4", ""))
-                .setContentText("Connecting...")
-                .setSmallIcon(android.R.drawable.stat_sys_download)
-                .setPriority(NotificationCompat.PRIORITY_LOW)
-                .setOnlyAlertOnce(true)
-                .addAction(android.R.drawable.ic_menu_close_clear_cancel, "Cancel download", cancelPendingIntent);
-
-            if (largeIcon != null) {
-                builder.setLargeIcon(largeIcon);
-            }
-
-            nm.notify(notificationId, builder.build());
-
-            InputStream input = null;
-            OutputStream output = null;
-            try {
-                if (!isValidR2Url(urlStr)) {
-                    throw new Exception("Invalid secure download source.");
-                }
-
-                URL url = new URL(urlStr);
-                connection = (HttpURLConnection) url.openConnection();
-                connection.setConnectTimeout(10000); 
-                connection.setReadTimeout(15000);    
-                connection.setRequestProperty("Accept-Encoding", "identity"); 
-                connection.setRequestProperty("Connection", "Keep-Alive"); 
-                connection.connect();
-
-                if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
-                    throw new Exception("HTTP response: " + connection.getResponseCode());
-                }
-
-                int fileLength = connection.getContentLength();
-                input = new BufferedInputStream(connection.getInputStream(), 128 * 1024);
-
-                File downloadDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
-                File flaynityDir = new File(downloadDir, DOWNLOAD_FOLDER);
-                if (!flaynityDir.exists()) {
-                    flaynityDir.mkdirs();
-                }
-                File file = new File(flaynityDir, fileName);
-                
-                output = new BufferedOutputStream(new FileOutputStream(file), 128 * 1024);
-
-                byte[] data = new byte[128 * 1024]; 
-                long total = 0;
-                int count;
-                long lastUpdateTime = 0;
-                int lastProgressPercent = -1;
-
-                while ((count = input.read(data)) != -1) {
-                    if (isCancelled) {
-                        throw new Exception("Cancelled");
-                    }
-                    total += count;
-                    output.write(data, 0, count);
-
-                    long currentTime = System.currentTimeMillis();
-                    int progressPercent = (fileLength > 0) ? (int) (total * 100 / fileLength) : -1;
-                    
-                    if (progressPercent != lastProgressPercent && (currentTime - lastUpdateTime > 800)) { 
-                        lastUpdateTime = currentTime;
-                        lastProgressPercent = progressPercent;
-                        
-                        String progressText;
-                        if (fileLength > 0) {
-                            String currentMB = String.format("%.1f", (double)total / (1024 * 1024));
-                            String totalMB = String.format("%.1f", (double)fileLength / (1024 * 1024));
-                            progressText = currentMB + " MB / " + totalMB + " MB (" + progressPercent + "%)";
-                        } else {
-                            progressText = String.format("%.1f", (double)total / (1024 * 1024)) + " MB";
-                        }
-
-                        builder.setContentText(progressText);
-                        if (progressPercent >= 0) {
-                            builder.setProgress(100, progressPercent, false);
-                        } else {
-                            builder.setProgress(100, 0, true);
-                        }
-                        nm.notify(notificationId, builder.build());
-                    }
-                }
-
-                output.flush();
-                output.close();
-                output = null;
-                input.close();
-                input = null;
-
-                android.media.MediaScannerConnection.scanFile(
-                    MainActivity.this,
-                    new String[] { file.getAbsolutePath() },
-                    new String[] { "video/mp4" },
-                    null
-                );
-
-                builder.setContentText("Download Complete")
-                    .setProgress(0, 0, false)
-                    .setSmallIcon(android.R.drawable.stat_sys_download_done)
-                    .setOnlyAlertOnce(false);
-                builder.mActions.clear(); 
-                nm.notify(notificationId, builder.build());
-                
-                runOnUiThread(() -> Toast.makeText(MainActivity.this, "Download Complete: " + fileName, Toast.LENGTH_SHORT).show());
-
-            } catch (Exception e) {
-                if (isCancelled) {
-                    nm.cancel(notificationId);
-                    runOnUiThread(() -> Toast.makeText(MainActivity.this, "Download Cancelled", Toast.LENGTH_SHORT).show());
-                } else {
-                    builder.setContentText("Download Failed: " + e.getMessage())
-                        .setProgress(0, 0, false);
-                    builder.mActions.clear();
-                    nm.notify(notificationId, builder.build());
-                    runOnUiThread(() -> Toast.makeText(MainActivity.this, "Download Failed: " + e.getMessage(), Toast.LENGTH_SHORT).show());
-                }
-            } finally {
-                try { if (output != null) output.close(); } catch (Exception ignored) {}
-                try { if (input != null) input.close(); } catch (Exception ignored) {}
-                if (connection != null) connection.disconnect();
-            }
-            activeDownloads.remove(notificationId);
+        public void requestNotificationPermission() {
+            runOnUiThread(() -> MainActivity.this.requestNotificationPermission());
         }
     }
 
@@ -497,6 +155,13 @@ public class MainActivity extends Activity {
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         super.onCreate(savedInstanceState);
         
+        // 🔴 ভিপিএন/প্রক্সি ডিটেকশন (ক্লিন এক্সিট)
+        if (isVpnOrProxyActive()) {
+            Toast.makeText(this, "Security Alert: VPN or Proxy detected! Please disable it.", Toast.LENGTH_LONG).show();
+            finishAffinity();
+            return;
+        }
+
         getWindow().setFlags(
             WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
             WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED
@@ -506,25 +171,6 @@ public class MainActivity extends Activity {
         webview1 = findViewById(R.id.webview1);
 
         setupFullScreen(); 
-
-        cancelReceiver = new BroadcastReceiver() {
-            @Override
-            public void onReceive(Context context, Intent intent) {
-                if (ACTION_CANCEL_DOWNLOAD.equals(intent.getAction())) {
-                    int notifId = intent.getIntExtra("notif_id", -1);
-                    DownloadTask task = activeDownloads.get(notifId);
-                    if (task != null) {
-                        task.cancel();
-                    }
-                }
-            }
-        };
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(cancelReceiver, new IntentFilter(ACTION_CANCEL_DOWNLOAD), Context.RECEIVER_NOT_EXPORTED);
-        } else {
-            registerReceiver(cancelReceiver, new IntentFilter(ACTION_CANCEL_DOWNLOAD));
-        }
 
         try {
             GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
@@ -538,9 +184,26 @@ public class MainActivity extends Activity {
         
         setupWebView();
         startLoadingApp();
-        checkAndRequestPermissions();
         fetchFcmToken();
         registerNetworkCallback();
+    }
+
+    private boolean isVpnOrProxyActive() {
+        try {
+            ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+            if (cm != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                Network activeNetwork = cm.getActiveNetwork();
+                NetworkCapabilities caps = cm.getNetworkCapabilities(activeNetwork);
+                if (caps != null && caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN)) {
+                    return true;
+                }
+            }
+            String proxyHost = System.getProperty("http.proxyHost");
+            if (proxyHost != null && !proxyHost.trim().isEmpty()) {
+                return true;
+            }
+        } catch (Exception ignored) {}
+        return false;
     }
 
     @Override
@@ -549,170 +212,6 @@ public class MainActivity extends Activity {
         if (hasFocus) {
             setupFullScreen();
         }
-    }
-
-    private void startApkDownload(final String url, final String requestedFileName) {
-        if (url == null || url.trim().isEmpty()) {
-            Toast.makeText(this, "APK download link is empty", Toast.LENGTH_LONG).show();
-            return;
-        }
-
-        final String downloadUrl = url.trim();
-        final String fileName0 = requestedFileName == null || requestedFileName.trim().isEmpty()
-            ? URLUtil.guessFileName(downloadUrl, null, "application/vnd.android.package-archive")
-            : requestedFileName.trim();
-        final String fileName = (fileName0 == null || fileName0.isEmpty())
-            ? "flay-app-debug.apk"
-            : (fileName0.toLowerCase().endsWith(".apk") ? fileName0 : fileName0 + ".apk");
-
-        if (!downloadUrl.startsWith("http://") && !downloadUrl.startsWith("https://")) {
-            Toast.makeText(this, "Invalid APK download link", Toast.LENGTH_LONG).show();
-            return;
-        }
-
-        String downloadUserAgent = null;
-        String downloadCookie = null;
-        try {
-            if (webview1 != null) {
-                downloadUserAgent = webview1.getSettings().getUserAgentString();
-            }
-        } catch (Exception ignored) {}
-        try {
-            String cookie = CookieManager.getInstance().getCookie(downloadUrl);
-            if (cookie != null && !cookie.trim().isEmpty()) {
-                downloadCookie = cookie;
-            }
-        } catch (Exception ignored) {}
-
-        final String finalUserAgent = downloadUserAgent;
-        final String finalCookie = downloadCookie;
-
-        Toast.makeText(this, "APK download started", Toast.LENGTH_SHORT).show();
-
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                HttpURLConnection connection = null;
-                Uri savedUri = null;
-                try {
-                    URL u = new URL(downloadUrl);
-                    connection = (HttpURLConnection) u.openConnection();
-                    connection.setConnectTimeout(15000);
-                    connection.setReadTimeout(30000);
-                    connection.setInstanceFollowRedirects(true);
-                    connection.setRequestProperty("Accept-Encoding", "identity");
-
-                    if (finalUserAgent != null && !finalUserAgent.trim().isEmpty()) {
-                        connection.setRequestProperty("User-Agent", finalUserAgent);
-                    }
-
-                    if (finalCookie != null && !finalCookie.trim().isEmpty()) {
-                        connection.setRequestProperty("Cookie", finalCookie);
-                    }
-
-                    connection.connect();
-
-                    int code = connection.getResponseCode();
-                    if (code < 200 || code >= 400) {
-                        throw new Exception("HTTP " + code);
-                    }
-
-                    String mime = connection.getContentType();
-                    if (mime == null || mime.trim().isEmpty()) {
-                        mime = "application/vnd.android.package-archive";
-                    } else if (mime.contains(";")) {
-                        mime = mime.substring(0, mime.indexOf(';')).trim();
-                    }
-
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                        ContentValues values = new ContentValues();
-                        values.put(MediaStore.Downloads.DISPLAY_NAME, fileName);
-                        values.put(MediaStore.Downloads.MIME_TYPE, "application/vnd.android.package-archive");
-                        values.put(MediaStore.Downloads.RELATIVE_PATH,
-                            Environment.DIRECTORY_DOWNLOADS + "/" + DOWNLOAD_FOLDER);
-                        values.put(MediaStore.Downloads.IS_PENDING, 1);
-
-                        savedUri = getContentResolver().insert(
-                            MediaStore.Downloads.EXTERNAL_CONTENT_URI, values
-                        );
-                        if (savedUri == null) {
-                            throw new Exception("Could not create Downloads/Flay AI file.");
-                        }
-
-                        try (InputStream in = new BufferedInputStream(connection.getInputStream());
-                             OutputStream out = getContentResolver().openOutputStream(savedUri)) {
-                            if (out == null) throw new Exception("Could not open APK file.");
-                            byte[] buffer = new byte[64 * 1024];
-                            int n;
-                            while ((n = in.read(buffer)) != -1) {
-                                out.write(buffer, 0, n);
-                            }
-                            out.flush();
-                        }
-
-                        ContentValues done = new ContentValues();
-                        done.put(MediaStore.Downloads.IS_PENDING, 0);
-                        getContentResolver().update(savedUri, done, null, null);
-                    } else {
-                        File dir = new File(
-                            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
-                            DOWNLOAD_FOLDER
-                        );
-                        if (!dir.exists() && !dir.mkdirs()) {
-                            throw new Exception("Could not create Downloads/Flay AI folder.");
-                        }
-
-                        File outFile = new File(dir, fileName);
-                        try (InputStream in = new BufferedInputStream(connection.getInputStream());
-                             OutputStream out = new BufferedOutputStream(new FileOutputStream(outFile))) {
-                            byte[] buffer = new byte[64 * 1024];
-                            int n;
-                            while ((n = in.read(buffer)) != -1) {
-                                out.write(buffer, 0, n);
-                            }
-                            out.flush();
-                        }
-
-                        MediaScannerConnection.scanFile(
-                            MainActivity.this,
-                            new String[]{outFile.getAbsolutePath()},
-                            new String[]{"application/vnd.android.package-archive"},
-                            null
-                        );
-                    }
-
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            Toast.makeText(
-                                MainActivity.this,
-                                "APK downloaded\nDownloads/Flay AI/" + fileName,
-                                Toast.LENGTH_LONG
-                            ).show();
-                        }
-                    });
-
-                } catch (Exception e) {
-                    if (savedUri != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                        try { getContentResolver().delete(savedUri, null, null); } catch (Exception ignored) {}
-                    }
-                    android.util.Log.e("FLAY_APK_DOWNLOAD", "APK download failed", e);
-                    final String msg = String.valueOf(e.getMessage());
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            Toast.makeText(
-                                MainActivity.this,
-                                "Could not start APK download: " + msg,
-                                Toast.LENGTH_LONG
-                            ).show();
-                        }
-                    });
-                } finally {
-                    if (connection != null) connection.disconnect();
-                }
-            }
-        }).start();
     }
 
     private void setupFullScreen() {
@@ -752,7 +251,7 @@ public class MainActivity extends Activity {
         final String finalTheme = themeMode;
         runOnUiThread(() -> {
             if (webview1 != null) {
-                webview1.evaluateJavascript("javascript:selectThemeVal('" + finalTheme + "');", null);
+                webview1.evaluateJavascript("if(typeof window.selectThemeVal === 'function'){ window.selectThemeVal('" + finalTheme + "'); }", null);
             }
         });
     }
@@ -765,18 +264,17 @@ public class MainActivity extends Activity {
                 GoogleSignInAccount account = task.getResult(ApiException.class);
                 if (account != null) {
                     String idToken = account.getIdToken(); 
-                    webview1.evaluateJavascript("javascript:handleNativeGoogleSignIn('" + idToken + "');", null);
+                    if (webview1 != null) {
+                        webview1.evaluateJavascript("javascript:handleNativeGoogleSignIn('" + idToken + "');", null);
+                    }
                 }
             } catch (ApiException e) {
                 android.util.Log.e("GOOGLE_AUTH_FAILED", "Code: " + e.getStatusCode());
                 final int errorCode = e.getStatusCode();
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        Toast.makeText(MainActivity.this, "Google Error Code: " + errorCode, Toast.LENGTH_LONG).show();
-                    }
-                });
-                webview1.evaluateJavascript("javascript:showNotification('Google Sign-In Failed (Code " + errorCode + ")', 'error');", null);
+                runOnUiThread(() -> Toast.makeText(MainActivity.this, "Google Error Code: " + errorCode, Toast.LENGTH_LONG).show());
+                if (webview1 != null) {
+                    webview1.evaluateJavascript("javascript:showNotification('Google Sign-In Failed', 'error');", null);
+                }
             }
         } 
         else if (requestCode == FILECHOOSER_RESULTCODE) {
@@ -805,60 +303,284 @@ public class MainActivity extends Activity {
         }
     }
 
+    private String getDynamicFirebaseDbUrl() {
+        try {
+            FirebaseApp app = FirebaseApp.getInstance();
+            if (app != null && app.getOptions() != null) {
+                String url = app.getOptions().getDatabaseUrl();
+                if (url != null && !url.trim().isEmpty()) return url.trim();
+
+                String projId = app.getOptions().getProjectId();
+                if (projId != null && !projId.trim().isEmpty()) {
+                    return "https://" + projId + "-default-rtdb.firebaseio.com";
+                }
+            }
+        } catch (Exception ignored) {}
+
+        try {
+            int resId = getResources().getIdentifier("firebase_database_url", "string", getPackageName());
+            if (resId != 0) {
+                String url = getString(resId);
+                if (url != null && !url.trim().isEmpty()) return url.trim();
+            }
+        } catch (Exception ignored) {}
+
+        return null;
+    }
+
+    private void applySecretKeyToUserAgent(String key) {
+        if (key == null || key.trim().isEmpty() || webview1 == null) return;
+        runOnUiThread(() -> {
+            WebSettings ws = webview1.getSettings();
+            if (baseUserAgent == null) {
+                baseUserAgent = ws.getUserAgentString();
+            }
+            String targetKey = key.trim();
+            if (!ws.getUserAgentString().contains(targetKey)) {
+                ws.setUserAgentString(baseUserAgent + " " + targetKey);
+            }
+        });
+    }
+
     private void startLoadingApp() {
         isError = false;
-        if (isNetworkAvailable()) {
-            webview1.getSettings().setCacheMode(WebSettings.LOAD_DEFAULT);
-            webview1.loadUrl(WEBSITE_URL);
-        } else {
-            webview1.getSettings().setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK);
-            webview1.loadUrl(WEBSITE_URL);
+
+        SharedPreferences prefs = getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
+        String cachedUrl = prefs.getString(KEY_CACHED_URL, null);
+        String cachedSecret = prefs.getString(KEY_CACHED_SECRET, null);
+
+        if (cachedSecret != null && !cachedSecret.trim().isEmpty()) {
+            secretKey = cachedSecret.trim();
+            applySecretKeyToUserAgent(secretKey);
+        }
+
+        if (cachedUrl != null && !cachedUrl.trim().isEmpty()) {
+            websiteUrl = cachedUrl.trim();
+        }
+
+        if (!isNetworkAvailable()) {
+            if (websiteUrl != null && !websiteUrl.trim().isEmpty()) {
+                loadWebsiteUrl();
+            } else if (webview1 != null) {
+                webview1.loadUrl(OFFLINE_URL);
+            }
+            return;
+        }
+
+        if (websiteUrl != null && !websiteUrl.trim().isEmpty()) {
+            loadWebsiteUrl();
+        }
+
+        handler.postDelayed(() -> {
+            if (websiteUrl == null && !isFinishing() && webview1 != null) {
+                webview1.loadUrl(OFFLINE_URL);
+            }
+        }, 6000);
+
+        fetchConfigDirectFromFirebase();
+
+        try {
+            String dbUrl = getDynamicFirebaseDbUrl();
+            DatabaseReference configRef;
+            if (dbUrl != null) {
+                configRef = FirebaseDatabase.getInstance(dbUrl).getReference(APP_CONFIG_DB_PATH);
+            } else {
+                configRef = FirebaseDatabase.getInstance().getReference(APP_CONFIG_DB_PATH);
+            }
+
+            configRef.addListenerForSingleValueEvent(new ValueEventListener() {
+                @Override
+                public void onDataChange(DataSnapshot snapshot) {
+                    String remoteUrl = snapshot.child("websiteUrl").getValue(String.class);
+                    String remoteSecret = snapshot.child("secretKey").getValue(String.class);
+
+                    saveAndApplyConfig(remoteUrl, remoteSecret);
+                }
+
+                @Override
+                public void onCancelled(DatabaseError error) {
+                    android.util.Log.e("FIREBASE_CONFIG", "Failed: " + error.getMessage());
+                }
+            });
+        } catch (Exception e) {
+            android.util.Log.e("FIREBASE_CONFIG", "SDK Init failed: " + e.getMessage());
         }
     }
 
+    private void saveAndApplyConfig(final String url, final String secret) {
+        runOnUiThread(() -> {
+            SharedPreferences prefs = getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
+            SharedPreferences.Editor editor = prefs.edit();
+
+            boolean secretUpdated = false;
+            if (secret != null && !secret.trim().isEmpty()) {
+                secretKey = secret.trim();
+                editor.putString(KEY_CACHED_SECRET, secretKey);
+                applySecretKeyToUserAgent(secretKey);
+                secretUpdated = true;
+            }
+
+            if (url != null && !url.trim().isEmpty()) {
+                String cleanUrl = url.trim();
+                if (cleanUrl.startsWith("https://") || cleanUrl.startsWith("http://")) {
+                    boolean urlChanged = (websiteUrl == null || !websiteUrl.equals(cleanUrl));
+                    websiteUrl = cleanUrl;
+                    editor.putString(KEY_CACHED_URL, websiteUrl);
+
+                    if (urlChanged || secretUpdated) {
+                        loadWebsiteUrl();
+                    }
+                }
+            }
+            editor.apply();
+        });
+    }
+
+    private void fetchConfigDirectFromFirebase() {
+        new Thread(() -> {
+            HttpURLConnection conn = null;
+            BufferedReader reader = null;
+            try {
+                String dynamicDbUrl = getDynamicFirebaseDbUrl();
+                if (dynamicDbUrl == null || dynamicDbUrl.trim().isEmpty()) return;
+
+                if (dynamicDbUrl.endsWith("/")) {
+                    dynamicDbUrl = dynamicDbUrl.substring(0, dynamicDbUrl.length() - 1);
+                }
+
+                URL url = new URL(dynamicDbUrl + "/" + APP_CONFIG_DB_PATH + ".json");
+                conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("GET");
+                conn.setConnectTimeout(8000);
+                conn.setReadTimeout(8000);
+
+                if (conn.getResponseCode() == 200) {
+                    reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+                    StringBuilder sb = new StringBuilder();
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        sb.append(line);
+                    }
+
+                    JSONObject json = new JSONObject(sb.toString().trim());
+                    String remoteUrl = json.optString("websiteUrl", null);
+                    String remoteSecret = json.optString("secretKey", null);
+
+                    saveAndApplyConfig(remoteUrl, remoteSecret);
+                }
+            } catch (Exception e) {
+                android.util.Log.e("FIREBASE_FETCH", "Error: " + e.getMessage());
+            } finally {
+                if (reader != null) {
+                    try { reader.close(); } catch (Exception ignored) {}
+                }
+                if (conn != null) {
+                    conn.disconnect();
+                }
+            }
+        }).start();
+    }
+
+    private void loadWebsiteUrl() {
+        if (webview1 == null) return;
+
+        if (websiteUrl == null || websiteUrl.trim().isEmpty()) {
+            webview1.loadUrl(OFFLINE_URL);
+            return;
+        }
+
+        if (isNetworkAvailable()) {
+            webview1.getSettings().setCacheMode(WebSettings.LOAD_DEFAULT);
+            webview1.loadUrl(websiteUrl);
+        } else {
+            webview1.getSettings().setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK);
+            webview1.loadUrl(websiteUrl);
+        }
+    }
+
+    private void retryConnection() {
+        if (isVpnOrProxyActive()) {
+            Toast.makeText(this, "Security Alert: VPN or Proxy detected!", Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        if (!isNetworkAvailable()) {
+            runOnUiThread(() -> {
+                Toast.makeText(MainActivity.this, "Still No Internet Connection 😕", Toast.LENGTH_SHORT).show();
+                if (webview1 != null) {
+                    webview1.evaluateJavascript("if(typeof window.stopRefreshAnimation === 'function'){ window.stopRefreshAnimation(); }", null);
+                }
+            });
+            return; 
+        }
+
+        runOnUiThread(() -> {
+            isError = false;
+
+            if (websiteUrl == null || websiteUrl.trim().isEmpty()) {
+                SharedPreferences prefs = getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
+                websiteUrl = prefs.getString(KEY_CACHED_URL, null);
+                secretKey = prefs.getString(KEY_CACHED_SECRET, null);
+                if (secretKey != null) applySecretKeyToUserAgent(secretKey);
+            }
+
+            if (webview1 != null) {
+                webview1.evaluateJavascript("if(typeof window.stopRefreshAnimation === 'function'){ window.stopRefreshAnimation(); }", null);
+            }
+
+            if (websiteUrl != null && !websiteUrl.trim().isEmpty()) {
+                loadWebsiteUrl();
+            } else {
+                startLoadingApp();
+            }
+        });
+    }
+
     private void setupWebView() {
+        if (webview1 == null) return;
         WebSettings ws = webview1.getSettings();
         
         String defaultUA = ws.getUserAgentString();
         if (defaultUA != null) {
-            String customUA = defaultUA.replaceAll("(?i);\\s*wv", "")
-                                       .replaceAll("(?i)Version/\\d+\\.\\d+\\s*", "");
-            ws.setUserAgentString(customUA); 
+            baseUserAgent = defaultUA.replaceAll("(?i);\\s*wv", "")
+                                     .replaceAll("(?i)Version/\\d+\\.\\d+\\s*", "");
+            ws.setUserAgentString(baseUserAgent); 
         }
         
+        CookieManager cookieManager = CookieManager.getInstance();
+        cookieManager.setAcceptCookie(true);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            cookieManager.setAcceptThirdPartyCookies(webview1, true);
+        }
+
         ws.setJavaScriptEnabled(true);
         ws.setDomStorageEnabled(true);
         ws.setDatabaseEnabled(true);
         ws.setAllowFileAccess(true);
         ws.setGeolocationEnabled(true);
-        
         ws.setAllowContentAccess(true);
         ws.setAllowFileAccessFromFileURLs(true);
         ws.setAllowUniversalAccessFromFileURLs(true);
         
-        ws.setSupportMultipleWindows(true);
-        ws.setJavaScriptCanOpenWindowsAutomatically(true);
+        ws.setSupportMultipleWindows(false);
+        ws.setJavaScriptCanOpenWindowsAutomatically(false);
         
         ws.setSupportZoom(false);
         ws.setBuiltInZoomControls(false);
         ws.setDisplayZoomControls(false);
-        
         ws.setLoadWithOverviewMode(true);
         ws.setUseWideViewPort(true);
-        
         ws.setMediaPlaybackRequiresUserGesture(false); 
         
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             webview1.setRendererPriorityPolicy(WebView.RENDERER_PRIORITY_BOUND, true);
         }
-        
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            ws.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+            ws.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
         }
         
         ws.setCacheMode(WebSettings.LOAD_DEFAULT);
         webview1.setLayerType(View.LAYER_TYPE_HARDWARE, null);
-        
         ws.setLoadsImagesAutomatically(true);
         
         webview1.setVerticalScrollBarEnabled(false);
@@ -885,9 +607,9 @@ public class MainActivity extends Activity {
             @Override
             public void onReceivedError(WebView v, int code, String desc, String url) {
                 super.onReceivedError(v, code, desc, url);
-                if (url != null && (url.startsWith(WEBSITE_URL) || url.equals("about:blank"))) {
+                if (url != null && ((websiteUrl != null && url.startsWith(websiteUrl)) || url.equals("about:blank"))) {
                     isError = true;
-                    webview1.loadUrl(OFFLINE_URL);
+                    if (webview1 != null) webview1.loadUrl(OFFLINE_URL);
                 }
             }
 
@@ -897,12 +619,16 @@ public class MainActivity extends Activity {
                 super.onReceivedError(v, r, e);
                 if (r.isForMainFrame()) {
                     isError = true;
-                    webview1.loadUrl(OFFLINE_URL);
+                    if (webview1 != null) webview1.loadUrl(OFFLINE_URL);
                 }
             }
 
             @Override
-            public void onReceivedSslError(WebView v, SslErrorHandler h, SslError e) { h.proceed(); }
+            public void onReceivedSslError(WebView v, SslErrorHandler h, SslError e) { 
+                h.cancel();
+                isError = true;
+                v.loadUrl(OFFLINE_URL);
+            }
             
             @Override
             public boolean shouldOverrideUrlLoading(WebView v, String url) {
@@ -923,6 +649,7 @@ public class MainActivity extends Activity {
                     .setPositiveButton("OK", (d, w) -> r.confirm()).setCancelable(false).show();
                 return true;
             }
+
             @Override
             public boolean onJsConfirm(WebView v, String url, String msg, JsResult r) {
                 new AlertDialog.Builder(MainActivity.this).setMessage(msg)
@@ -930,34 +657,16 @@ public class MainActivity extends Activity {
                     .setNegativeButton("No",  (d, w) -> r.cancel()).setCancelable(false).show();
                 return true;
             }
+
             @Override
             public void onGeolocationPermissionsShowPrompt(String o, GeolocationPermissions.Callback c) {
                 c.invoke(o, true, false);
             }
 
             @Override
-            public boolean onCreateWindow(WebView view, boolean isDialog, boolean isUserGesture, android.os.Message resultMsg) {
-                WebView.WebViewTransport transport = (WebView.WebViewTransport) resultMsg.obj;
-                transport.setWebView(new WebView(view.getContext()) {
-                    @Override
-                    public void loadUrl(String url) {
-                        try {
-                            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
-                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                            getContext().startActivity(intent);
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
-                    }
-                });
-                resultMsg.sendToTarget();
-                return true;
-            }
-
-            @Override
             public void onPermissionRequest(final PermissionRequest request) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                    java.util.ArrayList<String> missingPermissions = new java.util.ArrayList<>();
+                    ArrayList<String> missingPermissions = new ArrayList<>();
                     for (String resource : request.getResources()) {
                         if (resource.equals(PermissionRequest.RESOURCE_AUDIO_CAPTURE)) {
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M &&
@@ -972,7 +681,6 @@ public class MainActivity extends Activity {
                             }
                         }
                     }
-
                     if (!missingPermissions.isEmpty()) {
                         pendingPermissionRequest = request;
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -1003,166 +711,53 @@ public class MainActivity extends Activity {
                 return true;
             }
         });
-
-        webview1.setDownloadListener(new DownloadListener() {
-            @Override
-            public void onDownloadStart(String url, String ua, String cd, String mt, long cl) {
-                if (url != null && url.toLowerCase().startsWith("blob:")) {
-                    android.util.Log.w("FLAY_DOWNLOAD", "Blocked blob URL from DownloadManager: " + url);
-                    Toast.makeText(MainActivity.this, "This download must be started by the app.", Toast.LENGTH_LONG).show();
-                    return;
-                }
-
-                String mime = mt == null ? "" : mt.toLowerCase();
-                String disposition = cd == null ? "" : cd.toLowerCase();
-                String lowerUrl = url == null ? "" : url.toLowerCase();
-                boolean isApk = mime.contains("application/vnd.android.package-archive")
-                    || (mime.contains("application/octet-stream") && (lowerUrl.contains(".apk") || disposition.contains(".apk")))
-                    || lowerUrl.contains(".apk");
-
-                if (isApk) {
-                    String name = URLUtil.guessFileName(
-                        url, cd, "application/vnd.android.package-archive"
-                    );
-                    startApkDownload(url, name);
-                    return;
-                }
-
-                try {
-                    if (url == null || url.trim().isEmpty()) {
-                        Toast.makeText(MainActivity.this, "Download link is empty", Toast.LENGTH_LONG).show();
-                        return;
-                    }
-                    DownloadManager.Request req = new DownloadManager.Request(Uri.parse(url));
-                    req.setMimeType((mt == null || mt.trim().isEmpty()) ? "application/octet-stream" : mt);
-                    req.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
-                    req.setDestinationInExternalPublicDir(
-                        Environment.DIRECTORY_DOWNLOADS,
-                        URLUtil.guessFileName(url, cd, mt)
-                    );
-                    req.allowScanningByMediaScanner();
-
-                    String requestUa = (ua == null || ua.trim().isEmpty())
-                        ? webview1.getSettings().getUserAgentString() : ua;
-                    if (requestUa != null && !requestUa.trim().isEmpty()) {
-                        req.addRequestHeader("User-Agent", requestUa);
-                    }
-
-                    DownloadManager dm = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
-                    if (dm == null) {
-                        Toast.makeText(MainActivity.this, "Download service is unavailable", Toast.LENGTH_LONG).show();
-                        return;
-                    }
-                    dm.enqueue(req);
-                    Toast.makeText(MainActivity.this, "Download started", Toast.LENGTH_SHORT).show();
-                } catch (Exception e) {
-                    android.util.Log.e("FLAY_DOWNLOAD", "Could not queue download", e);
-                    Toast.makeText(
-                        MainActivity.this,
-                        "Could not start download: " + String.valueOf(e.getMessage()),
-                        Toast.LENGTH_LONG
-                    ).show();
-                }
-            }
-        });;
     }
 
     private boolean handleUrlRouting(String url) {
         if (url == null) return false;
 
-        if (url.startsWith("http://") || url.startsWith("https://")) {
-            if (!url.contains("devnix-ai.pages.dev") && 
-                !url.contains("file:///android_asset") && 
-                !url.contains("pub-bcff9c709dbe44d7a50c78e9a0f9bd59.r2.dev") && 
-                !url.contains("r2.cloudflarestorage.com")) {
-                try {
-                    Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
-                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                    startActivity(intent);
-                    return true; 
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-            if (url.contains("t.me") || url.contains("telegram.me") || url.contains("telegram.dog")) {
-                try {
-                    Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
-                    startActivity(intent);
-                    return true;
-                } catch (Exception e) {
-                    return false;
-                }
-            }
-            return false; 
-        }
-
-        try {
-            Intent intent;
-            if (url.startsWith("intent:")) {
-                intent = Intent.parseUri(url, Intent.URI_INTENT_SCHEME);
-            } else {
-                intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
-            }
-
-            if (intent != null) {
-                if (getPackageManager().resolveActivity(intent, 0) != null) {
-                    startActivity(intent);
+        if (url.startsWith("intent:") || url.contains("t.me") || url.contains("telegram.me") || url.startsWith("whatsapp:") || url.startsWith("mailto:") || url.startsWith("tel:") || url.startsWith("market:")) {
+            try {
+                Intent intent;
+                if (url.startsWith("intent:")) {
+                    intent = Intent.parseUri(url, Intent.URI_INTENT_SCHEME);
                 } else {
-                    String fallbackUrl = intent.getStringExtra("browser_fallback_url");
-                    if (fallbackUrl != null) {
-                        webview1.loadUrl(fallbackUrl);
-                    }
+                    intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
                 }
-                return true; 
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return true; 
-    }
 
-    private void retryConnection() {
-        if (!isNetworkAvailable()) {
-            Toast.makeText(this, "Still No Internet Connection 😕", Toast.LENGTH_SHORT).show();
-            return; 
+                if (intent != null) {
+                    if (getPackageManager().resolveActivity(intent, 0) != null) {
+                        startActivity(intent);
+                    }
+                    return true;
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            return true;
         }
 
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                isError = false;
-                String js = "if(typeof window.Devnix-aiNetworkOnline === 'function'){ window.Devnix-aiNetworkOnline(); } else { window.location.href = '" + WEBSITE_URL + "'; }";
-                webview1.evaluateJavascript(js, null);
-            }
-        });
+        return false; 
     }
 
     private void fetchFcmToken() {
         try {
             com.google.firebase.iid.FirebaseInstanceId.getInstance().getInstanceId()
-                .addOnCompleteListener(new com.google.android.gms.tasks.OnCompleteListener<com.google.firebase.iid.InstanceIdResult>() {
-                    @Override
-                    public void onComplete(com.google.android.gms.tasks.Task<com.google.firebase.iid.InstanceIdResult> task) {
-                        if (task.isSuccessful() && task.getResult() != null) {
-                            currentFcmToken = task.getResult().getToken();
-                            android.util.Log.d("FCM_TOKEN", "Cached successfully: " + currentFcmToken);
-                            
-                            try {
-                                com.google.firebase.messaging.FirebaseMessaging.getInstance().subscribeToTopic("all");
-                            } catch (Exception e) {
-                                android.util.Log.e("FCM_TOKEN", "Subscribe to all failed: " + e.getMessage());
-                            }
-                        } else {
-                            android.util.Log.e("FCM_TOKEN", "Token fetch failed", task.getException());
+                .addOnCompleteListener(task -> {
+                    if (task.isSuccessful() && task.getResult() != null) {
+                        currentFcmToken = task.getResult().getToken();
+                        try {
+                            com.google.firebase.messaging.FirebaseMessaging.getInstance().subscribeToTopic("all");
+                        } catch (Exception e) {
+                            e.printStackTrace();
                         }
                     }
                 });
         } catch (Exception e) {
-            android.util.Log.e("FCM_TOKEN", "Primary fetch failed: " + e.getMessage());
             try {
                 currentFcmToken = com.google.firebase.iid.FirebaseInstanceId.getInstance().getToken();
             } catch (Exception ex) {
-                android.util.Log.e("FCM_TOKEN", "Fallback failed: " + ex.getMessage());
+                ex.printStackTrace();
             }
         }
     }
@@ -1174,38 +769,28 @@ public class MainActivity extends Activity {
                 connectivityManager.registerDefaultNetworkCallback(new ConnectivityManager.NetworkCallback() {
                     @Override
                     public void onAvailable(Network network) {
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                String js = "if(typeof window.Devnix-aiNetworkOnline === 'function'){ window.Devnix-aiNetworkOnline(); }";
-                                webview1.evaluateJavascript(js, null);
-                                if (isError) {
-                                    retryConnection();
-                                }
+                        runOnUiThread(() -> {
+                            String currentUrl = (webview1 != null) ? webview1.getUrl() : "";
+                            if (isError || (currentUrl != null && currentUrl.equals(OFFLINE_URL))) {
+                                retryConnection();
                             }
                         });
                     }
 
                     @Override
                     public void onLost(Network network) {
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                String js = "if(typeof window.Devnix-aiNetworkOffline === 'function'){ window.Devnix-aiNetworkOffline(); }";
-                                webview1.evaluateJavascript(js, null);
-                            }
-                        });
+                        runOnUiThread(() -> {});
                     }
                 });
             }
         } catch (Exception e) {
-            android.util.Log.e("NETWORK_CALLBACK", "Initialization error: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
     private void checkAndRequestPermissions() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            java.util.ArrayList<String> permissions = new java.util.ArrayList<>();
+            ArrayList<String> permissions = new ArrayList<>();
             
             if (checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) == android.content.pm.PackageManager.PERMISSION_DENIED) {
                 permissions.add(android.Manifest.permission.RECORD_AUDIO);
@@ -1236,6 +821,64 @@ public class MainActivity extends Activity {
         }
     }
 
+    private void requestNotificationPermission() {
+        if (Build.VERSION.SDK_INT < 33) return;
+
+        SharedPreferences prefs = getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
+        if (prefs.getBoolean(KEY_NOTIFICATION_REQUESTED, false)) return;
+
+        if (checkSelfPermission("android.permission.POST_NOTIFICATIONS")
+                == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            prefs.edit().putBoolean(KEY_NOTIFICATION_REQUESTED, true).apply();
+            return;
+        }
+
+        prefs.edit().putBoolean(KEY_NOTIFICATION_REQUESTED, true).apply();
+        requestPermissions(
+            new String[]{"android.permission.POST_NOTIFICATIONS"},
+            103
+        );
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+
+        if (requestCode == 102 && pendingPermissionRequest != null) {
+            PermissionRequest request = pendingPermissionRequest;
+            pendingPermissionRequest = null;
+
+            boolean cameraGranted = true;
+            boolean audioGranted = true;
+
+            for (int i = 0; i < permissions.length; i++) {
+                if (android.Manifest.permission.CAMERA.equals(permissions[i])) {
+                    cameraGranted = grantResults[i] == android.content.pm.PackageManager.PERMISSION_GRANTED;
+                } else if (android.Manifest.permission.RECORD_AUDIO.equals(permissions[i])) {
+                    audioGranted = grantResults[i] == android.content.pm.PackageManager.PERMISSION_GRANTED;
+                }
+            }
+
+            if (cameraGranted && audioGranted) {
+                try {
+                    request.grant(request.getResources());
+                } catch (Exception e) {
+                    android.util.Log.e("WEBVIEW_PERMISSION", "Grant failed: " + e.getMessage());
+                }
+            } else {
+                try {
+                    request.deny();
+                } catch (Exception ignored) {}
+            }
+            return;
+        }
+
+        if (requestCode == 103) {
+            // Notification permission is requested only after the Home page is reached.
+            return;
+        }
+    }
+
     private boolean isNetworkAvailable() {
         ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
         if (cm != null) {
@@ -1247,23 +890,64 @@ public class MainActivity extends Activity {
 
     @Override
     public void onBackPressed() {
-        if (hasWebBackStack) {
-            webview1.evaluateJavascript("javascript:executeBackAction();", null);
-        } else {
-            finishAffinity();
+        if (webview1 == null) {
+            super.onBackPressed();
+            return;
         }
+
+        String currentUrl = webview1.getUrl();
+        if (currentUrl != null && currentUrl.equals(OFFLINE_URL)) {
+            finish();
+            return;
+        }
+
+        if (webview1.canGoBack()) {
+            webview1.goBack();
+            return;
+        }
+
+        webview1.evaluateJavascript(
+            "(function(){"
+            + "try {"
+            + "if (window.app && typeof window.app.executeBackAction === 'function') {"
+            + "window.app.executeBackAction(); return 'handled';"
+            + "}"
+            + "if (typeof window.executeBackAction === 'function') {"
+            + "window.executeBackAction(); return 'handled';"
+            + "}"
+            + "} catch(e) {"
+            + "console.error('Back navigation error:', e);"
+            + "}"
+            + "return 'not_handled';"
+            + "})()",
+            value -> {
+                if (value == null || value.contains("not_handled")) {
+                    finish();
+                }
+            }
+        );
     }
 
-    @Override protected void onResume()  { super.onResume();  webview1.onResume();  }
-    @Override protected void onPause()   { super.onPause();   webview1.onPause();   }
+    @Override 
+    protected void onResume() { 
+        super.onResume();  
+        if (webview1 != null) webview1.onResume();  
+    }
+
+    @Override 
+    protected void onPause() { 
+        super.onPause();   
+        if (webview1 != null) webview1.onPause();   
+    }
+
     @Override 
     protected void onDestroy() {
         super.onDestroy();
-        handler.removeCallbacksAndMessages(null);
-        try {
-            unregisterReceiver(cancelReceiver);
-        } catch (Exception ignored) {}
-        
-        webview1.destroy();
+        if (handler != null) {
+            handler.removeCallbacksAndMessages(null);
+        }
+        if (webview1 != null) {
+            webview1.destroy();
+        }
     }
 }
