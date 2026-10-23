@@ -2951,10 +2951,10 @@ function mpLocalItems(){const ap=activeProvider(),out=[];
   ms.forEach(m=>out.push({pid:p.id,m,name:m,desc:p.name,logo:mpBrand(m)||mpBrand(p.name)||'chip',on:!!(ap&&p.id===ap.id&&m===p.model)}));});
  return out;}
 function mpRow(it,i){
- const lg=it.logo==='chip'?'<svg class="ic" aria-hidden="true"><use href="#i-chip"/></svg>':\`<svg class="mlogo" aria-hidden="true"><use href="#l-\${it.logo}"/></svg>\`;
- return \`<button class="mp-row\${it.on?' on':''}" style="--i:\${Math.min(i,9)}" role="option" aria-selected="\${!!it.on}" \${it.pro?'data-pro="1"':\`data-mp="\${esc(it.pid)}" data-m="\${esc(it.m)}"\`}>
-  <span class="mp-body"><span class="mp-name"><span class="mp-brandmark \${esc(it.logo||'chip')}" aria-hidden="true">\${lg}</span><b>\${esc(it.name)}</b>\${it.pro?'<i class="mp-pro">Pro</i>':''}</span><span class="mp-desc">\${esc(it.desc)}</span></span>
-  \${it.on?icon('check'):''}</button>\`;}
+ const lg=it.logo==='chip'?'<svg class="ic" aria-hidden="true"><use href="#i-chip"/></svg>':`<svg class="mlogo" aria-hidden="true"><use href="#l-${it.logo}"/></svg>`;
+ return `<button class="mp-row${it.on?' on':''}" style="--i:${Math.min(i,9)}" role="option" aria-selected="${!!it.on}" ${it.pro?'data-pro="1"':`data-mp="${esc(it.pid)}" data-m="${esc(it.m)}"`}>
+  <span class="mp-body"><span class="mp-name"><span class="mp-brandmark ${esc(it.logo||'chip')}" aria-hidden="true">${lg}</span><b>${esc(it.name)}</b>${it.pro?'<i class="mp-pro">Pro</i>':''}</span><span class="mp-desc">${esc(it.desc)}</span></span>
+  ${it.on?icon('check'):''}</button>`;}
 function mpLocalHtml(){
  const provs=S.settings.providers;
  if(!provs.length)return `<div class="mp-empty"><span>No local models yet. Connect your own provider to use its models here.</span><button class="mp-chip pri" data-mpsetup="1" style="height:40px;padding:0 20px;font-size:14px">Set up AI</button></div>`;
