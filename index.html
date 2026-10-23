@@ -2043,7 +2043,7 @@ function closeActSheet(fromPop){const el=document.getElementById('acSheet');if(e
 function acShowList(){const m=findThinkMsg(_ac.mid);if(!m)return;_ac.view='list';renderActSheet(m);const l=document.querySelector('#acSheet .cl-list');if(!l)return;
  requestAnimationFrame(()=>{if(_ac.ls!=null)l.scrollTop=_ac.ls;else if(_ac.ev){const t=l.querySelector('[data-evid="'+_ac.ev+'"]');if(t)l.scrollTop=Math.max(0,t.offsetTop-24);}});}
 function acBack(){if(!_ac.mid)return;if(_ac.kind==='act'&&_ac.view==='detail'){if(_ac.d>=2)history.back();else acShowList();}else closeActSheet();}
-window.addEventListener('popstate',()=>{if(_ac.mute){_ac.mute=false;return;}if(!_ac.mid)return;_ac.d=Math.max(0,_ac.d-1);if(_ac.kind==='act'&&_ac.view==='detail')acShowList();else closeActSheet(true);});
+window.addEventListener('popstate',()=>{if(_ac.mute){_ac.mute=false;_ac._handledPop=true;return;}if(!_ac.mid)return;_ac._handledPop=true;_ac.d=Math.max(0,_ac.d-1);if(_ac.kind==='act'&&_ac.view==='detail')acShowList();else closeActSheet(true);});
 function openActSheet(mid,kind,evid,n){
  const m=findThinkMsg(mid);if(!m)return;
  let el=document.getElementById('acSheet');
@@ -2284,8 +2284,10 @@ function goBack(){
  _flaySetScreen(id);
 }
 function requestAppBack(){
- const sheet=document.querySelector('.tk-sheet.show');
- if(sheet){if(typeof acBack==='function')acBack();return;}
+ const sheet=document.getElementById('acSheet');
+ if(sheet&&sheet.classList.contains('show')){if(typeof acBack==='function')acBack();return;}
+ const otherSheet=document.querySelector('.tk-sheet.show');
+ if(otherSheet){otherSheet.classList.remove('show');return;}
  const drawerEl=document.getElementById('drawer');
  if(drawerEl&&drawerEl.classList.contains('open')){closeDrawer();return;}
  const modalEl=document.getElementById('modalRoot');
@@ -2296,7 +2298,8 @@ function requestAppBack(){
 $('[data-back]').forEach(b=>b.onclick=requestAppBack);
 $('[data-menu]').forEach(b=>b.onclick=openDrawer);
 window.addEventListener('popstate',function(e){
- if(_ac&&_ac.mid)return;
+ if(_ac&&_ac._handledPop){_ac._handledPop=false;return;}
+ if(_ac&&_ac.mute)return;
  const st=e.state;
  if(st&&st.flayNav){
   _flayBackDepth=Math.max(0,_flayBackDepth-1);
