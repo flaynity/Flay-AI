@@ -1547,8 +1547,9 @@ function onState(user){
  if(!user){XAuth.user=null;loadingFor=null;hideBoot();go('welcome');return;}
  if(loadingFor===user.uid)return;
  loadingFor=user.uid;XAuth.user=user;showBoot('Loading your workspace\u2026');
- Cloud.load(user).then(function(){
-  Cloud.touchProfile(user).catch(function(){});
+ /* Prevent Firebase reads from leaving the WebView on the boot screen forever. */
+ withTimeout(Cloud.load(user),15000,'Workspace loading timed out. Check your internet connection and Firebase Realtime Database rules, then retry.').then(function(){
+  Cloud.touchProfile(user).catch(function(e){console.warn('Profile sync failed:',e);});
   resolveReady(user);
  }).catch(function(e){
   loadingFor=null;
