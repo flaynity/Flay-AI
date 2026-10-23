@@ -1548,11 +1548,12 @@ document.querySelectorAll('[data-soc]').forEach(function(b){
 function onState(user){
  if(!user){XAuth.user=null;loadingFor=null;hideBoot();go('welcome');return;}
  if(loadingFor===user.uid)return;
- loadingFor=user.uid;XAuth.user=user;showBoot('Loading your workspace\u2026');
- var timeout=new Promise(function(_,reject){setTimeout(function(){reject(new Error('Workspace loading timed out. Check your connection and Firebase Database rules.'));},15000);});
- Promise.race([Cloud.load(user),timeout]).then(function(){
+ loadingFor=user.uid;XAuth.user=user;
+ /* Never block entry to the main app while remote workspace data loads. */
+ hideBoot();
+ resolveReady(user);
+ Cloud.load(user).then(function(){
   Cloud.touchProfile(user).catch(function(){});
-  resolveReady(user);
  }).catch(function(e){
   loadingFor=null;
   Cloud.settings=Cloud.settings||{};
@@ -1560,11 +1561,9 @@ function onState(user){
   loaded.chats=Array.isArray(loaded.chats)?loaded.chats:[];
   loaded.projects=Array.isArray(loaded.projects)?loaded.projects:[];
   drafts=drafts||{};
-  if(window.console&&console.error)console.error('Workspace loading failed:',e);
-  hideBoot();
-  resolveReady(user);
+  if(window.console&&console.error)console.error('Workspace data could not load:',e);
   if(typeof toast==='function')toast('Workspace data could not load. Check your connection or Firebase Database rules.','warn');
- }); 
+ });
 }
 XAuth.reveal=function(){
  if(revealed)return;revealed=true;document.body.classList.remove('auth-open');
