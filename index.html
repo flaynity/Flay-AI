@@ -609,6 +609,7 @@ section.screen .topbar>button.ibtn[data-back]{width:46px!important;height:46px!i
 #auth .au-scroll{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:calc(16px + env(safe-area-inset-top)) 20px calc(28px + env(safe-area-inset-bottom))}
 #auth .au-hd{position:relative;height:42px;display:flex;align-items:center;justify-content:center}
 #auth .au-title{font-family:'Urbanist','Inter',-apple-system,'Segoe UI',Roboto,Arial,sans-serif;font-size:21px;font-weight:600;letter-spacing:.1px;color:#fff;line-height:1}
+#auth .au-title-image{display:block;width:auto;max-width:180px;height:32px;max-height:36px;object-fit:contain;flex:0 1 auto}
 #auth .au-back{position:absolute;left:0;top:0;width:42px;height:42px;display:flex;align-items:center;justify-content:center;border-radius:50%}
 #auth .au-back svg{width:22px;height:22px;stroke:#fff;fill:none;stroke-width:2.3;stroke-linecap:round;stroke-linejoin:round}
 #auth .au-back.circ{background:#161616}
@@ -695,7 +696,7 @@ body.auth-open #toasts{z-index:6000}
     <div class="au-scroll">
       <header class="au-hd">
         <button class="au-back plain" type="button" data-to="welcome" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
-        <div class="au-title">xFlay AI</div>
+        <img class="au-title-image" src="assets/app-name.png" alt="xFlay AI" />
       </header>
       <h2 class="au-h2">Login Now To Your Account.</h2>
       <p class="au-p">Access your account to manage settings, explore features</p>
@@ -730,7 +731,7 @@ body.auth-open #toasts{z-index:6000}
     <div class="au-scroll">
       <header class="au-hd">
         <button class="au-back circ" type="button" data-to="login" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
-        <div class="au-title">xFlay AI</div>
+        <img class="au-title-image" src="assets/app-name.png" alt="xFlay AI" />
       </header>
       <h2 class="au-h2">Sign Up To Your Account.</h2>
       <form id="suForm" novalidate autocomplete="on">
