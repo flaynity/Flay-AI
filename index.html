@@ -1482,11 +1482,35 @@ $('liForgot').addEventListener('click',function(){
  if(!EMAIL.test(em))return note('liErr','Enter your email above, then tap Forgot password.');
  auth.sendPasswordResetEmail(em).then(function(){note('liErr','Password reset link sent to '+em+'.',true);}).catch(function(err){note('liErr',msg(err));});
 });
+/* Native Android Google Sign-In returns the Google ID token through MainActivity. */
+window.handleNativeGoogleSignIn=function(idToken){
+ var errId=cur==='signup'?'suErr':'liErr';
+ try{
+  if(!auth)throw new Error('Firebase is not ready. Check your internet connection and reload.');
+  if(!idToken||typeof idToken!=='string')throw new Error('Google Sign-In did not return a valid ID token.');
+  var credential=firebase.auth.GoogleAuthProvider.credential(idToken);
+  persist(rem[cur==='signup'?'signup':'login']).then(function(){
+   return auth.signInWithCredential(credential);
+  }).catch(function(err){note(errId,msg(err));}).then(function(){
+   document.querySelectorAll('[data-soc="google"]').forEach(function(btn){btn.classList.remove('busy');});
+  });
+ }catch(err){
+  note(errId,msg(err));
+  document.querySelectorAll('[data-soc="google"]').forEach(function(btn){btn.classList.remove('busy');});
+ }
+};
 document.querySelectorAll('[data-soc]').forEach(function(b){
  b.addEventListener('click',function(){
   var errId=cur==='signup'?'suErr':'liErr';note(errId,'');
   if(!auth)return note(errId,'Firebase is not ready. Check your internet connection and reload.');
   var kind=b.getAttribute('data-soc'),p;
+  /* In Sketchware WebView, use the existing native Google Sign-In flow when available. */
+  if(kind==='google'&&window.AndroidBridge&&typeof window.AndroidBridge.triggerGoogleSignIn==='function'){
+   b.classList.add('busy');
+   try{window.AndroidBridge.triggerGoogleSignIn();}
+   catch(e){b.classList.remove('busy');note(errId,msg(e));}
+   return;
+  }
   try{
    if(kind==='google'){p=new firebase.auth.GoogleAuthProvider();p.setCustomParameters({prompt:'select_account'});}
    else{p=new firebase.auth.OAuthProvider('apple.com');p.addScope('email');p.addScope('name');}
