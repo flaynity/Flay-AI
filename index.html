@@ -1291,18 +1291,99 @@ function niceError(e){
  return e instanceof Error?e:new Error(m);
 }
 
-var Cloud={uid:null,settings:{},profile:null,onError:null,_enc:enc,_dec:dec,_flatten:flatten,_build:build,_diff:diff,_treeOf:treeOf,_kE:kE,_kD:kD};
+/* ---------- cloud-safe serialization ----------
+   Code files, ZIP entries, attachment bodies, generated-file bodies, diffs and tool output stay on the device.
+   Every Firebase write of a chat / project record goes through cloudSafe(); it builds NEW objects and never mutates the live record. */
+var HEAVY_RE=/(^|\/)(files|bin|rawAtts|ws|caUndo|lastSnapshot|diffs|req|res|generatedFiles|dataUrl|b64|base64)(\/|$)/;
+var HEAVY_KEYS={files:1,bin:1,ws:1,caUndo:1,lastSnapshot:1,dataUrl:1,b64:1,base64:1,rawAtts:1,generatedFiles:1,queue:1,diffs:1};
+var legacy={};
+function safeText(s){
+ s=String(s==null?'':s);
+ s=s.replace(/```flayfiles[\s\S]*?(```|$)/g,'[generated files: the contents are kept on this device only]');
+ s=s.replace(/(^|\n)[ \t`>*\-]*<?\s*TOOL_CALL\s*[:>][^\n]*/gi,'$1');
+ s=s.replace(/(```|~~~)([^\n`~]*)\n([\s\S]*?)(```|~~~|$)/g,function(m,f,lang,body){
+  if(/^\s*(prompt|weblinks|questions)\s*$/i.test(lang))return m;
+  var lines=body.split('\n').length;
+  if(body.length>3000||lines>40)return f+lang+'\n['+lines+' lines of code kept on this device only]\n'+f;
+  return m;});
+ if(s.length>200000)s=s.slice(0,200000)+'\n[truncated in cloud history]';
+ return s;}
+function scrub(v,d){
+ d=d||0;if(d>40)return null;
+ if(typeof v==='string'){
+  if(v.length>300000&&v.slice(0,5)==='data:')return '';
+  if(v.length>20000)return v.slice(0,20000)+' [truncated in cloud history]';
+  return v;}
+ if(Array.isArray(v))return v.map(function(x){return scrub(x,d+1);});
+ if(isPlain(v)){var o={};Object.keys(v).forEach(function(k){if(HEAVY_KEYS[k])return;o[k]=scrub(v[k],d+1);});return o;}
+ return v;}
+function safeAtt(a){
+ if(!a||typeof a!=='object')return null;
+ var o={kind:a.kind,name:String(a.name||a.path||'').slice(0,200)};
+ if(typeof a.size==='number')o.size=a.size;
+ if(a.path)o.path=String(a.path).slice(0,300);
+ if(a.mime||a.type)o.mime=String(a.mime||a.type).slice(0,80);
+ if(a.files&&typeof a.files==='object')o.entries=Object.keys(a.files).length;
+ if(a.bin&&typeof a.bin==='object')o.binEntries=Object.keys(a.bin).length;
+ if(typeof a.content==='string')o.chars=a.content.length;
+ o.local=true;return o;}
+function safeAct(e){
+ if(!e||typeof e!=='object')return e;var o={};
+ Object.keys(e).forEach(function(k){
+  if(k==='req'||k==='res')return;
+  var v=e[k];
+  if(typeof v==='string')o[k]=v.slice(0,k==='text'?500:240);
+  else if(typeof v==='number'||typeof v==='boolean')o[k]=v;});
+ return o;}
+function safeMsg(m){
+ if(!m||typeof m!=='object')return m;var o={};
+ Object.keys(m).forEach(function(k){
+  var v=m[k];
+  if(k==='content'){o[k]=safeText(v);return;}
+  if(k==='rawAtts'){o[k]=Array.isArray(v)?v.map(safeAtt).filter(Boolean):[];return;}
+  if(k==='caUndo'||k==='lastSnapshot'||k==='webContext'||k==='queue')return;
+  if(k==='generatedFiles'){o[k]=Array.isArray(v)?v.map(function(g){var r={};
+   if(g&&typeof g==='object'){Object.keys(g).forEach(function(gk){var gv=g[gk];if(gk==='content'||gk==='before'||gk==='after'||gk==='code')return;
+    if(typeof gv==='string')r[gk]=gv.slice(0,300);else if(typeof gv==='number'||typeof gv==='boolean')r[gk]=gv;});
+    if(typeof g.content==='string')r.chars=g.content.length;}
+   return r;}):[];return;}
+  if(k==='ops'){if(v&&typeof v==='object'&&Array.isArray(v.results))o[k]={results:v.results.map(function(r){return r&&typeof r==='object'?{path:String(r.path||'').slice(0,300),action:r.action,ok:r.ok}:null;}).filter(Boolean)};return;}
+  if(k==='activity'){o[k]=Array.isArray(v)?v.map(safeAct):[];return;}
+  if(k==='reasoning'){o[k]=typeof v==='string'?v.slice(-2000):v;return;}
+  o[k]=scrub(v,0);});
+ return o;}
+function safeMsgs(arr){return Array.isArray(arr)?arr.map(safeMsg):[];}
+function cloudSafe(store,rec){
+ if(!rec||typeof rec!=='object')return rec;
+ var o={};
+ Object.keys(rec).forEach(function(k){
+  var v=rec[k];
+  if(k==='_localMissing')return;
+  if(store==='chats'&&(k==='wsCount'||k==='wsFiles')){if(!rec.ws)o[k]=v;return;}
+  if(store==='chats'){
+   if(k==='messages'){o[k]=safeMsgs(v);return;}
+   if(k==='ws'){if(v&&typeof v==='object'&&v.files&&typeof v.files==='object'){var ks=Object.keys(v.files);o.wsCount=ks.length;o.wsFiles=ks.slice(0,300);}return;}}
+  if(store==='projects'){
+   if(k==='files')return;
+   if(k==='agent'){o[k]=safeMsgs(v);return;}
+   if(k==='lastSnapshot'){if(v&&typeof v==='object'&&v.messageId)o.lastSnapshotId=String(v.messageId);return;}}
+  o[k]=scrub(v,0);});
+ if(store==='projects'&&rec.files&&typeof rec.files==='object'&&Object.keys(rec.files).length){
+  var idx=[];Object.keys(rec.files).slice(0,3000).forEach(function(p){var f=rec.files[p]||{};idx.push(p+'|'+((f.content||'').length)+(f.binary?'|b':''));});
+  o.fileIndex=idx;}
+ return o;}
+var Cloud={uid:null,settings:{},profile:null,onError:null,_enc:enc,_dec:dec,_flatten:flatten,_build:build,_diff:diff,_treeOf:treeOf,_kE:kE,_kD:kD,safe:cloudSafe,safeMsgs:safeMsgs};
 var db=null,acked=new Map(),chains=new Map(),loaded={chats:null,projects:null},drafts={},dTimers={},pendSettings=null,tSet=0;
 function base(){return db.ref('users/'+Cloud.uid);}
 function report(e){e=niceError(e);if(Cloud.onError)Cloud.onError(e);else if(root.console)console.error(e);return e;}
 Cloud.init=function(database){db=database;};
 Cloud.load=function(user){
- Cloud.uid=user.uid;acked=new Map();chains=new Map();var b=base();
+ Cloud.uid=user.uid;acked=new Map();chains=new Map();legacy={};var b=base();
  return Promise.all(['settings','chats','projects','drafts','profile'].map(function(n){return b.child(n).once('value');})).then(function(s){
   Cloud.settings=s[0].val()?dec(s[0].val()):{};
   ['chats','projects'].forEach(function(store,i){
    var v=s[i+1].val()||{},list=[];
-   Object.keys(v).forEach(function(k){var rec=build(v[k]);if(!rec||typeof rec!=='object')return;if(rec.id===undefined||rec.id===null)rec.id=kD(k);acked.set(store+'/'+rec.id,{map:flatten(rec)});list.push(rec);});
+   Object.keys(v).forEach(function(k){var rec=build(v[k]);if(!rec||typeof rec!=='object')return;if(rec.id===undefined||rec.id===null)rec.id=kD(k);var lmap=flatten(rec),lp=[];acked.set(store+'/'+rec.id,{map:lmap});lmap.forEach(function(val,pp){if(HEAVY_RE.test(pp)&&sizeOf(val)>200)lp.push(pp);});if(lp.length)legacy[store+'/'+rec.id]=lp;list.push(rec);});
    loaded[store]=list;});
   drafts={};var dv=s[3].val()||{};Object.keys(dv).forEach(function(k){if(typeof dv[k]==='string')drafts[kD(k)]=dv[k];});
   Cloud.profile=s[4].val()?dec(s[4].val()):null;
@@ -1320,7 +1401,9 @@ Cloud.touchProfile=function(user){
 };
 function doPut(store,rec){
  if(!Cloud.uid)return Promise.reject(new Error('Not signed in.'));
+ rec=cloudSafe(store,rec);
  var key=store+'/'+rec.id,ent=acked.get(key),oldMap=ent?ent.map:new Map(),nw=flatten(rec),up=diff(oldMap,nw);
+ Object.keys(up).forEach(function(pp){if(up[pp]===null&&HEAVY_RE.test(pp))delete up[pp];}); /* old remote nodes are only removed by the explicit, confirmed cleanup */
  if(ent&&!Object.keys(up).length)return Promise.resolve();
  var ref=base().child(store).child(kE(rec.id)),list=batches(up),i=0;
  function next(){
@@ -1350,6 +1433,16 @@ Cloud.get=function(store,id){
  if(ent)return Promise.resolve(build(treeOf(ent.map)));
  return base().child(store).child(kE(id)).once('value').then(function(s){return s.val()?build(s.val()):undefined;});
 };
+Cloud.legacyInfo=function(){var k=Object.keys(legacy),n=0;k.forEach(function(x){n+=legacy[x].length;});return{records:k.length,nodes:n,keys:k};};
+Cloud.purgeLegacy=function(canPurge){
+ var keys=Object.keys(legacy),done=0,skipped=[];
+ return keys.reduce(function(chain,key){return chain.then(function(){
+  var store=key.split('/')[0],id=key.slice(store.length+1);
+  return Promise.resolve(canPurge?canPurge(store,id):false).then(function(ok){
+   if(!ok){skipped.push(key);return;}
+   var ref=base().child(store).child(kE(id)),up={};legacy[key].forEach(function(pp){up[pp]=null;});
+   return Promise.all(batches(up).map(function(b){return withTimeout(ref.update(b),30000,'Could not reach Firebase. Check your internet connection.');})).then(function(){delete legacy[key];done++;});});});},Promise.resolve())
+  .then(function(){return{removed:done,skipped:skipped.length};});};
 function flushSettings(){
  if(pendSettings==null||!Cloud.uid)return;
  var o=pendSettings;pendSettings=null;clearTimeout(tSet);
@@ -1360,6 +1453,7 @@ Cloud.saveSettings=function(obj){Cloud.settings=obj;pendSettings=obj;clearTimeou
 function writeDraft(k){
  if(!Cloud.uid)return;clearTimeout(dTimers[k]);delete dTimers[k];
  var r=base().child('drafts').child(kE(k)),v=drafts[k];
+ if(v&&v.length>8000)v=null; /* long pasted drafts (possibly code) are not uploaded */
  return (v?r.set(v):r.remove()).catch(report);
 }
 Cloud.draft={
@@ -1669,6 +1763,38 @@ const LDB=(()=>{
  };
  return L;
 })();
+/* ---------- device-local file store (IndexedDB) ----------
+   File bodies (uploaded code, ZIP entries, project files, generated files, undo snapshots) live ONLY here.
+   Nothing in this store is ever sent to Firebase or any other remote service. */
+const Local=(()=>{
+ let dbp=null,failed=false,warned=0;const timers=new Map(),pend=new Map();
+ const key=(kind,id)=>(Cloud.uid||'guest')+':'+kind+':'+id;
+ const open=()=>dbp||(dbp=new Promise((res,rej)=>{try{
+  if(!window.indexedDB){failed=true;rej(new Error('IndexedDB is not available in this WebView.'));return;}
+  const r=indexedDB.open('xflay-local',1);
+  r.onupgradeneeded=()=>{try{r.result.createObjectStore('rec');}catch(_){}};
+  r.onsuccess=()=>res(r.result);r.onerror=()=>{failed=true;rej(r.error||new Error('IndexedDB error'));};
+ }catch(e){failed=true;rej(e);}}));
+ const warn=e=>{const n=Date.now();if(n-warned<8000)return;warned=n;
+  const q=e&&(e.name==='QuotaExceededError'||/quota/i.test(String(e.message||'')));
+  try{toast(q?'Device storage is full. Project files could not be saved on this device.':'Saving files on this device failed: '+String((e&&e.message)||e),'err');}catch(_){}};
+ const tx=(mode,fn)=>open().then(db=>new Promise((res,rej)=>{
+  let t,rq;try{t=db.transaction('rec',mode);rq=fn(t.objectStore('rec'));}catch(e){rej(e);return;}
+  t.oncomplete=()=>res(rq&&rq.result);t.onerror=()=>rej(t.error);t.onabort=()=>rej(t.error||new Error('transaction aborted'));}));
+ const L={
+  ok:()=>!failed,
+  async get(kind,id){const k=key(kind,id);if(pend.has(k))return pend.get(k);try{const v=await tx('readonly',st=>st.get(k));return v;}catch(e){return undefined;}},
+  async has(kind,id){const k=key(kind,id);if(pend.has(k))return true;try{return (await tx('readonly',st=>st.count(k)))>0;}catch(e){return false;}},
+  put(kind,id,val){const k=key(kind,id);pend.set(k,val);if(!timers.has(k))timers.set(k,setTimeout(()=>{L._w(k);},250));},
+  _w(k){clearTimeout(timers.get(k));timers.delete(k);if(!pend.has(k))return Promise.resolve();const v=pend.get(k);pend.delete(k);
+   return tx('readwrite',st=>{try{return st.put(v,k);}catch(e){return st.put(JSON.parse(JSON.stringify(v)),k);}}).catch(e=>{warn(e);});},
+  flush(){return Promise.all([...pend.keys()].map(k=>L._w(k)));},
+  del(kind,id){const k=key(kind,id);pend.delete(k);clearTimeout(timers.get(k));timers.delete(k);return tx('readwrite',st=>st.delete(k)).catch(()=>{});}
+ };
+ document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')L.flush();});
+ window.addEventListener('pagehide',()=>{L.flush();});
+ return L;
+})();
 const fbAgentRef=pid=>firebase.database().ref('users/'+Cloud.uid+'/agentChats/'+Cloud._kE(pid));
 const fbTimeout=(p,ms)=>new Promise((res,rej)=>{const t=setTimeout(()=>rej(new Error('timeout')),ms);p.then(v=>{clearTimeout(t);res(v);},e=>{clearTimeout(t);rej(e);});});
 const Sync={busy:null,
@@ -1679,8 +1805,8 @@ const Sync={busy:null,
   LDB.dirtyIds('chats').forEach(id=>{const rec=LDB.get('chats',id);if(!rec){LDB.clean('chats',id);return;}
    jobs.push(Cloud.put('chats',rec).then(()=>LDB.clean('chats',id)).catch(()=>{}));});
   LDB.dirtyIds('agent').forEach(pid=>{const arr=LDB.get('agent',pid);if(!Array.isArray(arr)){LDB.clean('agent',pid);return;}
-   const e=Cloud._enc(arr);
-   jobs.push(fbTimeout(fbAgentRef(pid).set(e===undefined?null:e),25000).then(()=>LDB.clean('agent',pid)).catch(()=>{}));});
+   const e=Cloud._enc(Cloud.safeMsgs(arr));
+   jobs.push((arr.some(msgHeavy)?Local.has('project',pid):Promise.resolve(true)).then(ok=>{if(!ok)return;return fbTimeout(fbAgentRef(pid).set(e===undefined?null:e),25000).then(()=>LDB.clean('agent',pid));}).catch(()=>{}));});
   if(!jobs.length)return Promise.resolve();
   Sync.busy=Promise.all(jobs).then(()=>{Sync.busy=null;},()=>{Sync.busy=null;});
   return Sync.busy;},
@@ -1692,32 +1818,69 @@ const Sync={busy:null,
 /* runs on every "user leaves the app" signal the cloud layer already listens to (hidden / pagehide) and on sign-out */
 (()=>{const f=Cloud.flush;Cloud.flush=function(){return Promise.all([f.apply(Cloud,arguments),Sync.run()]);};
  window.addEventListener('beforeunload',()=>{Sync.run();});})();
-const withLocalAgent=p=>{if(!p)return p;const la=LDB.get('agent',p.id);if(la!==undefined)p.agent=la;else if(!Array.isArray(p.agent))p.agent=[];else if(p.agent.length)LDB.set('agent',p.id,p.agent);return p;};
+const HV_MSG=['rawAtts','generatedFiles','caUndo','ops','webContext','activity','queue','reasoning'];
+const msgHeavy=m=>!!m&&typeof m==='object'&&((m.rawAtts||[]).some(a=>a&&(typeof a.content==='string'||a.files||a.bin||a.dataUrl))||(m.generatedFiles||[]).some(g=>g&&typeof g.content==='string')||!!(m.caUndo&&Object.keys(m.caUndo).length)||!!(m.ops&&m.ops.diffs)||(m.activity||[]).some(e=>e&&(e.res||e.req)));
+const hasHeavy=(kind,r)=>{if(!r)return false;
+ if(kind==='chat')return !!(r.ws&&r.ws.files&&Object.keys(r.ws.files).length)||(r.messages||[]).some(msgHeavy);
+ return !!(r.files&&Object.keys(r.files).length)||!!r.lastSnapshot||(r.agent||[]).some(msgHeavy);};
+const mergeMsgs=(light,full)=>{const fm=new Map((full||[]).map(m=>[m&&m.id,m]));
+ return (light||[]).map(m=>{const f=fm.get(m&&m.id);if(!f)return m;const o=Object.assign({},m);HV_MSG.forEach(k=>{if(f[k]!==undefined)o[k]=f[k];});return o;});};
+/* light = cloud-safe record (history + metadata). The device copy in IndexedDB holds the file bodies. */
+const hydrate=async(kind,light)=>{
+ if(!light||light.id===undefined||light.id===null)return light;
+ const full=await Local.get(kind,light.id);
+ if(full&&typeof full==='object'&&full.id===light.id){
+  if(kind==='chat'){
+   if((light.messages||[]).length>(full.messages||[]).length)full.messages=mergeMsgs(light.messages,full.messages);
+   if((full.updatedAt||0)<(light.updatedAt||0)){const r=Object.assign({},light);r.messages=mergeMsgs(light.messages,full.messages);if(full.ws)r.ws=full.ws;return r;}
+   return full;}
+  const la=LDB.get('agent',light.id);
+  if(Array.isArray(la)&&la.length>(full.agent||[]).length)full.agent=mergeMsgs(la,full.agent);
+  if((full.updatedAt||0)<(light.updatedAt||0)){const r=Object.assign({},light);r.files=full.files||{};r.lastSnapshot=full.lastSnapshot||null;r.agent=full.agent||light.agent;return r;}
+  return full;}
+ if(hasHeavy(kind,light)){ /* legacy record that still carries file bodies: keep them on this device */
+  Local.put(kind,light.id,light);
+  if(kind==='chat')LDB.set('chats',light.id,Cloud.safe('chats',light),true);
+  else if(Array.isArray(light.agent))LDB.set('agent',light.id,Cloud.safeMsgs(light.agent),true);}
+ else if(kind==='project'&&Array.isArray(light.fileIndex)&&light.fileIndex.length&&!(light.files&&Object.keys(light.files).length))light._localMissing=true;
+ return light;};
+const withLocalAgent=p=>{if(!p)return p;const la=LDB.get('agent',p.id);if(la!==undefined)p.agent=la;else if(!Array.isArray(p.agent))p.agent=[];else if(p.agent.length)LDB.set('agent',p.id,Cloud.safeMsgs(p.agent));return p;};
 const DB={
  put:(st,v)=>{
-  if(st==='chats'){LDB.set('chats',v.id,v);return Promise.resolve();}
-  if(st==='projects'){const rest=Object.assign({},v);delete rest.agent;LDB.set('agent',v.id,Array.isArray(v.agent)?v.agent:[]);return Cloud.put('projects',rest);}
+  if(st==='chats'){Local.put('chat',v.id,v);LDB.set('chats',v.id,Cloud.safe('chats',v));return Promise.resolve();}
+  if(st==='projects'){Local.put('project',v.id,v);const rest=Object.assign({},v);delete rest.agent;LDB.set('agent',v.id,Cloud.safeMsgs(Array.isArray(v.agent)?v.agent:[]));return Cloud.put('projects',rest);}
   return Cloud.put(st,v);},
  del:(st,id)=>{
-  if(st==='chats'){LDB.del('chats',id);return Cloud.del('chats',id).catch(()=>{});}
-  if(st==='projects'){LDB.del('agent',id);try{fbAgentRef(id).remove().catch(()=>{});}catch(e){}return Cloud.del('projects',id);}
+  if(st==='chats'){LDB.del('chats',id);Local.del('chat',id);return Cloud.del('chats',id).catch(()=>{});}
+  if(st==='projects'){LDB.del('agent',id);Local.del('project',id);try{fbAgentRef(id).remove().catch(()=>{});}catch(e){}return Cloud.del('projects',id);}
   return Cloud.del(st,id);},
  all:async st=>{
   if(st==='chats'){
    const remote=await Cloud.all('chats'),out=LDB.all('chats'),have=new Set(out.map(c=>c.id));
-   for(const c of remote){if(!c||c.id===undefined||have.has(c.id))continue;LDB.set('chats',c.id,c,true);out.push(c);}
-   return out;}
+   for(const c of remote){if(!c||c.id===undefined||have.has(c.id))continue;LDB.set('chats',c.id,Cloud.safe('chats',c),true);out.push(c);}
+   return Promise.all(out.map(c=>hydrate('chat',c)));}
   const list=await Cloud.all(st);
   if(st!=='projects')return list;
   return Promise.all(list.map(async p=>{
    if(LDB.get('agent',p.id)===undefined&&!(Array.isArray(p.agent)&&p.agent.length)){
-    try{const sn=await fbTimeout(fbAgentRef(p.id).once('value'),8000),v=sn.val();if(v){const a=Cloud._dec(v);if(Array.isArray(a)&&a.length){LDB.set('agent',p.id,a,true);}}}catch(e){}}
-   return withLocalAgent(p);}));},
+    try{const sn=await fbTimeout(fbAgentRef(p.id).once('value'),8000),v=sn.val();if(v){const a=Cloud._dec(v);if(Array.isArray(a)&&a.length){LDB.set('agent',p.id,Cloud.safeMsgs(a),true);p.agent=a;}}}catch(e){}}
+   return hydrate('project',withLocalAgent(p));}));},
  get:async(st,id)=>{
-  if(st==='chats')return LDB.get('chats',id);
+  if(st==='chats'){const l=LDB.get('chats',id);return l?hydrate('chat',l):l;}
   const r=await Cloud.get(st,id);
-  return st==='projects'?withLocalAgent(r):r;}
+  return st==='projects'?hydrate('project',withLocalAgent(r)):r;}
 };
+/* old file contents that earlier versions uploaded: report only; removal needs the user's confirmation and a local copy first */
+async function legacyCleanupPrompt(){
+ try{const info=Cloud.legacyInfo();if(!info.records)return;
+  const last=+(localStorage.getItem('xflay:legacyAsk')||0);if(Date.now()-last<864e5)return;localStorage.setItem('xflay:legacyAsk',String(Date.now()));
+  const ok=await confirmDlg({title:'Old file contents found in the cloud',body:info.records+' saved chat/project record(s) still hold file contents uploaded by an earlier version. Chat text and project names stay. File contents are copied to this device first, then removed from the cloud. Records without a local copy are skipped.',ok:'Remove from cloud'});
+  if(!ok)return;
+  await Local.flush();
+  const r=await Cloud.purgeLegacy((store,id)=>Local.has(store==='chats'?'chat':'project',id));
+  toast('Removed old file contents from '+r.removed+' record(s)'+(r.skipped?'; '+r.skipped+' skipped (no local copy on this device)':'')+'.',r.skipped?'warn':'ok');
+ }catch(e){toast('Cloud cleanup failed: '+String((e&&e.message)||e),'err');}}
+window.xflayCloudCleanup=legacyCleanupPrompt;
 Cloud.onError=(()=>{let t=0;return e=>{const n=Date.now();if(n-t>8000){t=n;toast('Cloud save failed: '+String((e&&e.message)||e),'err');}};})();
 /* ---------- global state ---------- */
 const S={settings:{providers:[],selectedProviderId:null,reasoning:'balanced'},
@@ -1761,6 +1924,7 @@ function wlHtml(c){
    +'<a class="wl-open" href="'+eu+'" target="_blank" rel="noopener noreferrer">'+esc(x.open||('Open '+name))+WL_ARROW+'</a></div></div>';
  });
  if(c.open)h+='<div class="wl-it wl-sk"><div class="wl-logo"></div><div class="wl-main"><i></i><i></i></div></div>';
+ if(c.unv&&!c.open)h+='<div class="muted small" style="padding:6px 2px">These links come from the model, not from a live search, and are not verified.</div>';
  return h+'</div>';
 }
 /* ---------- code card (premium, same look as the Writing card) ---------- */
@@ -1798,7 +1962,7 @@ function md(src,msg){
 src=src.replace(/```flayfiles\n?([\s\S]*?)```/g,'@@(FILE_OUTPUT)@@');
  src=src.replace(/```flayfiles\n?[\s\S]*$/,'@@(FILE_OUTPUT_LIVE)@@');
  const wlCards=[],qCards=[];
-   src=src.replace(/```weblinks[ \t]*\n?([\s\S]*?)(```|$)/g,(m,j,cl)=>{wlCards.push({items:wlItems(j),open:!cl});return '\u0002'+(wlCards.length-1)+'\u0002';});
+   src=src.replace(/```weblinks[ \t]*\n?([\s\S]*?)(```|$)/g,(m,j,cl)=>{wlCards.push({items:wlItems(j),open:!cl,unv:!(msg&&Array.isArray(msg.sources)&&msg.sources.length)});return '\u0002'+(wlCards.length-1)+'\u0002';});
  src=src.replace(/```questions[ \t]*\n?([\s\S]*?)(```|$)/g,(m,j,cl)=>{qCards.push({json:j,open:!cl});return '\u0003'+(qCards.length-1)+'\u0003';});
  src=src.replace(/```([\w+#.-]*)[ \t]*\n?([\s\S]*?)(```|$)/g,(m0,l,c,cl)=>{const op=!cl;if(op)c=c.replace(/`{1,2}$/,'');blocks.push({l,c:c.replace(/\n$/,''),open:op});return '\u0001'+(blocks.length-1)+'\u0001';});
  let h=esc(src);
@@ -2436,7 +2600,7 @@ $('#chatAtts').addEventListener('click',e=>{const b=e.target.closest('[data-rmat
 
 /* ---------- system prompts ---------- */
 const THINK_RULE='Reasoning speed: think ultra fast. Keep your private reasoning short - at most 3 to 5 steps, each a brief bold title line plus one short sentence. Never over-think simple requests.';
-const LINKS_RULE='When the user asks for website link(s) (a site, service, tool, platform, ad network, store, etc.), use the LIVE WEB CONTEXT when it is supplied. Reply with ONE short intro sentence in the user\'s language, then exactly one fenced code block tagged weblinks containing a JSON array of 3 to 8 items, each shaped like {"name":"Google AdSense","tag":"short category line in the user\'s language","desc":"one or two sentences in the user\'s language","url":"https://official-site.example","open":"short label in the user\'s language, e.g. AdSense Website \u0996\u09c1\u09b2\u09c1\u09a8"}. Use only real official URLs (preferably ones found in the live web context); never invent or guess URLs, and leave out any site you are not sure exists. Do not write raw URLs outside the block. After the block you may add one short note (for example about approval or payment rules). If the user asks for one specific site, return just that one item.';
+const LINKS_RULE='When the user asks for website link(s) (a site, service, tool, platform, ad network, store, etc.), use the LIVE WEB CONTEXT when it is supplied. Reply with ONE short intro sentence in the user\'s language, then exactly one fenced code block tagged weblinks containing a JSON array of 3 to 8 items, each shaped like {"name":"Google AdSense","tag":"short category line in the user\'s language","desc":"one or two sentences in the user\'s language","url":"https://official-site.example","open":"short label in the user\'s language, e.g. AdSense Website \u0996\u09c1\u09b2\u09c1\u09a8"}. Only put URLs in the block that appear in the SOURCES of the live web context. If there is no live web context, or its status is FAILED or NO USABLE RESULTS, do NOT output a weblinks block: say in the user\'s language that the links could not be verified live. Never invent or guess URLs, and leave out any site you are not sure exists. Do not write raw URLs outside the block. After the block you may add one short note (for example about approval or payment rules). If the user asks for one specific site, return just that one item.';
 function isLinkIntent(t){t=String(t||'').trim();if(!t||t.length>400)return false;
  const noun=/(\blinks?\b|\burls?\b|\bweb\s?sites?\b|\bsites?\b|\u09b2\u09bf\u0982\u0995|\u09b2\u09bf\u0999\u09cd\u0995|\u0993\u09af\u09bc\u09c7\u09ac\u09b8\u09be\u0987\u099f|\u0993\u09af\u09bc\u09c7\u09ac \u09b8\u09be\u0987\u099f|\u09b8\u09be\u0987\u099f)/i;
  const ask=/(\bgive\b|\bsend\b|\bshare\b|\bshow\b|\bprovide\b|\bfind\b|\bsuggest\b|\brecommend\b|\blist\b|\bneed\b|\bwant\b|\bwhere\b|\bwhich\b|\bbest\b|\btop\b|\u09a6\u09be\u0993|\u09a6\u09bf\u09a8|\u09a6\u09c7\u09a8|\u09a6\u09bf\u09ac\u09c7|\u09a6\u09bf\u09a4\u09c7|\u09a6\u09c7\u0996\u09be\u0993|\u09a6\u09c7\u0996\u09be\u09a8|\u09aa\u09be\u09a0\u09be\u0993|\u099a\u09be\u0987|\u09ac\u09b2\u09cb|\u09ac\u09b2\u09c1\u09a8|\u0996\u09c1\u0981\u099c\u09c7|\u0995\u09cb\u09a5\u09be\u09af\u09bc|\u0995\u09cb\u09a8\u099f\u09be)/i;
@@ -2515,12 +2679,17 @@ async function researchWeb(m,queries,sig,hostSel,opts){
  try{
   m._webSearching=true;m._webTitle='Searching the web…';m._webDesc=queries.join(' · ');
   m.webSteps.push({t:'Searching the web',d:queries.map(q=>'“'+q+'”').join('\n')});upd();
-  const rs=await Promise.all(queries.map(q=>searchWebFull(q,sig).catch(e=>{if(e.name==='AbortError')throw e;return{text:'',sources:[]};})));
+  const rs=await Promise.all(queries.map(q=>searchWebFull(q,sig).catch(e=>{if(e.name==='AbortError')throw e;return{text:'',sources:[],failed:true,error:String((e&&e.message)||e).slice(0,100)};})));
   gone();
   const seen=new Set(),all=[];
   for(let i=0;all.length<12;i++){let any=false;rs.forEach(r=>{const s=(r.sources||[])[i];if(s){any=true;if(!seen.has(s.url)&&all.length<12){seen.add(s.url);all.push(s);}}});if(!any)break;}
   m.sources=all;
-  if(!all.length){m.webSteps.push({t:'No web pages found',d:''});return '';}
+  if(!all.length){
+   if(rs.length&&rs.every(r=>r.failed)){const why=[...new Set(rs.map(r=>r.error).filter(Boolean))].join(' | ').slice(0,220)||'search service unreachable';
+    m.webSteps.push({t:'Web search failed',d:why});m.webFailed=true;upd();
+    return 'LIVE WEB SEARCH STATUS: FAILED ('+why+'). No live results were obtained. Tell the user, in their language, that the live search could not be completed so nothing could be verified. Do NOT present any website or URL as verified or official, and do not build a list of links from memory; if you mention a URL you are certain of, label it clearly as unverified.';}
+   m.webSteps.push({t:'Search finished with no usable results',d:''});upd();
+   return 'LIVE WEB SEARCH STATUS: NO USABLE RESULTS for: '+queries.join(' | ')+'. Tell the user, in their language, that the search returned nothing usable. Do NOT invent or guess URLs and do not present any link as verified.';}
   m.webSteps.push({t:'Found '+all.length+' web pages',d:all.slice(0,8).map(s=>s.host).join('\n'),srcs:hosts(all)});upd();
   let pages=[];
   if(opts.read!==false){
@@ -2595,7 +2764,7 @@ function srcNorm(u){try{if(u.startsWith('//'))u='https:'+u;let x=new URL(u);let 
  if(!/^https?:$/.test(x.protocol)||!h.includes('.'))return null;
  if(/(^|\.)(google\.[a-z.]+|gstatic\.com|googleusercontent\.com|googleapis\.com|googleadservices\.com|jina\.ai|duckduckgo\.com|schema\.org|w3\.org|bing\.com)$/.test(h))return null;
  x.hash='';return{url:x.href,host:h};}catch(_){return null;}}
-async function searchOne(url,signal){try{const r=await fetch(url,{headers:{Accept:'text/plain'},signal});if(!r.ok)return '';return (await r.text()).trim();}catch(_){return '';}}
+async function searchOne(url,signal){try{const r=await fetch(url,{headers:{Accept:'text/plain'},signal});if(!r.ok)return{ok:false,text:'',err:'HTTP '+r.status};return{ok:true,text:(await r.text()).trim(),err:''};}catch(e){return{ok:false,text:'',err:(e&&e.name==='AbortError')?'timed out':String((e&&e.message)||e).slice(0,80)};}}
 function srcParse(raw){const out=[],seen=new Set(),perHost={};const clean=String(raw||'').replace(/!\[[^\]]*\]\([^)]*\)/g,'');
  const re=/\[([^\]]{2,240})\]\(((?:https?:)?\/\/[^)\s]+)[^)]*\)/g;let m;
  while((m=re.exec(clean))&&out.length<8){const n=srcNorm(m[2]);if(!n||seen.has(n.url))continue;
@@ -2609,10 +2778,12 @@ async function searchWebFull(query,signal){
  if(signal){if(signal.aborted)ac.abort();else signal.addEventListener('abort',onAb,{once:true});}
  try{
   const enc=encodeURIComponent(q);
-  const [a,b]=await Promise.all([searchOne('https://r.jina.ai/http://www.google.com/search?q='+enc,ac.signal),searchOne('https://r.jina.ai/https://html.duckduckgo.com/html/?q='+enc,ac.signal)]);
+  const [ra,rb]=await Promise.all([searchOne('https://r.jina.ai/http://www.google.com/search?q='+enc,ac.signal),searchOne('https://r.jina.ai/https://html.duckduckgo.com/html/?q='+enc,ac.signal)]);
   if(signal&&signal.aborted)throw new DOMException('Aborted','AbortError');
+  const a=ra.text,b=rb.text;
+  if(!ra.ok&&!rb.ok)return{text:'',sources:[],failed:true,error:'Google: '+ra.err+'; DuckDuckGo: '+rb.err};
   const seen=new Set(),sources=[];[...srcParse(a),...srcParse(b)].forEach(s=>{if(!seen.has(s.url)&&sources.length<8){seen.add(s.url);sources.push(s);}});
-  if(!sources.length)return{text:'',sources:[]};
+  if(!sources.length)return{text:'',sources:[],empty:true};
   const text='LIVE WEB SEARCH RESULTS FOR: '+q+'\nUse these results as external context. Do not claim to have browsed beyond them.\n\n'+sources.map((s,i)=>(i+1)+'. '+s.title+'\n'+s.url).join('\n')+'\n\n--- raw search page excerpt ---\n'+(a||b).slice(0,4000);
   return{text,sources};
  }finally{clearTimeout(to);if(signal)signal.removeEventListener('abort',onAb);}}
@@ -2831,6 +3002,7 @@ $('#chipWeb2').onclick=()=>{setWebAccess(!S.webAccess);toast(S.webAccess?'Web ac
 $('#filePickPhoto').onchange=e=>{readIn(e.target.files,'chat');e.target.value='';};
 $('#filePickFile').onchange=e=>{readIn(e.target.files,'chat');e.target.value='';};
 $('#filePickAgent').onchange=e=>{readIn(e.target.files,'agent');e.target.value='';};
+const ZIP_ENTRY_MAX=10000000,ZIP_TOTAL_MAX=10000000; /* characters per ZIP text entry / per archive; entries beyond this are reported by name, never skipped silently */
 async function readIn(files,target){for(const f of files){
  const ext=(f.name.split('.').pop()||'').toLowerCase();
  try{
@@ -2838,8 +3010,9 @@ async function readIn(files,target){for(const f of files){
    (target==='chat'?S.pendingAttachments:S.agentAttachments).push({kind:'image',name:f.name,size:f.size,dataUrl});}
   else if(ext==='zip'){const zip=await JSZip.loadAsync(f);const names=Object.keys(zip.files).filter(n=>!zip.files[n].dir);
    let tree=names.slice(0,200).join('\n');if(names.length>200)tree+=`\n... (${names.length-200} more entries)`;
-   const files={};let tot=0;for(const n of names){if(BIN_RE.test(n))continue;const e=zip.files[n];if((e._data&&e._data.uncompressedSize>2e6))continue;try{const t=await e.async('string');if(tot+t.length>8e6||/\u0000/.test(t.slice(0,2000)))continue;tot+=t.length;files[n]=t;}catch(_){}}
-   const za={kind:'zip',name:f.name,size:f.size,tree:names.length+' entries:\n'+tree,files};if(target!=='chat')za.content=attBlock(za,'',ATT_BUDGET);
+   const files={},skipList=[];let tot=0;for(const n of names){if(BIN_RE.test(n))continue;const e=zip.files[n];if((e._data&&e._data.uncompressedSize>ZIP_ENTRY_MAX)){skipList.push(n+' (over '+ZIP_ENTRY_MAX+' characters)');continue;}try{const t=await e.async('string');if(/\u0000/.test(t.slice(0,2000))){skipList.push(n+' (binary content)');continue;}if(tot+t.length>ZIP_TOTAL_MAX){skipList.push(n+' (total text limit reached)');continue;}tot+=t.length;files[n]=t;}catch(err){skipList.push(n+' ('+String((err&&err.message)||err).slice(0,60)+')');}}
+   if(skipList.length)toast(skipList.length+' file(s) in '+f.name+' were NOT read: '+skipList.slice(0,3).join('; ')+(skipList.length>3?'; ...':''),'warn');
+   const za={kind:'zip',name:f.name,size:f.size,tree:names.length+' entries:\n'+tree,files,skipped:skipList.slice(0,50)};if(target!=='chat')za.content=attBlock(za,'',ATT_BUDGET);
    (target==='chat'?S.pendingAttachments:S.agentAttachments).push(za);}
   else{const txt=await f.text();(target==='chat'?S.pendingAttachments:S.agentAttachments).push({kind:'text',name:f.name,size:f.size,content:txt});}
  }catch(err){toast('Could not read '+f.name+': '+err.message,'err');}}
@@ -3772,7 +3945,9 @@ document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;
 
 (async function boot(){await XAuth.ready;try{loadSettings();applyTheme();
  try{const[chats,projects]=await Promise.all([DB.all('chats'),DB.all('projects')]);
-  S.chats=chats.sort((a,b)=>b.updatedAt-a.updatedAt);S.projects=projects;Sync.boot();}catch(e){}
+  S.chats=chats.sort((a,b)=>b.updatedAt-a.updatedAt);S.projects=projects;Sync.boot();
+  const lm=projects.filter(x=>x&&x._localMissing);if(lm.length)setTimeout(()=>toast(lm.length+' project(s) have no file contents on this device (files are stored only on the device where they were imported): '+lm.slice(0,2).map(x=>x.name).join(', ')+'. Re-import the ZIP to edit them here.','warn'),2500);
+  setTimeout(()=>{legacyCleanupPrompt();},6000);}catch(e){}
  const last=(Cloud.settings||{}).lastChatId||null;
  S.chat=S.chats.find(c=>c.id===last)||null;
  if(!S.chat){S.chat={id:uid(),title:'',createdAt:Date.now(),updatedAt:Date.now(),messages:[]};S.chats.unshift(S.chat);}
@@ -4623,7 +4798,7 @@ function attTile(a,rm){const nm=a.path||a.name||'file',ext=(nm.split('.').pop()|
 function wkFmt(ms){const s=Math.max(1,Math.round(ms/1000));return s<60?s+'s':Math.floor(s/60)+'m '+(s%60)+'s';}
 function wkItems(m){const a=[],add=t=>{t=String(t||'').replace(/\s+/g,' ').trim();if(t&&!a.includes(t))a.push(t.slice(0,140));};
  (m.reads||[]).forEach(n=>add('Read '+n));(m.webSteps||[]).forEach(w=>add(w.t));
- (m.activity||[]).forEach(e=>add(e.label));(m.generatedFiles||[]).forEach(g=>add('Write '+g.path));return a;}
+ (m.activity||[]).forEach(e=>add((e.status==='fail'&&!/^(failed|tool error|agent stopped)/i.test(String(e.label||''))?'Failed: ':e.status==='cancel'&&!/^(cancelled|stopped)/i.test(String(e.label||''))?'Cancelled: ':'')+e.label));(m.generatedFiles||[]).forEach(g=>add('Write '+g.path));return a;}
 function wkIc(t,i){const l=String(t).toLowerCase();
  if(/^plan\b/.test(l))return 'wk-list';
  if(/\b(search|find|grep|look)/.test(l))return 'wk-search';
@@ -4638,7 +4813,10 @@ function wkRow(t,i){i=i||0;const nm=wkIc(t,i),ic=icon(nm,'wk-ic'+(nm==='wk-bubbl
  if(!k)return '<div class="wk-i"'+sty+'>'+ic+'<span class="wk-tx">'+esc(t)+'</span></div>';
  return '<div class="wk-i tool"'+sty+'><button class="wk-tool" data-wkr>'+ic+'<span>'+esc((k[0]==='read'?'Read ':'Write ')+k[1])+'</span>'+icon('chev-d','xs')+'</button><pre class="wk-json">{\n    "'+k[0]+'": '+esc(JSON.stringify(k[1]))+'\n}</pre></div>';}
 function wkHead(m){const live=m.status==='streaming';let ms;if(live){m._wkT=Date.now()-(m.createdAt||Date.now());ms=m._wkT;}else{if(!m.workMs&&m._wkT)m.workMs=m._wkT;ms=m.workMs||m.thinkMs||0;}
- return live?'Working\u2026':(ms?'Worked for '+wkFmt(ms):'Worked');}
+ if(live)return 'Working\u2026';
+ if(m.status==='stopped')return ms?'Stopped after '+wkFmt(ms):'Stopped';
+ if(m.status==='error')return ms?'Failed after '+wkFmt(ms):'Failed';
+ return ms?'Worked for '+wkFmt(ms):'Worked';}
 function wkHtml(m){const it=wkItems(m);if(!it.length)return '';const live=m.status==='streaming';
  return '<div class="wk'+(live?' live':'')+(m._wkClosed?' closed':'')+'"><button class="wk-h" data-wk>'+'<span class="wk-t">'+wkHead(m)+'</span>'+icon('chev-d','xs')+'</button><div class="wk-l">'+it.map(wkRow).join('')+'</div></div>';}
 function patchWk(mel,m){const it=wkItems(m);let w=mel.querySelector(':scope > .wk');
@@ -4977,7 +5155,7 @@ function chatWs(chat){
  return chat.ws;}
 function ingest(ws,atts){const added=[];let skipped=0;
  (atts||[]).forEach(a=>{
-  if(a.kind==='text'){const p=normPath(a.name);if(!badPath(p)){ws.files[p]={content:String(a.content||'')};added.push(p);}}
+  if(a.kind==='text'){const p=normPath(a.name);if(!badPath(p)&&typeof a.content==='string'){ws.files[p]={content:a.content};added.push(p);}}
   else if(a.kind==='zip'){
    Object.keys(a.files||{}).forEach(n=>{const p=normPath(n);if(badPath(p)||skipPath(p)){skipped++;return;}ws.files[p]={content:a.files[n]};added.push(p);});
    Object.keys(a.bin||{}).forEach(n=>{const p=normPath(n);if(badPath(p)||skipPath(p)){skipped++;return;}ws.files[p]={content:a.bin[n],binary:true};added.push(p);});
@@ -5053,14 +5231,30 @@ function tEdit(run,a){
  if(cnt>1){const ls=[];let i=c.indexOf(old);while(i>=0&&ls.length<12){ls.push(lineOf(c,i));i=c.indexOf(old,i+old.length);}
   return E('old matches '+cnt+' places in '+path+' (lines '+ls.join(', ')+(cnt>12?', ...':'')+'). Add neighboring lines to old so it is unique.');}
  if(old===nw)return E('old and new are identical; nothing to change.');
+ if(REST_MARK.test(nw)&&!REST_MARK.test(old))return E('Refusing this edit: new contains a "rest of the code unchanged" style marker. Put the real code in new.');
  const i=c.indexOf(old);f.content=c.slice(0,i)+nw+c.slice(i+old.length);
  const s=lineOf(c,i),e=s+nl(nw);
  return R('OK edited '+path+': replaced 1 occurrence at line '+s+' (new text spans lines '+s+'-'+e+'); file now has '+lc(f.content)+' lines.','Updated '+path,'code',true,'line '+s+(e>s?'-'+e:''),true);}
+const CODE_EXT=/\.(js|jsx|ts|tsx|mjs|cjs|java|kt|kts|py|c|cc|cpp|h|hpp|cs|go|rs|php|rb|swift|dart|sh|html?|css|scss|xml|gradle|sql|vue|svelte)$/i;
+const REST_MARK=/(\/\/|#|\/\*|<!--|\*)\s*\.{3,}\s*(rest|remaining|existing|other|unchanged|same|previous)|(rest|remainder) of (the )?(code|file|implementation|content|function)\b[^\n]{0,30}(unchanged|same|here|remains|omitted)|(existing|previous|unchanged|original) code (here|remains|unchanged|goes here|stays)|\.\.\.\s*\(?(rest|remaining) (of )?(the )?(code|file)/i;
+function placeholderWhy(path,text){
+ const t=String(text||'');
+ if(REST_MARK.test(t))return 'it contains a "rest of the code unchanged" style marker instead of the real code';
+ if(!CODE_EXT.test(path)||/(^|\/)__init__\.py$/.test(path))return null;
+ if(!t.trim())return 'the content is empty';
+ let c=t.replace(/\/\*[\s\S]*?\*\//g,'').replace(/<!--[\s\S]*?-->/g,'');
+ if(/\.(py|sh|rb|ya?ml)$/i.test(path))c=c.replace(/(^|\n)[ \t]*#[^\n]*/g,'$1');
+ if(!/\.(html?|css|scss|xml)$/i.test(path))c=c.replace(/(^|\n)[ \t]*\/\/[^\n]*/g,'$1');
+ c=c.trim();
+ if(!c)return 'it contains only comments and no code';
+ if(c.replace(/\s+/g,'').length<120&&/(TODO|your code here|code goes here|implement (this|me)|placeholder)/i.test(t))return 'it is only a TODO/placeholder stub';
+ return null;}
 function tCreate(run,a){
  const path=normPath(a.path);
  if(badPath(path))return E('Invalid path "'+(a.path||'')+'". Use a relative path with forward slashes and no "..".');
  if(run.files[path])return E('File already exists: '+path+'. Use edit_file to change it (or delete_file, then create_file, for a full rewrite of a small file).');
  if(typeof a.content!=='string')return E('content is required (a string).');
+ {const why=placeholderWhy(path,a.content);if(why)return E('Refusing to create '+path+' because '+why+'. Write the complete, working file content (no placeholders, no "rest unchanged" comments).');}
  if(a.content.length>TEXT_CAP)return E('content is too large ('+a.content.length+' chars). Create a smaller skeleton, then add sections with edit_file.');
  run.files[path]={content:a.content};
  return R('OK created '+path+' ('+lc(a.content)+' lines).','Created '+path,'file',true,lc(a.content)+' lines',true);}
@@ -5189,7 +5383,9 @@ function execTool(run,call){
  catch(e){return E('Tool crashed: '+(e&&e.message||e));}}
 
 /* ---------- protocol (Appendix A) ---------- */
-const MARK=/(^|\n)[ \t`>*\-]*<?\s*TOOL_CALL\s*[:>]/;
+const MARK=/(^|[\s`>*\-\]\.!?:;,)"'])[ \t`>*\-\[]*<?\s*TOOL_CALL\s*[:>\]](?=[\s`]*(?:\{|$))/i;
+const CTRL_ANY=/(^|\n)[ \t`>*\-]*<?\s*\/?\s*TOOL_(?:CALL|RESULT)\s*[:>\]]|[|\uFF5C]\s*DSML/i;
+const markCut=(t,m)=>m.index+(/\S/.test(m[1])?m[1].length:0);
 /* DeepSeek-style DSML tool calls (<｜DSML｜invoke name="..."> ... ) are converted to the same call object */
 const DSML_OPEN=/<\/?\s*[|｜]+\s*DSML\s*[|｜]+/;
 const DSML_TAIL=/<\/?\s*[|｜]*\s*(?:D(?:S(?:M(?:L)?)?)?)?$/;
@@ -5208,25 +5404,38 @@ function parseDSML(text,idx){
    if(o&&typeof o==='object'&&!Array.isArray(o)){Object.assign(args,o);continue;}}
   args[pm[1]]=v;}
  return{kind:'call',pre,call:{tool:im[1].trim(),args}};}
+function normCall(o,pre){
+ if(!o||typeof o!=='object'||Array.isArray(o))return{kind:'bad',pre,error:'The tool call must be one JSON object.'};
+ const tool=String(o.tool||o.name||o.function||'').trim();let args=o.args||o.arguments||o.parameters||o.input;
+ if(typeof args==='string'){try{args=JSON.parse(args);}catch(_){args=null;}}
+ if(!args||typeof args!=='object'||Array.isArray(args)){args={};Object.keys(o).forEach(k=>{if(k!=='tool'&&k!=='name'&&k!=='function')args[k]=o[k];});}
+ if(!tool)return{kind:'bad',pre,error:'The tool call JSON needs a "tool" field.'};
+ return{kind:'call',pre,call:{tool,args}};}
 function parseCall(text){
  const dm=DSML_OPEN.exec(text),m=MARK.exec(text);
  if(dm&&(!m||dm.index<m.index))return parseDSML(text,dm.index);
- if(!m)return{kind:'none'};
- const mi=text.indexOf('TOOL_CALL',m.index),pre=text.slice(0,m.index).trim(),s=text.indexOf('{',mi+9);
+ if(!m){ /* a bare JSON tool object (optionally fenced) is also accepted */
+  const t=String(text||'').trim().replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/,'');
+  if(t.charAt(0)==='{'&&t.charAt(t.length-1)==='}'&&/"(tool|name)"\s*:/.test(t)){let o=null;try{o=JSON.parse(t);}catch(_){}
+   if(o&&typeof o==='object'&&TOOLS.includes(String(o.tool||o.name||'').trim()))return normCall(o,'');}
+  return{kind:'none'};}
+ const cut=markCut(text,m),tm=/TOOL_CALL/i.exec(text.slice(m.index)),mi=m.index+tm.index,pre=text.slice(0,cut).trim(),s=text.indexOf('{',mi+9);
  if(s<0)return{kind:'partial',pre};
- if(text.slice(mi+9,s).replace(/[\s`:>]/g,'')!=='')return{kind:'bad',pre,error:'TOOL_CALL must be followed by one JSON object.'};
+ if(text.slice(mi+9,s).replace(/[\s`:>\]]/g,'')!=='')return{kind:'bad',pre,error:'TOOL_CALL must be followed by one JSON object.'};
  let depth=0,str=false,esc=false,e=-1;
  for(let i=s;i<text.length;i++){const c=text[i];
   if(str){if(esc)esc=false;else if(c==='\\')esc=true;else if(c==='"')str=false;continue;}
   if(c==='"')str=true;else if(c==='{')depth++;else if(c==='}'){depth--;if(depth===0){e=i;break;}}}
  if(e<0)return{kind:'partial',pre};
  let o;try{o=JSON.parse(text.slice(s,e+1));}catch(err){return{kind:'bad',pre,error:'Invalid JSON in TOOL_CALL ('+err.message+'). Use double quotes, escape newlines as \\n and quotes as \\", and keep the whole call on one line.'};}
- const tool=String(o.tool||o.name||'').trim();let args=o.args||o.arguments||o.parameters;
- if(!args||typeof args!=='object'){args={};Object.keys(o).forEach(k=>{if(k!=='tool'&&k!=='name')args[k]=o[k];});}
- if(!tool)return{kind:'bad',pre,error:'The TOOL_CALL JSON needs a "tool" field.'};
- return{kind:'call',pre,call:{tool,args}};}
+ return normCall(o,pre);}
 function visible(buf){
- const m=MARK.exec(buf);let v=m?buf.slice(0,m.index):buf;const dm=DSML_OPEN.exec(v);if(dm)v=v.slice(0,dm.index);else v=v.replace(DSML_TAIL,'');for(const mk of ['TOOL_CALL:','<TOOL_CALL>']){for(let k=Math.min(mk.length-1,v.length);k>=1;k--){if(v.endsWith(mk.slice(0,k))&&(v.length===k||/[\n \t`>*\-]/.test(v[v.length-k-1]))){v=v.slice(0,v.length-k);break;}}}
+ const m=MARK.exec(buf);let v=m?buf.slice(0,markCut(buf,m)):buf;
+ const dm=DSML_OPEN.exec(v);if(dm)v=v.slice(0,dm.index);else v=v.replace(DSML_TAIL,'');
+ v=v.replace(/(^|\n)[ \t]*TOOL_RESULT\s*:[\s\S]*$/i,'$1');
+ for(const mk of ['TOOL_CALL:','<TOOL_CALL>','</TOOL_CALL>','[TOOL_CALL]','TOOL_RESULT:']){
+  for(let k=Math.min(mk.length-1,v.length);k>=1;k--){
+   if(v.slice(-k).toLowerCase()===mk.slice(0,k).toLowerCase()&&(v.length===k||/[\s`>*\-\[.!?:;,)"']/.test(v[v.length-k-1]))){v=v.slice(0,v.length-k);break;}}}
  return v.replace(/\s+$/,'');}
 const fmtCall=(c,shrink)=>{const a=Object.assign({},c.args);if(shrink)Object.keys(a).forEach(k=>{if(typeof a[k]==='string'&&a[k].length>300)a[k]=a[k].slice(0,200)+' ...['+(a[k].length-200)+' chars omitted]';});return 'TOOL_CALL: '+JSON.stringify({tool:c.tool,args:a});};
 function build(system,L){
@@ -5253,7 +5462,7 @@ async function step(o,L){
  am.content='';
  try{await modelCall({messages:build(o.system,L),signal:ctl.signal,
    onDelta:d=>{buf+=d;const v=visible(buf);if(v!==am.content){am.content=v;updateLive(am,sel);}
-    if(!cut&&(buf.indexOf('TOOL_CALL')>=0||DSML_OPEN.test(buf))&&parseCall(buf).kind==='call'){cut=true;ctl.abort();}},
+    if(!cut&&(/TOOL_CALL/i.test(buf)||DSML_OPEN.test(buf))&&parseCall(buf).kind==='call'){cut=true;ctl.abort();}},
    onReasoning:r=>{if(!am.thinkT0)am.thinkT0=Date.now();am.reasoning=((am.reasoning||'')+r).slice(-20000);updateLive(am,sel);}});}
  catch(e){if(!(e.name==='AbortError'&&cut&&!o.signal.aborted))throw e;}
  finally{o.signal.removeEventListener('abort',onAb);}
@@ -5296,7 +5505,10 @@ async function loop(o,run){
   if(P.kind==='none'){
    const t=buf.trim();
    if(!t){if(run.empty++<1){L.push({role:'assistant',kind:'hist',text:'(empty reply)'},{role:'user',kind:'hist',text:'Your last reply was empty. Either call a tool or write your final report.'});continue;}final='';break;}
-   const nd=nudge(run);if(nd){L.push({role:'assistant',kind:'hist',text:t},{role:'user',kind:'hist',text:nd});act(am,sel,'Verifying before the final report','check','done');continue;}
+   if(CTRL_ANY.test(t)){run.bad++;if(run.bad>=3)throw new Error('The model kept writing tool-call text that could not be executed. Try again or pick a stronger model.');
+    L.push({role:'assistant',kind:'hist',text:t.slice(0,800)},{role:'user',kind:'result',label:'format error',text:'TOOL_RESULT: ERROR: Your reply contained tool-call text that could not be executed. Send exactly one line: TOOL_CALL: {"tool":"...","args":{...}} , or write your final answer with no TOOL_CALL or TOOL_RESULT text.'});
+    act(am,sel,'Tool call could not be read, asking the model to retry','alert','warn');continue;}
+   const nd=nudge(run);if(nd){L.push({role:'assistant',kind:'hist',text:t},{role:'user',kind:'hist',text:nd});act(am,sel,'Asking the model to verify its changes','check','done');continue;}
    final=t;break;}
   if(P.kind!=='call'){
    run.bad++;if(run.bad>=3)throw new Error('The model kept sending malformed tool calls. Try again or pick a stronger model.');
@@ -5368,8 +5580,10 @@ function chatHistory(chat,am){
  hist.forEach((m,i)=>{const last=i===hist.length-1;
   if(m.role==='user'){let c=m.content||'';
    if(m.caAddedN)c+='\n[Added to the workspace: '+(m.caAdded||[]).slice(0,12).join(', ')+(m.caAddedN>12?' ... ('+m.caAddedN+' files in total)':'')+']';
-   const imgs=(m.rawAtts||[]).filter(a=>a.kind==='image');imgs.forEach(a=>{if(!activeProvider()||!activeProvider().vision)c+='\n[Image attached: '+a.name+']';});
-   if(last){c+='\n\n'+wsNote(chat.ws.files);if(m.webContext)c+='\n\n--- LIVE WEB CONTEXT (fresh web research for this message; use its concrete details, do not invent facts that are not in it) ---\n'+m.webContext+'\n--- END LIVE WEB CONTEXT ---';}
+   const imgs=(m.rawAtts||[]).filter(a=>a.kind==='image'&&a.dataUrl);imgs.forEach(a=>{if(!activeProvider()||!activeProvider().vision)c+='\n[Image attached: '+a.name+']';});
+   {const miss=(m.attachments||[]).filter(a=>(a.kind==='text'||a.kind==='zip')&&!(m.rawAtts||[]).some(r=>r&&r.name===a.name&&(typeof r.content==='string'||r.files)));
+    if(miss.length)c+='\n[Attachment metadata only: '+miss.map(a=>a.name).join(', ')+'. Its contents are not available on this device unless it is already in the workspace (call list_files). Never guess its contents; if it is missing, tell the user to upload it again.]';}
+   if(last){c+='\n\n'+wsNote(chat.ws.files);if(chat.wsCount&&!Object.keys(chat.ws.files).length)c+='\n[This conversation earlier had '+chat.wsCount+' workspace file(s) (e.g. '+(chat.wsFiles||[]).slice(0,5).join(', ')+') but their contents are not available on this device. Ask the user to upload them again; never guess their contents.]';if(m.webContext)c+='\n\n--- LIVE WEB CONTEXT (fresh web research for this message; use its concrete details, do not invent facts that are not in it) ---\n'+m.webContext+'\n--- END LIVE WEB CONTEXT ---';}
    pushHist(out,'user',c,last?visionParts(c,imgs):null);}
   else pushHist(out,'assistant',stripFences(m.content));});
  return out;}
@@ -5427,12 +5641,12 @@ window.readIn=async function(files,target){
   try{const zip=await JSZip.loadAsync(f);
    const names=Object.keys(zip.files).filter(n=>!zip.files[n].dir&&!skipPath(n.replace(/^\/+/,'')));
    let tree=names.slice(0,200).join('\n');if(names.length>200)tree+='\n... ('+(names.length-200)+' more entries)';
-   const fl={},bin={};let tot=0,btot=0,skipped=0;
+   const fl={},bin={},skipList=[];let tot=0,btot=0,skipped=0;
    for(const n of names){const e=zip.files[n],un=e._data&&e._data.uncompressedSize;
-    try{if(BIN_RE.test(n)){if((un&&un>3e6)||btot>25e6){skipped++;continue;}const b64=await e.async('base64'),x=(n.split('.').pop()||'').toLowerCase();btot+=b64.length;bin[n]='data:'+(MIME[x]||'application/octet-stream')+';base64,'+b64;}
-     else{if(un&&un>TEXT_CAP){skipped++;continue;}const t=await e.async('string');if(tot+t.length>12e6||/\u0000/.test(t.slice(0,2000))){skipped++;continue;}tot+=t.length;fl[n]=t;}}catch(_){skipped++;}}
-   S.pendingAttachments.push({kind:'zip',name:f.name,size:f.size,tree:names.length+' entries:\n'+tree,files:fl,bin});
-   if(skipped)toast(skipped+' large or unreadable file(s) in '+f.name+' were not added to the workspace.','warn');
+    try{if(BIN_RE.test(n)){if((un&&un>3e6)||btot>25e6){skipped++;skipList.push(n+' (binary too large for memory)');continue;}const b64=await e.async('base64'),x=(n.split('.').pop()||'').toLowerCase();btot+=b64.length;bin[n]='data:'+(MIME[x]||'application/octet-stream')+';base64,'+b64;}
+     else{if(un&&un>ZIP_ENTRY_MAX){skipped++;skipList.push(n+' (over '+ZIP_ENTRY_MAX+' characters)');continue;}const t=await e.async('string');if(/\u0000/.test(t.slice(0,2000))){skipped++;skipList.push(n+' (binary content, not text)');continue;}if(tot+t.length>ZIP_TOTAL_MAX){skipped++;skipList.push(n+' (total text limit of '+ZIP_TOTAL_MAX+' characters reached)');continue;}tot+=t.length;fl[n]=t;}}catch(err){skipped++;skipList.push(n+' ('+String((err&&err.message)||err).slice(0,60)+')');}}
+   S.pendingAttachments.push({kind:'zip',name:f.name,size:f.size,tree:names.length+' entries:\n'+tree,files:fl,bin,skipped:skipList.slice(0,50)});
+   if(skipped)toast(skipped+' file(s) in '+f.name+' were NOT read: '+skipList.slice(0,3).join('; ')+(skipped>3?'; ...':'')+'. They are not in the workspace.','warn');
   }catch(err){toast('Could not read '+f.name+': '+err.message,'err');}}
  if(rest.length)await _readIn(rest,'chat');else renderAtts();};
 
@@ -5444,7 +5658,7 @@ window.sendAgent=async function(){
  S._fixPending=false;
  p.agent.push({id:uid(),role:'user',content:text||'(selected files)',attachments:atts.map(a=>({name:a.path||a.name,size:a.size,kind:a.kind})),createdAt:Date.now(),status:'done'});
  S.agentAttachments=[];inp.value='';if(agentDraftKey())Cloud.draft.del(agentDraftKey());autoGrow(inp);renderAgentAtts();
- const trim=t=>{t=String(t||'');return t.length>60000?t.slice(0,20000)+'\n...[truncated]...\n'+t.slice(-40000):t;};
+ const trim=t=>{t=String(t||'');return t.length>60000?t.slice(0,20000)+'\n...[TRUNCATED: '+(t.length-60000)+' of '+t.length+' characters omitted from the middle; do not claim to have seen them]...\n'+t.slice(-40000):t;};
  const sel=atts.filter(a=>a.kind==='project').map(a=>a.path||a.name),imgs=atts.filter(a=>a.kind==='image');
  let extra='';if(sel.length)extra+='[The user selected these project files for this request: '+sel.join(', ')+']';
  atts.filter(a=>a.kind!=='project'&&a.kind!=='image'&&typeof a.content==='string').forEach(a=>{extra+='\n\n--- ATTACHED '+(a.path||a.name)+' ---\n'+trim(a.content)+'\n--- END ATTACHED ---';});
@@ -5478,6 +5692,7 @@ function footHtml(m){
  else if(m.caUndone)h+='<span class="ca-undone muted small">Changes undone</span>';
  return h?'<div class="ca-foot">'+h+'</div>':'';}
 window.msgHtml=function(m){
+ if(m&&m.role==='assistant'&&typeof m.content==='string'&&CTRL_ANY.test(m.content))m=Object.assign({},m,{content:visible(m.content)});
  let h=_msgHtml(m);
  if(m.role!=='assistant'||!m.caAgent)return h;
  if(!m.caProject)h=h.replace('Changes applied to project','Files changed');
