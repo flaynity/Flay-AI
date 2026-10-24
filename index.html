@@ -1294,13 +1294,14 @@ function niceError(e){
 /* ---------- cloud-safe serialization ----------
    Code files, ZIP entries, attachment bodies, generated-file bodies, diffs and tool output stay on the device.
    Every Firebase write of a chat / project record goes through cloudSafe(); it builds NEW objects and never mutates the live record. */
-var HEAVY_RE=/(^|\/)(files|bin|rawAtts|ws|caUndo|lastSnapshot|diffs|req|res|generatedFiles|dataUrl|b64|base64)(\/|$)/;
-var HEAVY_KEYS={files:1,bin:1,ws:1,caUndo:1,lastSnapshot:1,dataUrl:1,b64:1,base64:1,rawAtts:1,generatedFiles:1,queue:1,diffs:1};
+var HEAVY_RE=/(^|\/)(files|bin|rawAtts|ws|caUndo|lastSnapshot|diffs|req|res|generatedFiles|dataUrl|b64|base64|extra|errText|code|content|before|after|snapshot)(\/|$)/;
+var HEAVY_KEYS={files:1,bin:1,ws:1,caUndo:1,lastSnapshot:1,dataUrl:1,b64:1,base64:1,rawAtts:1,generatedFiles:1,queue:1,diffs:1,extra:1,errText:1,code:1,content:1,before:1,after:1,snapshot:1};
 var legacy={};
 function safeText(s){
  s=String(s==null?'':s);
  s=s.replace(/```flayfiles[\s\S]*?(```|$)/g,'[generated files: the contents are kept on this device only]');
- s=s.replace(/(^|\n)[ \t`>*\-]*<?\s*TOOL_CALL\s*[:>][^\n]*/gi,'$1');
+ s=s.replace(/(?:^|\n)[ \t`>*\-]*<?\s*TOOL_CALL\s*[:>][\s\S]*?(?:```|$)/gi,'$1');
+ s=s.replace(/(?:^|\n)[ \t`>*\-]*<?\s*TOOL_RESULT\s*[:>][\s\S]*?(?:```|$)/gi,'$1');
  s=s.replace(/(```|~~~)([^\n`~]*)\n([\s\S]*?)(```|~~~|$)/g,function(m,f,lang,body){
   if(/^\s*(prompt|weblinks|questions)\s*$/i.test(lang))return m;
   var lines=body.split('\n').length;
@@ -1341,7 +1342,8 @@ function safeMsg(m){
   var v=m[k];
   if(k==='content'){o[k]=safeText(v);return;}
   if(k==='rawAtts'){o[k]=Array.isArray(v)?v.map(safeAtt).filter(Boolean):[];return;}
-  if(k==='caUndo'||k==='lastSnapshot'||k==='webContext'||k==='queue')return;
+  if(k==='attachments'){o[k]=Array.isArray(v)?v.map(safeAtt).filter(Boolean):[];return;}
+  if(k==='caUndo'||k==='lastSnapshot'||k==='webContext'||k==='queue'||k==='extra'||k==='errText')return;
   if(k==='generatedFiles'){o[k]=Array.isArray(v)?v.map(function(g){var r={};
    if(g&&typeof g==='object'){Object.keys(g).forEach(function(gk){var gv=g[gk];if(gk==='content'||gk==='before'||gk==='after'||gk==='code')return;
     if(typeof gv==='string')r[gk]=gv.slice(0,300);else if(typeof gv==='number'||typeof gv==='boolean')r[gk]=gv;});
@@ -1902,20 +1904,27 @@ function wlHost(u){try{return new URL(u).hostname.replace(/^www\./,'');}catch(_)
 /* complete objects of a (possibly still streaming) JSON array */
 function wlItems(txt){
  const out=[];let depth=0,start=-1,inStr=false,bs=false;txt=String(txt||'');
+ txt=txt.replace(/&#91;|&lbrack;/gi,'[').replace(/&#93;|&rbrack;/gi,']').replace(/&#123;/gi,'{').replace(/&#125;/gi,'}').replace(/&quot;|&#34;/gi,'"').replace(/&amp;/gi,'&');
+ txt=txt.replace(/\\\[/g,'[').replace(/\\\]/g,']');
  for(let i=0;i<txt.length;i++){const c=txt[i];
   if(inStr){if(bs)bs=false;else if(c==='\\')bs=true;else if(c==='"')inStr=false;continue;}
   if(c==='"'){inStr=true;continue;}
   if(c==='{'){if(depth===0)start=i;depth++;}
-  else if(c==='}'&&depth>0){depth--;if(depth===0&&start>=0){try{const o=JSON.parse(txt.slice(start,i+1));if(o&&o.url)out.push(o);}catch(_){}start=-1;}}
+  else if(c==='}'&&depth>0){depth--;if(depth===0&&start>=0){
+    let chunk=txt.slice(start,i+1);
+    chunk=chunk.replace(/,\s*}/g,'}').replace(/,\s*]/g,']');
+    try{const o=JSON.parse(chunk);if(o&&o.url&&/^https?:\/\//i.test(String(o.url).trim()))out.push(o);}catch(_){}
+    start=-1;
+  }}
  }
  return out;}
 function wlHtml(c){
  const ok=(c.items||[]).filter(x=>x&&/^https?:\/\/[^\s"'<>]+$/i.test(String(x.url||''))).slice(0,10);
- if(!ok.length)return c.open?'<div class="gen-note"><span>Searching websites\u2026</span></div>':'';
+ if(!ok.length)return c.open?'<div class="gen-note"><span>Searching websites\u2026</span></div>':'<div class="gen-note"><span>No verified website links available.</span></div>';
  const fav=(h,z)=>'https://www.google.com/s2/favicons?domain='+encodeURIComponent(h)+'&sz='+z;
  let h='<div class="wl">';
  ok.forEach((x,i)=>{
-  const url=String(x.url),host=wlHost(url),name=(String(x.name||host).trim()||host),eu=esc(url);
+  const url=String(x.url).trim(),host=wlHost(url),name=(String(x.name||host).trim()||host),eu=esc(url);
   h+='<div class="wl-it"><div class="wl-logo" data-l="'+esc((name[0]||'?').toUpperCase())+'"><img src="'+fav(host,128)+'" alt="" decoding="sync" onerror="this.parentNode.classList.add(\'nl\');this.remove()"></div><div class="wl-main">'
    +'<a class="wl-name" href="'+eu+'" target="_blank" rel="noopener noreferrer">'+(i+1)+'. '+esc(name)+'</a>'
    +(x.tag?'<div class="wl-tag">'+esc(x.tag)+'</div>':'')
@@ -1957,14 +1966,17 @@ function cbHtml(b,msg){
   +'<div class="cb-body"><pre><code>'+hlCode(b.c,lang)+'</code>'+(live?'<span class="caret"></span>':'')+'</pre></div></div>';}
 function md(src,msg){
  const blocks=[];src=String(src??'');const pCards=[];
- src=src.replace(/(```|~~~)(?:prompt|json|text|txt)?[ \t]*\n?(\s*\[\s*\{[\s\S]*?)(\1|$)/g,(m,f,body,cl)=>(/"url"\s*:/.test(body)&&/"name"\s*:/.test(body))?'```weblinks\n'+body.replace(/\s+$/,'')+(cl?'\n```':''):m);
- src=src.replace(/(```|~~~)prompt[ \t]*\n?([\s\S]*?)(\1|$)/g,(m,f,t,cl)=>{pCards.push({text:t.replace(/\n$/,''),open:!cl});return '\u0004'+(pCards.length-1)+'\u0004';});
-src=src.replace(/```flayfiles\n?([\s\S]*?)```/g,'@@(FILE_OUTPUT)@@');
+ src=src.replace(/(?:```|~~~|\\~\\~\\~|\\`\\`\\`)(?:weblinks|json|links|prompt|text|txt)?[ \t]*\n?(\s*(?:\[|&#91;|&lbrack;|\\\[)\s*\{[\s\S]*?)(?:```|~~~|\\~\\~\\~|\\`\\`\\`|$)/gi,(m,body,cl)=>(/"url"\s*:/.test(body)&&/"name"\s*:/.test(body))?'```weblinks\n'+body.replace(/\s+$/,'')+(cl?'\n```':''):m);
+ src=src.replace(/(?:```|~~~|\\~\\~\\~|\\`\\`\\`)prompt[ \t]*\n?([\s\S]*?)(?:```|~~~|\\~\\~\\~|\\`\\`\\`|$)/gi,(m,t,cl)=>{pCards.push({text:t.replace(/\n$/,''),open:!cl});return '\u0004'+(pCards.length-1)+'\u0004';});
+ src=src.replace(/```flayfiles\n?([\s\S]*?)```/g,'@@(FILE_OUTPUT)@@');
  src=src.replace(/```flayfiles\n?[\s\S]*$/,'@@(FILE_OUTPUT_LIVE)@@');
  const wlCards=[],qCards=[];
-   src=src.replace(/```weblinks[ \t]*\n?([\s\S]*?)(```|$)/g,(m,j,cl)=>{wlCards.push({items:wlItems(j),open:!cl,unv:!(msg&&Array.isArray(msg.sources)&&msg.sources.length)});return '\u0002'+(wlCards.length-1)+'\u0002';});
- src=src.replace(/```questions[ \t]*\n?([\s\S]*?)(```|$)/g,(m,j,cl)=>{qCards.push({json:j,open:!cl});return '\u0003'+(qCards.length-1)+'\u0003';});
- src=src.replace(/```([\w+#.-]*)[ \t]*\n?([\s\S]*?)(```|$)/g,(m0,l,c,cl)=>{const op=!cl;if(op)c=c.replace(/`{1,2}$/,'');blocks.push({l,c:c.replace(/\n$/,''),open:op});return '\u0001'+(blocks.length-1)+'\u0001';});
+ src=src.replace(/(?:```|~~~|\\~\\~\\~|\\`\\`\\`)weblinks[ \t]*\n?([\s\S]*?)(?:```|~~~|\\~\\~\\~|\\`\\`\\`|$)/gi,(m,j,cl)=>{
+   wlCards.push({items:wlItems(j),open:!cl,unv:!(msg&&Array.isArray(msg.sources)&&msg.sources.length)});
+   return '\u0002'+(wlCards.length-1)+'\u0002';
+ });
+ src=src.replace(/(?:```|~~~|\\~\\~\\~|\\`\\`\\`)questions[ \t]*\n?([\s\S]*?)(?:```|~~~|\\~\\~\\~|\\`\\`\\`|$)/gi,(m,j,cl)=>{qCards.push({json:j,open:!cl});return '\u0003'+(qCards.length-1)+'\u0003';});
+ src=src.replace(/(?:```|~~~|\\~\\~\\~|\\`\\`\\`)([\w+#.-]*)[ \t]*\n?([\s\S]*?)(?:```|~~~|\\~\\~\\~|\\`\\`\\`|$)/gi,(m0,l,c,cl)=>{const op=!cl;if(op)c=c.replace(/`{1,2}$/,'');blocks.push({l,c:c.replace(/\n$/,''),open:op});return '\u0001'+(blocks.length-1)+'\u0001';});
  let h=esc(src);
  h=h.replace(/^(#{1,4})[ \t]+(.*)$/gm,(m0,a,t)=>{const n=a.length<=2?2:a.length;return '<h'+n+'>'+t+'</h'+n+'>';});
  h=h.replace(/\*\*([^*\n]+)\*\*/g,'<strong>$1</strong>');
@@ -2600,7 +2612,7 @@ $('#chatAtts').addEventListener('click',e=>{const b=e.target.closest('[data-rmat
 
 /* ---------- system prompts ---------- */
 const THINK_RULE='Reasoning speed: think ultra fast. Keep your private reasoning short - at most 3 to 5 steps, each a brief bold title line plus one short sentence. Never over-think simple requests.';
-const LINKS_RULE='When the user asks for website link(s) (a site, service, tool, platform, ad network, store, etc.), use the LIVE WEB CONTEXT when it is supplied. Reply with ONE short intro sentence in the user\'s language, then exactly one fenced code block tagged weblinks containing a JSON array of 3 to 8 items, each shaped like {"name":"Google AdSense","tag":"short category line in the user\'s language","desc":"one or two sentences in the user\'s language","url":"https://official-site.example","open":"short label in the user\'s language, e.g. AdSense Website \u0996\u09c1\u09b2\u09c1\u09a8"}. Only put URLs in the block that appear in the SOURCES of the live web context. If there is no live web context, or its status is FAILED or NO USABLE RESULTS, do NOT output a weblinks block: say in the user\'s language that the links could not be verified live. Never invent or guess URLs, and leave out any site you are not sure exists. Do not write raw URLs outside the block. After the block you may add one short note (for example about approval or payment rules). If the user asks for one specific site, return just that one item.';
+const LINKS_RULE='When the user asks for website link(s) (a site, service, tool, platform, ad network, store, etc.), the application automatically performs live web research and supplies verified LIVE WEB CONTEXT. Always reply directly in the user\'s language with a concise, helpful intro sentence presenting the verified results found by the app (for example: "Here are the verified official websites found:" / "এখানে ভেরিফাইড অফিসিয়াল ওয়েবসাইটগুলোর লিংক দেওয়া হলো:"). Do NOT state "I don\'t have a web-search tool of my own" or make contradictory statements. Then output exactly one fenced code block tagged weblinks containing a JSON array of 3 to 8 items, each shaped like {"name":"Google AdSense","tag":"short category line in the user\'s language","desc":"one or two sentences in the user\'s language","url":"https://official-site.example","open":"short label in the user\'s language, e.g. AdSense Website \u0996\u09c1\u09b2\u09c1\u09a8"}. Only put URLs in the block that appear in the SOURCES of the live web context. If the search returned FAILED or NO USABLE RESULTS, do NOT output a weblinks block: state clearly in the user\'s language that the live search could not verify the links. Never invent or guess URLs, and do not write raw URLs outside the block. If the user asks for one specific site, return just that one item.';
 function isLinkIntent(t){t=String(t||'').trim();if(!t||t.length>400)return false;
  const noun=/(\blinks?\b|\burls?\b|\bweb\s?sites?\b|\bsites?\b|\u09b2\u09bf\u0982\u0995|\u09b2\u09bf\u0999\u09cd\u0995|\u0993\u09af\u09bc\u09c7\u09ac\u09b8\u09be\u0987\u099f|\u0993\u09af\u09bc\u09c7\u09ac \u09b8\u09be\u0987\u099f|\u09b8\u09be\u0987\u099f)/i;
  const ask=/(\bgive\b|\bsend\b|\bshare\b|\bshow\b|\bprovide\b|\bfind\b|\bsuggest\b|\brecommend\b|\blist\b|\bneed\b|\bwant\b|\bwhere\b|\bwhich\b|\bbest\b|\btop\b|\u09a6\u09be\u0993|\u09a6\u09bf\u09a8|\u09a6\u09c7\u09a8|\u09a6\u09bf\u09ac\u09c7|\u09a6\u09bf\u09a4\u09c7|\u09a6\u09c7\u0996\u09be\u0993|\u09a6\u09c7\u0996\u09be\u09a8|\u09aa\u09be\u09a0\u09be\u0993|\u099a\u09be\u0987|\u09ac\u09b2\u09cb|\u09ac\u09b2\u09c1\u09a8|\u0996\u09c1\u0981\u099c\u09c7|\u0995\u09cb\u09a5\u09be\u09af\u09bc|\u0995\u09cb\u09a8\u099f\u09be)/i;
@@ -2701,7 +2713,7 @@ async function researchWeb(m,queries,sig,hostSel,opts){
    else m.webSteps.push({t:'Could not read the pages',d:'Using the search results only.'});
    upd();
   }
-  let ctx='LIVE WEB RESEARCH. Queries: '+queries.join(' | ')+'\nUse this as external context. Base concrete facts on it and do not invent details that are not here.\n\nSOURCES:\n'+all.map((s,i)=>(i+1)+'. '+s.title+'\n'+s.url).join('\n');
+  let ctx='LIVE WEB RESEARCH (retrieved by the app for this query). Queries: '+queries.join(' | ')+'\nUse these results as external context. Present these verified sources directly. Do NOT say you do not have a web search tool of your own.\n\nSOURCES:\n'+all.map((s,i)=>(i+1)+'. '+s.title+'\n'+s.url).join('\n');
   if(pages.length)ctx+='\n\nPAGE EXCERPTS:\n'+pages.map(x=>'### '+(x.p.title||x.s.title)+' ('+x.s.url+')\n'+x.p.text).join('\n\n');
   else{const raw=(rs.find(r=>r.text)||{}).text||'';if(raw)ctx+='\n\nSEARCH PAGE EXCERPT:\n'+raw.slice(0,3500);}
   return ctx.slice(0,10000);
@@ -2749,7 +2761,7 @@ function plainText(m,sp){
  let t=String(m.content||'');
  t=t.replace(/(```|~~~)prompt[ \t]*\n?([\s\S]*?)(\1|$)/g,(x,f,b)=>b);
  t=t.replace(/```flayfiles[\s\S]*?(```|$)/g,'');
- t=t.replace(/```weblinks[ \t]*\n?([\s\S]*?)(```|$)/g,(x,j)=>wlItems(j).map((o,i)=>(i+1)+'. '+(o.name||'')+(o.tag?' - '+o.tag:'')+(o.desc?'. '+o.desc:'')+(sp?'':'\n'+o.url)).join('\n'));
+ t=t.replace(/(?:```|~~~|\\~\\~\\~|\\`\\`\\`)weblinks[ \t]*\n?([\s\S]*?)(?:```|~~~|\\~\\~\\~|\\`\\`\\`|$)/gi,(x,j)=>wlItems(j).map((o,i)=>(i+1)+'. '+(o.name||'')+(o.tag?' - '+o.tag:'')+(o.desc?'. '+o.desc:'')+(sp?'':'\n'+o.url)).join('\n'));
  t=t.replace(/```questions[ \t]*\n?([\s\S]*?)(```|$)/g,(x,j)=>{let q;try{q=JSON.parse(String(j).trim());}catch(_){return '';}
   return (q.groups||[]).map((g,i)=>(i+1)+'. '+g.q+(sp?'':'\n'+(g.options||[]).map(o=>'- '+o).join('\n'))).join('\n');});
  if(sp)t=t.replace(/```[\s\S]*?(```|$)/g,'');
@@ -4935,7 +4947,7 @@ Your standard: work like a careful senior engineer making a change in someone el
 Tool results come back as plain text. Make one call at a time. You may group several independent read-only calls (list_files, read_file, search) when the app allows it.
 
 - **list_files()** - Returns every file with its line count, as a tree. Call it first on any project or zip.
-- **read_file(path, from, to)** - Returns lines from..to (1-based, inclusive). Each line is returned as the line number, a vertical bar, a space, then the text, for example: 842| const x = 1; A read is capped at 300 lines per call; aim for 150 or fewer. Omit from and to only for files of 300 lines or fewer.
+- **read_file(path, from, to)** - Returns lines from..to (1-based, inclusive). Both endpoints are inclusive, so the line count is (to - from + 1). A read is capped at 300 lines per call (aim for 150 or fewer). Example: lines 1 to 300 is exactly 300 lines (300 - 1 + 1 = 300). Requesting lines 300 to 600 is 301 lines (600 - 300 + 1 = 301) and will FAIL! To continue reading after line 300, use from=301, to=450 or from=301, to=600. For large files, use list_files to check total line count, then read in sequential, non-overlapping chunks (e.g. 1-150, 151-300, 301-450). Omit from and to only for files of 300 lines or fewer.
 - **search(pattern, path, regex)** - Case-insensitive literal search across all files, or only in path if given. Set regex to true for a regular expression. Returns up to 50 matches formatted like: index.html:412| matching line text. If results are cut off, narrow the pattern.
 - **edit_file(path, old, new)** - Replaces old with new in an existing file. old must match the current text exactly (whitespace, quotes, and non-ASCII text such as Bengali) and must occur exactly once. No match returns an error. More than one match returns an error listing the line numbers. new may be empty to delete text. Never put the line-number prefixes from read_file into old or new.
 - **create_file(path, content)** - Creates a new file. Fails if the path already exists.
@@ -4974,6 +4986,7 @@ Every request follows this loop. For a small request each step is small - but do
 - Never read a large file from top to bottom. Context is limited; reading everything wastes it and buries what matters.
 - Build a map first. Get the line count from list_files, then search for structural anchors such as: function, class, addEventListener, the opening script / style / section tags, id attributes, and section-divider comments. Write the result as one compact line in your message so it stays in context, for example: CSS 12-880 | HTML 881-2400 | JS 2401-9800 | chat render about 5120.
 - Locate by search, then read windows of 150 lines or fewer around the hits. Follow references outward only as far as the task needs: element, then handler, then the function it calls, then the state it changes, then the CSS rule.
+- Both 'from' and 'to' are 1-based and INCLUSIVE. (to - from + 1) must never exceed 300. For example, lines 300 to 600 is 301 lines (600 - 300 + 1 = 301) and will trigger a Range Too Large error! When reading sequentially, use non-overlapping ranges like 1-150, 151-300, 301-450, 451-600. Keep track of what you have already read and do not reread the same unchanged ranges.
 - Keep old strings short but unique, usually 1 to 5 lines. If the target line is common, include a distinctive neighboring line.
 - After any edit, line numbers below it are stale. Do not reuse numbers from your map without re-checking.
 - Files of 300 lines or fewer may be read whole.
@@ -4983,6 +4996,7 @@ Every request follows this loop. For a small request each step is small - but do
 - Build old from the latest read_file output, copied exactly, without the line-number prefixes.
 - To insert code: put an anchor line in old and repeat it in new together with the addition. To delete: leave new empty, and also remove whatever the deletion leaves behind (an empty line, a dangling comma, an orphan bracket) so the syntax stays valid.
 - Not found: re-read the region (it changed, or whitespace differs) and retry. More than one match: add neighboring lines to old until it is unique.
+- Range errors: If read_file reports "Range too large", calculate (to - from + 1) <= 300. Never repeat the same failing range. Adjust 'to' immediately and retry with a valid range (e.g. 150 lines).
 - After 2 failed attempts at the same spot, read a wider region and rethink. After 3, stop and tell the user what is blocking you.
 - Never repeat an identical failing call. Read the error first.
 - If check_syntax reports an error, fix it immediately and check again. Never deliver a file with a syntax error that you know about; if you cannot fix it, say so plainly.
@@ -5658,7 +5672,7 @@ window.sendAgent=async function(){
  S._fixPending=false;
  p.agent.push({id:uid(),role:'user',content:text||'(selected files)',attachments:atts.map(a=>({name:a.path||a.name,size:a.size,kind:a.kind})),createdAt:Date.now(),status:'done'});
  S.agentAttachments=[];inp.value='';if(agentDraftKey())Cloud.draft.del(agentDraftKey());autoGrow(inp);renderAgentAtts();
- const trim=t=>{t=String(t||'');return t.length>60000?t.slice(0,20000)+'\n...[TRUNCATED: '+(t.length-60000)+' of '+t.length+' characters omitted from the middle; do not claim to have seen them]...\n'+t.slice(-40000):t;};
+ const trim=t=>{t=String(t||'');return t.length>ATT_BUDGET?t.slice(0,ATT_BUDGET)+'\n\n[File contains '+t.length+' characters. First '+ATT_BUDGET+' characters shown above for prompt context. Full file is loaded in the workspace; use read_file(path, from, to) and search to read any region.]':t;};
  const sel=atts.filter(a=>a.kind==='project').map(a=>a.path||a.name),imgs=atts.filter(a=>a.kind==='image');
  let extra='';if(sel.length)extra+='[The user selected these project files for this request: '+sel.join(', ')+']';
  atts.filter(a=>a.kind!=='project'&&a.kind!=='image'&&typeof a.content==='string').forEach(a=>{extra+='\n\n--- ATTACHED '+(a.path||a.name)+' ---\n'+trim(a.content)+'\n--- END ATTACHED ---';});
