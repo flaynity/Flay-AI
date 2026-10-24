@@ -4999,6 +4999,7 @@ Every request follows this loop. For a small request each step is small - but do
 - Range errors: If read_file reports "Range too large", calculate (to - from + 1) <= 300. Never repeat the same failing range. Adjust 'to' immediately and retry with a valid range (e.g. 150 lines).
 - After 2 failed attempts at the same spot, read a wider region and rethink. After 3, stop and tell the user what is blocking you.
 - Never repeat an identical failing call. Read the error first.
+- If `create_file` returns `File already exists: <path>`, treat that as a required recovery step: do NOT call `create_file` again and do NOT delete the existing file. First use `read_file` on that exact path, inspect the existing contents, then use `edit_file` with a unique exact old-text anchor to make only the requested change. If the file is not included in the current context, use `NEED: <path>` or read it before editing. Only use `create_file` when `list_files`/workspace state confirms the path does not exist.
 - If check_syntax reports an error, fix it immediately and check again. Never deliver a file with a syntax error that you know about; if you cannot fix it, say so plainly.
 - If you made a wrong edit, undo it with another edit_file and confirm with diff.
 - Step budget: a typical task needs fewer than about 40 tool calls. If the request is bigger, work in phases: finish and verify phase 1, report it, and say what remains.
